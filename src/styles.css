@@ -1,0 +1,705 @@
+/*
+ * Stylesheet für den Standalone-ProTracker-Player.
+ *
+ * Aufbau:
+ *   1. CSS-Variablen (Farben).
+ *   2. Reset + Body-Layout (zentriertes Fenster).
+ *   3. .player        — das Workbench-Fenster selbst.
+ *   4. .drop-overlay  — Vollflächiger Overlay-Hinweis beim Drag-Over.
+ *   5. .titlebar      — Amiga-Workbench-Titelleiste mit Dateinamen.
+ *   6. .controls      — File-Picker, Folder-Picker, Mod-Dropdown, Volume, Play.
+ *   7. .main          — VU-Meter, Tracker-Spur, Sample-Liste.
+ *   8. .tracker       — gescrollte Pattern-Anzeige, aktive Zeile zentriert.
+ *   9. .samples       — Instrument-Liste + Status-Panel.
+ *  10. .footer        — Statuszeile unten.
+ *
+ * Hinweis: der Look orientiert sich am Amiga-Workbench (helle 3D-Border
+ * mit weißen oberen / dunklen unteren Kanten). Schriften: Courier New,
+ * monospace, weil Tracker.
+ */
+
+:root {
+  /* Workbench-Standardfarben */
+  --bg: #c0c0c0;
+  --bg-dark: #808080;
+  --shadow-dark: #404040;
+  --title-bg: #0055aa;
+  --col-bg: #0033aa;
+  --tracker-bg: #000022;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #222;
+  font-family: 'Courier New', monospace;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* ─── Hauptfenster ──────────────────────────────────────────── */
+.player {
+  width: 100%;
+  max-width: 900px;
+  height: 560px;
+  background: var(--bg);
+  color: black;
+  /* 3D-Effekt: helle Kanten oben/links, dunkle unten/rechts */
+  border: 2px solid;
+  border-color: white white var(--shadow-dark) var(--shadow-dark);
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 12px;
+  user-select: none;
+  position: relative;
+}
+
+/* ─── Drop-Overlay ──────────────────────────────────────────── */
+/* Wird nur sichtbar, wenn .player.drag-over aktiv ist. */
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 85, 170, 0.85);
+  color: white;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  z-index: 100;
+  border: 4px dashed white;
+  pointer-events: none;
+}
+.player.drag-over .drop-overlay { display: flex; }
+
+/* ─── Titelleiste ───────────────────────────────────────────── */
+.titlebar {
+  background: var(--title-bg);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1px 8px;
+  font-weight: bold;
+  font-size: 10px;
+  border-bottom: 1px solid var(--shadow-dark);
+}
+.titlebar .left,
+.titlebar .right { display: flex; align-items: center; gap: 4px; }
+
+/* Pixel-artige Pseudo-Buttons in der Titelleiste (rein dekorativ). */
+.pixbtn {
+  width: 14px;
+  height: 12px;
+  background: var(--bg);
+  border: 1px solid;
+  border-color: white white var(--shadow-dark) var(--shadow-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  color: black;
+  font-weight: bold;
+}
+.titlebar .name {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Steuerleiste ──────────────────────────────────────────── */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--bg-dark);
+  gap: 8px;
+}
+.controls .group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+button {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: bold;
+  background: var(--bg);
+  color: black;
+  border: 2px solid;
+  border-color: white white #707070 #707070;
+  padding: 1px 8px;
+  cursor: pointer;
+}
+button:active { border-color: #707070 #707070 white white; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+input[type=file] { font-size: 9px; max-width: 200px; font-family: inherit; }
+input[type=range] { width: 90px; }
+
+/*
+ * Label-Buttons für die Datei-/Ordner-Picker. Der native <input type="file">
+ * wird versteckt; das umschließende <label> wird wie ein Button gestyled.
+ * So sieht die UI einheitlich aus und der Klick auf den Label öffnet
+ * trotzdem den Datei- bzw. Ordner-Dialog.
+ */
+.file-btn {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: bold;
+  background: var(--bg);
+  color: black;
+  border: 2px solid;
+  border-color: white white #707070 #707070;
+  padding: 1px 8px;
+  cursor: pointer;
+  display: inline-block;
+}
+.file-btn:active { border-color: #707070 #707070 white white; }
+.file-btn input { display: none; }
+
+#mod-select {
+  background: white;
+  border: 2px solid;
+  border-color: #707070 #707070 white white;
+  padding: 1px 2px;
+  font-family: inherit;
+  font-size: 10px;
+  max-width: 200px;
+}
+#playlist-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #000;
+  user-select: none;
+  cursor: pointer;
+}
+#playlist-label input {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* ─── Timeline-Scrubber ──────────────────────────────────────── */
+.timeline-container {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--bg-dark);
+  gap: 8px;
+}
+.timeline-container .scrub-lbl {
+  font-size: 10px;
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+}
+#position-scrubber {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  background: black;
+  height: 8px;
+  border: 1px solid;
+  border-color: #707070 #707070 white white;
+  outline: none;
+}
+#position-scrubber:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Thumb-Styling für Webkit und Firefox */
+#position-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 14px;
+  background: var(--bg);
+  border: 2px solid;
+  border-color: white white #707070 #707070;
+  cursor: pointer;
+}
+#position-scrubber::-webkit-slider-thumb:active {
+  border-color: #707070 #707070 white white;
+}
+#position-scrubber::-moz-range-thumb {
+  width: 16px;
+  height: 14px;
+  background: var(--bg);
+  border: 2px solid;
+  border-color: white white #707070 #707070;
+  cursor: pointer;
+  border-radius: 0;
+}
+#position-scrubber::-moz-range-thumb:active {
+  border-color: #707070 #707070 white white;
+}
+
+/* ─── Hauptbereich ──────────────────────────────────────────── */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-dark);
+  padding: 4px;
+  gap: 4px;
+  min-height: 0;
+}
+
+/* ─── VU-Meter (4 vertikale Säulen) ─────────────────────────── */
+.vu-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px;
+  width: 38px;
+  background: var(--bg);
+  border: 2px solid;
+  border-color: white white #707070 #707070;
+}
+.vu { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.vu .lbl { color: #555; font-size: 8px; font-weight: bold; }
+.vu .meter {
+  width: 16px;
+  height: 60px;
+  background: black;
+  border: 1px solid #555;
+  position: relative;
+  overflow: hidden;
+}
+/*
+ * Weicher Farbverlauf von Grün über Gelb/Orange in Rot.
+ *
+ * Stops sind so verteilt, dass die "warnenden" Farben (Orange/Rot)
+ * schon bei mittlerem Ausschlag erscheinen, weil bei den meisten MODs
+ * der oberste Bereich praktisch nie erreicht wird:
+ *   - Grünes Plateau bis ca. 35 %.
+ *   - Sanfter Übergang Grün → Gelb (35–55 %).
+ *   - Orange ab ca. 60 %.
+ *   - Rot ab ca. 75 %, Spitze in Vollrot ganz oben.
+ *
+ * Wichtig: background-size ist auf die volle Meter-Höhe (60px) gesetzt
+ * und background-position bottom — sonst würde der Gradient mit der
+ * Bar-Höhe mitskalieren und schon bei kleinem Ausschlag oben rot sein.
+ * So zeigt ein kleiner Bar nur den unteren (grünen) Slice; höhere
+ * Ausschläge wandern dann sichtbar in Gelb/Orange/Rot.
+ */
+.vu .bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2%;
+  background-image: linear-gradient(
+    to top,
+    #00aa00   0%,
+    #22cc22  35%,
+    #ccdd22  55%,
+    #ffcc22  65%,
+    #ff8822  75%,
+    #ff3322  88%,
+    #ff0000 100%
+  );
+  background-size: 100% 60px;
+  background-position: left bottom;
+  background-repeat: no-repeat;
+}
+
+/* ─── Tracker-Spur ──────────────────────────────────────────── */
+.tracker {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--tracker-bg);
+  border: 2px solid;
+  border-color: #707070 #707070 white white;
+  overflow: hidden;
+}
+.tracker-head {
+  display: flex;
+  align-items: center;
+  background: var(--col-bg);
+  color: white;
+  border-bottom: 1px solid black;
+  padding: 1px 4px;
+  font-size: 11px;
+  font-weight: bold;
+}
+.tracker-head .col-row { color: #ccc; width: 36px; flex-shrink: 0; }
+.tracker-head .col-ch { flex: 1; text-align: center; min-width: 0; }
+
+/* Scrollbar verstecken — die aktive Zeile wird selbst zentriert. */
+.rows { flex: 1; overflow-y: auto; scrollbar-width: none; }
+.rows::-webkit-scrollbar { display: none; }
+
+.mod-row {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.05s ease;
+  color: #00aa00;
+}
+.mod-row[data-active="true"] { background: #0044bb; color: #ffffff; }
+.mod-row-idx {
+  color: #737373;
+  width: 36px;
+  flex-shrink: 0;
+  font-weight: bold;
+}
+.mod-row[data-active="true"] .mod-row-idx { color: white; }
+
+.mod-note-block {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-weight: bold;
+  color: #005500;
+}
+.mod-note-block.has-note { color: white; }
+.mod-note-block.has-note .mod-note-name { color: #aaeebb; }
+.mod-inst.has-inst { color: #ffcc00; }
+.mod-fx.has-fx { color: #00ccff; }
+
+/* Aktive Zeile: alle Spalten weiß überschreiben, mit Akzent für Inst/FX. */
+.mod-row[data-active="true"] .mod-note-block,
+.mod-row[data-active="true"] .mod-note-name,
+.mod-row[data-active="true"] .mod-inst,
+.mod-row[data-active="true"] .mod-fx { color: white !important; }
+.mod-row[data-active="true"] .mod-inst.has-inst { color: #ffff55 !important; }
+.mod-row[data-active="true"] .mod-fx.has-fx { color: #55ffff !important; }
+
+/* Meldungen mitten in der Tracker-Spur (Hinweis, Fehler, leer). */
+.loading,
+.error,
+.empty-rows {
+  color: #00ccff;
+  padding: 24px;
+  text-align: center;
+  font-size: 12px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.error { color: #ff5555; }
+.empty-rows { color: #888; }
+.empty-rows .hint { color: #555; font-size: 10px; max-width: 320px; }
+
+/* ─── Sample-/Instrument-Liste ──────────────────────────────── */
+.samples {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 2px solid;
+  border-color: white white #707070 #707070;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.samples h3 {
+  margin: 0;
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--bg-dark);
+  font-size: 10px;
+  font-weight: bold;
+  text-align: center;
+  color: #333;
+}
+.inst-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+  background: white;
+  border-bottom: 1px solid var(--bg-dark);
+  font-size: 9px;
+  line-height: 1.3;
+}
+.inst-row { display: flex; gap: 4px; }
+.inst-row .inst-num { color: var(--title-bg); font-weight: bold; flex-shrink: 0; }
+.inst-row .inst-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inst-row.empty .inst-name { color: #888; }
+
+/* Status-Panel unter der Instrument-Liste (Key/Value-Zeilen). */
+.status {
+  padding: 4px;
+  font-size: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg);
+}
+.status .line { display: flex; justify-content: space-between; font-weight: bold; color: #444; }
+.status .line span:last-child {
+  color: black;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Footer ────────────────────────────────────────────────── */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1px 8px;
+  background: var(--bg);
+  border-top: 1px solid #888;
+  font-size: 8px;
+  font-weight: bold;
+  color: #555;
+}
+
+#theme-btn {
+  padding: 1px 5px;
+  font-size: 8px;
+  line-height: 1;
+  border: 1px solid;
+  border-color: white white var(--shadow-dark) var(--shadow-dark);
+  margin-right: 4px;
+  background: var(--bg);
+  color: black;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#theme-btn:active {
+  border-color: var(--shadow-dark) var(--shadow-dark) white white;
+}
+
+/* ─── Modern Darkmode-Overrides ────────────────────────────────── */
+.player.theme-dark {
+  --bg: hsl(220, 14%, 18%);          /* Elegantes Schiefergrau */
+  --bg-dark: hsl(220, 16%, 12%);     /* Tiefes Schiefergrau */
+  --shadow-dark: hsl(220, 20%, 8%);  /* Nahezu Schwarz */
+  --title-bg: hsl(255, 65%, 40%);    /* Edles Indigo-Violett */
+  --col-bg: hsl(255, 45%, 30%);      /* Gedecktes Indigo */
+  --tracker-bg: hsl(220, 20%, 6%);   /* Ultra-Deep-Space */
+  color: hsl(220, 15%, 85%);         /* Helles Kaltgrau */
+}
+
+/* Zusammengefasstes Alignment & Farben */
+.player.theme-dark .controls,
+.player.theme-dark .controls span,
+.player.theme-dark #playlist-label,
+.player.theme-dark #pos-display {
+  color: hsl(220, 15%, 85%) !important;
+}
+.player.theme-dark .controls button,
+.player.theme-dark .controls .file-btn,
+.player.theme-dark .controls select,
+.player.theme-dark #theme-btn {
+  background: var(--bg);
+  color: white;
+  border-color: hsl(220, 10%, 30%) hsl(220, 10%, 30%) var(--shadow-dark) var(--shadow-dark);
+}
+.player.theme-dark .controls button:active,
+.player.theme-dark .controls .file-btn:active,
+.player.theme-dark #theme-btn:active {
+  border-color: var(--shadow-dark) var(--shadow-dark) hsl(220, 10%, 30%) hsl(220, 10%, 30%);
+}
+.player.theme-dark .vu-col,
+.player.theme-dark .samples,
+.player.theme-dark .status {
+  background: var(--bg);
+  border-color: hsl(220, 10%, 30%) hsl(220, 10%, 30%) var(--shadow-dark) var(--shadow-dark);
+  color: hsl(220, 15%, 85%);
+}
+.player.theme-dark .vu .lbl { color: hsl(220, 10%, 60%); }
+.player.theme-dark .samples h3,
+.player.theme-dark .inst-scroll { border-bottom-color: var(--bg-dark); }
+.player.theme-dark .inst-scroll { background: var(--bg-dark); color: hsl(220, 15%, 90%); }
+.player.theme-dark .inst-row .inst-num { color: hsl(255, 80%, 75%); }
+.player.theme-dark .inst-row.empty .inst-name { color: hsl(220, 10%, 40%); }
+.player.theme-dark .status .line { color: hsl(220, 10%, 60%); }
+.player.theme-dark .status .line span:last-child { color: white; }
+.player.theme-dark .footer {
+  background: var(--bg);
+  color: hsl(220, 10%, 60%) !important;
+  border-top-color: var(--bg-dark);
+}
+.player.theme-dark #footer-state { color: hsl(255, 80%, 75%) !important; }
+
+/* Tracker-Zeilen in edlen Neon-Kontrasten */
+.player.theme-dark .mod-row { color: hsl(220, 10%, 60%); }
+.player.theme-wb13 .mod-row-idx { color: hsl(220, 10%, 35%); }
+.player.theme-dark .mod-note-block { color: hsl(220, 10%, 30%); }
+.player.theme-dark .mod-note-block.has-note { color: white; }
+.player.theme-dark .mod-note-block.has-note .mod-note-name { color: hsl(190, 80%, 65%); } /* Leuchtendes Cyan */
+.player.theme-dark .mod-inst.has-inst { color: hsl(40, 95%, 60%); }                        /* Leuchtendes Amber/Gold */
+.player.theme-dark .mod-fx.has-fx { color: hsl(325, 85%, 65%); }                          /* Leuchtendes Pink */
+.player.theme-dark .mod-row[data-active="true"] { background: hsl(255, 60%, 45%); }        /* Edles Violett-Highlight */
+
+/* ─── 11. Responsive Mobile-Layout ────────────────────────────── */
+@media (max-width: 768px) {
+  body {
+    padding: 4px;
+  }
+
+  .player {
+    height: calc(100vh - 8px);
+    max-height: none;
+    border-width: 1px;
+  }
+
+  /* Controls-Leiste stapeln */
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .controls .group {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .controls button,
+  .controls .file-btn,
+  #theme-btn {
+    padding: 4px 10px; /* Größere Touch-Ziele */
+    font-size: 11px;
+  }
+
+  #mod-select {
+    max-width: none;
+    flex: 1;
+    height: 24px;
+  }
+
+  /* Scrubber vergrößern */
+  .timeline-container {
+    padding: 6px;
+  }
+  
+  #position-scrubber {
+    height: 12px;
+  }
+  
+  #position-scrubber::-webkit-slider-thumb {
+    width: 20px;
+    height: 18px;
+  }
+  #position-scrubber::-moz-range-thumb {
+    width: 20px;
+    height: 18px;
+  }
+
+  /* Hauptbereich als CSS Grid für perfektes 2D-Stacking auf Tablets/Mobile */
+  .main {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      "vu tracker"
+      "samples samples";
+    padding: 2px;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .vu-col {
+    grid-area: vu;
+    height: 100%;
+    width: 38px;
+    justify-content: space-around; /* Gleichmäßige vertikale Verteilung der Kanäle */
+    flex-shrink: 0;
+  }
+
+  .tracker {
+    grid-area: tracker;
+    height: 100%;
+    min-height: 200px;
+  }
+
+  .samples {
+    grid-area: samples;
+    width: 100%;
+    height: auto;
+    flex-shrink: 0;
+  }
+
+  .inst-scroll {
+    height: 90px;
+    max-height: 90px;
+  }
+
+  .status {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px;
+  }
+
+  .status .line {
+    flex: 1 1 45%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extrem schmale Bildschirme (Mobiltelefone) */
+  .tracker-head {
+    font-size: 9px;
+    padding: 1px 2px;
+  }
+
+  .tracker-head .col-row {
+    width: 28px;
+  }
+
+  .mod-row {
+    font-size: 9.5px;
+    padding: 0 2px;
+  }
+
+  .mod-row-idx {
+    width: 28px;
+  }
+
+  /* Noten-Spalten noch kompakter machen und Umbrüche verhindern */
+  .mod-note-block {
+    font-size: 8.5px;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+  }
+
+  .mod-note-block span {
+    margin-right: 1px;
+  }
+  
+  /* Buttons optimal fließen lassen */
+  .controls .group {
+    justify-content: center;
+    gap: 6px;
+  }
+}

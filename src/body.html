@@ -1,0 +1,138 @@
+<!--
+  Body-Markup des Players.
+
+  Aufbau (siehe styles.css für die zugehörigen Selektoren):
+    .player                 ← Workbench-Fenster
+      .drop-overlay         ← Voll-Overlay beim Drag-Over
+      .titlebar             ← Amiga-Workbench-Titel mit Dateinamen
+      .controls             ← File-Picker, Folder-Picker, Mod-Dropdown,
+                              Volume, Play-Button
+      .main
+        .vu-col             ← 4 VU-Meter
+        .tracker            ← Pattern-Anzeige (64 Zeilen × 4 Kanäle)
+        .samples            ← Instrument-Liste + Status-Panel
+      .footer
+
+  Alle interaktiven Elemente haben stabile IDs, die in app.js abgefragt
+  werden — siehe dort die "DOM-Refs"-Sektion.
+-->
+<div class="player" id="player">
+
+  <!-- Voll-Overlay; sichtbar wenn .player.drag-over aktiv ist. -->
+  <div class="drop-overlay">DROP MOD FILE OR FOLDER HERE</div>
+
+  <!-- Titelleiste im Workbench-Stil. Die Buttons links/rechts sind rein dekorativ. -->
+  <div class="titlebar">
+    <div class="left">
+      <div class="pixbtn">✕</div>
+      <span>ProTracker v2.3d // Workbench 3.0 — Standalone</span>
+    </div>
+    <div class="name" id="title-name">NO FILE LOADED</div>
+    <div class="right">
+      <button id="theme-btn">DARK</button>
+      <div class="pixbtn">▲</div>
+      <div class="pixbtn">▼</div>
+    </div>
+  </div>
+
+  <!--
+    Steuerleiste.
+
+    "DATEI…" und "ORDNER…" sind <label>s, die je einen versteckten
+    <input type="file"> umschließen. So bekommt man einen einheitlich
+    gestylten Button-Look und der Klick triggert den Datei-/Ordner-Dialog.
+
+    Das <select id="mod-select"> bleibt verborgen, solange noch keine
+    MOD-Dateien gesammelt wurden. Sobald welche per Picker oder Drop
+    dazukommen, wird es eingeblendet und gefüllt.
+  -->
+  <div class="controls">
+    <div class="group">
+      <span>LOAD:</span>
+      <label class="file-btn">
+        <input id="file-input" type="file" accept=".mod,audio/*">
+        DATEI…
+      </label>
+      <label class="file-btn">
+        <!--
+          webkitdirectory ist die de-facto Standard-API zum Picken eines
+          Ordners. directory ist ein Alias für ältere Implementierungen.
+          multiple erlaubt, dass mehrere Dateien zurückkommen.
+        -->
+        <input id="folder-input" type="file" webkitdirectory directory multiple>
+        ORDNER…
+      </label>
+      <select id="mod-select" style="display:none;"></select>
+      <label id="playlist-label" style="display:none; font-size:10px; font-weight:bold; margin-left:6px; cursor:pointer;">
+        <input type="checkbox" id="playlist-mode" checked> AUTO-PLAY
+      </label>
+      <span id="drag-hint" style="color:#666; margin-left:4px;">oder Drag&amp;Drop (Datei/Ordner)</span>
+    </div>
+    <div class="group">
+      <span id="pos-display">POS: --/--</span>
+      <span>VOL:</span>
+      <input id="volume" type="range" min="0" max="1" step="0.01" value="1">
+      <button id="play-btn" disabled>PLAY AUDIO</button>
+    </div>
+  </div>
+
+  <!-- Timeline-Scrubber zum Springen im Song (Patterns) -->
+  <div class="timeline-container">
+    <span class="scrub-lbl">TRACK POSITION:</span>
+    <input id="position-scrubber" type="range" min="0" max="0" value="0" step="1" disabled>
+  </div>
+
+  <div class="main">
+    <!-- 4 VU-Meter, ein Balken pro Kanal. Höhe wird per JS gesetzt. -->
+    <div class="vu-col">
+      <div class="vu"><span class="lbl">CH1</span><div class="meter"><div class="bar" id="vu-0"></div></div></div>
+      <div class="vu"><span class="lbl">CH2</span><div class="meter"><div class="bar" id="vu-1"></div></div></div>
+      <div class="vu"><span class="lbl">CH3</span><div class="meter"><div class="bar" id="vu-2"></div></div></div>
+      <div class="vu"><span class="lbl">CH4</span><div class="meter"><div class="bar" id="vu-3"></div></div></div>
+    </div>
+
+    <!-- Tracker-Anzeige: 64 Zeilen × 4 Kanäle, aktive Zeile zentriert. -->
+    <div class="tracker">
+      <div class="tracker-head">
+        <span class="col-row">ROW</span>
+        <span class="col-ch">CH1</span>
+        <span class="col-ch">CH2</span>
+        <span class="col-ch">CH3</span>
+        <span class="col-ch">CH4</span>
+      </div>
+      <div class="rows" id="rows">
+        <div class="empty-rows">
+          <div>♦ AMIGA PROTRACKER MOD PLAYER ♦</div>
+          <div class="hint">
+            MOD-Datei per File-Picker laden, ganze Ordner droppen oder
+            den Ordner-Picker nutzen. Unterstützt alle ProTracker-Module
+            mit 4 Kanälen (M.K., FLT4, 4CHN, …).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rechte Spalte: Instrument-Liste + Statuszeilen. -->
+    <div class="samples">
+      <h3>INSTRUMENTS</h3>
+      <div class="inst-scroll" id="instruments"></div>
+      <div class="status">
+        <div class="line"><span>STATUS:</span><span id="status-state">STOPPED</span></div>
+        <div class="line"><span>ROW:</span><span id="status-row">--/--</span></div>
+        <div class="line"><span>BPM:</span><span id="status-bpm">---</span></div>
+        <div class="line"><span>SPEED:</span><span id="status-speed">---</span></div>
+        <div class="line"><span>NAME:</span><span id="status-name">---</span></div>
+        <div class="line"><span>FILE:</span><span id="status-file">---</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    Footer. Der Platzhalter {{VERSION}} wird beim Build durch den
+    Inhalt der VERSION-Datei ersetzt (siehe build.py).
+  -->
+  <div class="footer">
+    <span>♦ AMIGA PROTRACKER RENDERER ♦ STANDALONE BUILD v{{VERSION}}</span>
+    <span id="footer-state">■ IDLE</span>
+  </div>
+</div>
