@@ -1,0 +1,294 @@
+import Foundation
+
+public struct Note: Sendable, Codable {
+    public let instrument: Int      // 0..31 (0 = kein Instrument)
+    public let period: Int          // 12-Bit-Wert für Amiga-Perioden
+    public let effectId: Int        // Effekt-ID (inkl. Extended 0xE0..0xEF)
+    public let effectData: Int      // Effekt-Datenbyte (0..255)
+    
+    public var hasEffect: Bool {
+        return effectId != 0 || effectData != 0
+    }
+    
+    public var effectHigh: Int {
+        return (effectData >> 4) & 0x0F
+    }
+    
+    public var effectLow: Int {
+        return effectData & 0x0F
+    }
+    
+    public init(instrument: Int, period: Int, effectId: Int, effectData: Int) {
+        self.instrument = instrument
+        self.period = period
+        self.effectId = effectId
+        self.effectData = effectData
+    }
+}
+
+public struct Row: Sendable, Codable {
+    public let notes: [Note] // Immer exakt 4 Kanäle
+    
+    public init(notes: [Note]) {
+        self.notes = notes
+    }
+}
+
+public struct Pattern: Sendable, Codable {
+    public let rows: [Row] // Immer exakt 64 Zeilen
+    
+    public init(rows: [Row]) {
+        self.rows = rows
+    }
+}
+
+public struct Instrument: Sendable, Codable {
+    public let index: Int
+    public let name: String
+    public let length: Int          // In Bytes
+    public let finetune: Int        // -8..7
+    public let volume: Int          // 0..64
+    public let repeatOffset: Int    // In Bytes
+    public let repeatLength: Int    // In Bytes
+    public let bytes: [Int8]        // Signed 8-bit Sample-Daten
+    public let isLooped: Bool
+    
+    public init(index: Int, name: String, length: Int, finetune: Int, volume: Int, repeatOffset: Int, repeatLength: Int, bytes: [Int8], isLooped: Bool) {
+        self.index = index
+        self.name = name
+        self.length = length
+        self.finetune = finetune
+        self.volume = volume
+        self.repeatOffset = repeatOffset
+        self.repeatLength = repeatLength
+        self.bytes = bytes
+        self.isLooped = isLooped
+    }
+}
+
+public struct Mod: Sendable, Codable {
+    public let name: String
+    public let length: Int          // Anzahl der Songpositionen in der Playlist
+    public let patternTable: [Int]  // Playlist (Indizes der Patterns)
+    public let instruments: [Instrument?] // 1-basiertes Array (Index 0 ist nil)
+    public let patterns: [Pattern]
+    
+    public init(name: String, length: Int, patternTable: [Int], instruments: [Instrument?], patterns: [Pattern]) {
+        self.name = name
+        self.length = length
+        self.patternTable = patternTable
+        self.instruments = instruments
+        self.patterns = patterns
+    }
+}
+
+public class ModParser {
+    public enum ParserError: Error {
+        case fileTooSmall
+        case invalidSignature(String)
+    }
+    
+    public static func parse(data: Data) throws -> Mod {
+        guard data.count >= 1084 else {
+            throw ParserError.fileTooSmall
+        }
+        
+        // 1. Songname parsen (Offset 0, 20 Bytes)
+        let nameBytes = data.subdata(in: 0..<20)
+        let name = String(decoding: nameBytes.filter { $0 != 0 }, as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 2. Signatur prüfen (Offset 1080, 4 Bytes)
+        let sigBytes = data.subdata(in: 1080..<1084)
+        let sig = String(decoding: sigBytes, as: UTF8.self)
+        let validSigs = ["M.K.", "M!K!", "FLT4", "FLT8", "4CHN", "6CHN", "8CHN"]
+        guard validSigs.contains(sig) else {
+            throw ParserError.invalidSignature(sig)
+        }
+        
+        // 3. Playlist / PatternTable parsen (Offset 950)
+        let songLength = Int(data[950])
+        var patternTable = [Int]()
+        for i in 0..<songLength {
+            patternTable.append(Int(data[952 + i]))
+        }
+        
+        let maxPatternIndex = patternTable.max() ?? 0
+        
+        // 4. Instrumenten-Header parsen (Offset 20, 31 Instrumente zu je 30 Bytes)
+        var instruments: [Instrument?] = [nil] // Index 0 ist leer
+        var sampleStartOffset = 1084 + (maxPatternIndex + 1) * 1024
+        
+        for i in 0..<31 {
+            let offset = 20 + i * 30
+            let header = data.subdata(in: offset..<(offset + 30))
+            
+            let instNameBytes = header.subdata(in: 0..<22)
+            let instName = String(decoding: instNameBytes.filter { $0 != 0 }, as: UTF8.self)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Big-Endian Words
+            let instLength = 2 * Int(UInt16(header[22]) << 8 | UInt16(header[23]))
+            
+            // Finetune (signed 4-bit nibble)
+            var finetune = Int(header[24] & 0x0F)
+            if finetune > 7 { finetune -= 16 }
+            
+            let volume = Int(header[25])
+            let repeatOffset = 2 * Int(UInt16(header[26]) << 8 | UInt16(header[27]))
+            let repeatLength = 2 * Int(UInt16(header[28]) << 8 | UInt16(header[29]))
+            
+            // Sample-Bytes extrahieren
+            let start = min(sampleStartOffset, data.count)
+            let end = min(start + instLength, data.count)
+            let sampleData = data.subdata(in: start..<end)
+            
+            // Convert to signed Int8
+            let bytes = sampleData.map { Int8(bitPattern: $0) }
+            sampleStartOffset += instLength
+            
+            let isLooped = repeatOffset > 0 || repeatLength > 2
+            
+            let instrument = Instrument(
+                index: i + 1,
+                name: instName,
+                length: instLength,
+                finetune: finetune,
+                volume: volume,
+                repeatOffset: repeatOffset,
+                repeatLength: repeatLength,
+                bytes: bytes,
+                isLooped: isLooped
+            )
+            instruments.append(instrument)
+        }
+        
+        // 5. Patterns parsen (Ab Offset 1084, jedes Pattern ist 1024 Bytes groß)
+        var patterns = [Pattern]()
+        for p in 0...maxPatternIndex {
+            let patternOffset = 1084 + p * 1024
+            var rows = [Row]()
+            
+            for r in 0..<64 {
+                let rowOffset = patternOffset + r * 16
+                var notes = [Note]()
+                
+                for c in 0..<4 {
+                    let noteOffset = rowOffset + c * 4
+                    let b0 = data[noteOffset]
+                    let b1 = data[noteOffset + 1]
+                    let b2 = data[noteOffset + 2]
+                    let b3 = data[noteOffset + 3]
+                    
+                    // Instrumenten-Index: Splitting über Byte 0 und Byte 2
+                    let instrument = Int(b0 & 0xF0) | Int(b2 >> 4)
+                    
+                    // Period (12-bit)
+                    let period = Int(b0 & 0x0F) << 8 | Int(b1)
+                    
+                    // Effekt
+                    var effectId = Int(b2 & 0x0F)
+                    var effectData = Int(b3)
+                    
+                    if effectId == 0x0E {
+                        effectId = 0xE0 | (effectData >> 4)
+                        effectData &= 0x0F
+                    }
+                    
+                    notes.append(Note(
+                        instrument: instrument,
+                        period: period,
+                        effectId: effectId,
+                        effectData: effectData
+                    ))
+                }
+                rows.append(Row(notes: notes))
+            }
+            patterns.append(Pattern(rows: rows))
+        }
+        
+        return Mod(
+            name: name,
+            length: songLength,
+            patternTable: patternTable,
+            instruments: instruments,
+            patterns: patterns
+        )
+    }
+    
+    public static func generateDemoMod() -> Mod {
+        var instruments = [Instrument?]()
+        instruments.append(nil) // index 0
+        
+        // Square wave sample bytes
+        var bytes = [Int8](repeating: 0, count: 256)
+        for i in 0..<256 {
+            bytes[i] = i < 128 ? 64 : -64
+        }
+        
+        let demoInst = Instrument(
+            index: 1,
+            name: "Cyber Synth Osc",
+            length: 256,
+            finetune: 0,
+            volume: 64,
+            repeatOffset: 0,
+            repeatLength: 256,
+            bytes: bytes,
+            isLooped: true
+        )
+        instruments.append(demoInst)
+        
+        for i in 2...31 {
+            instruments.append(Instrument(
+                index: i,
+                name: "Empty Sample \(i)",
+                length: 0,
+                finetune: 0,
+                volume: 0,
+                repeatOffset: 0,
+                repeatLength: 0,
+                bytes: [],
+                isLooped: false
+            ))
+        }
+        
+        var rows = [Row]()
+        // C-major scale note periods: C-3 (214), E-3 (171), G-3 (144), C-4 (107)
+        let melody = [214, 171, 144, 107, 144, 171]
+        for r in 0..<64 {
+            var notes = [Note]()
+            
+            // Channel 1: Lead Melody
+            if r % 4 == 0 {
+                let notePeriod = melody[(r / 4) % melody.count]
+                notes.append(Note(instrument: 1, period: notePeriod, effectId: 0, effectData: 0))
+            } else {
+                notes.append(Note(instrument: 0, period: 0, effectId: 0, effectData: 0))
+            }
+            
+            // Channel 2: Arpeggio Chords
+            if r % 8 == 0 {
+                notes.append(Note(instrument: 1, period: 214, effectId: 0x00, effectData: 0x47))
+            } else {
+                notes.append(Note(instrument: 0, period: 0, effectId: 0, effectData: 0))
+            }
+            
+            // Channels 3 & 4 empty
+            notes.append(Note(instrument: 0, period: 0, effectId: 0, effectData: 0))
+            notes.append(Note(instrument: 0, period: 0, effectId: 0, effectData: 0))
+            
+            rows.append(Row(notes: notes))
+        }
+        
+        let pattern = Pattern(rows: rows)
+        
+        return Mod(
+            name: "Cyber Synth Demo",
+            length: 1,
+            patternTable: [0],
+            instruments: instruments,
+            patterns: [pattern]
+        )
+    }
+}
