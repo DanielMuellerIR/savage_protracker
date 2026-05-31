@@ -24,6 +24,7 @@ public final class RealtimePlaybackState: Sendable {
     
     // Elapsed frames for timing calculation
     nonisolated(unsafe) public var elapsedFrames: UInt64 = 0
+    nonisolated(unsafe) public var waveWriteIndex: Int = 0
     
     public init() {}
 }
@@ -32,6 +33,13 @@ public final class RealtimeVUBuffer: @unchecked Sendable {
     public let pointer: UnsafeMutablePointer<Float>
     public init(pointer: UnsafeMutablePointer<Float>) {
         self.pointer = pointer
+    }
+}
+
+public final class RealtimeWaveBuffer: @unchecked Sendable {
+    public let channelWavesPointer: UnsafeMutablePointer<Float>
+    public init(channelWaves: UnsafeMutablePointer<Float>) {
+        self.channelWavesPointer = channelWaves
     }
 }
 
@@ -81,11 +89,13 @@ public final class ModPlayerCoordinator: ObservableObject {
     }
     
     @Published public var channelWaveforms: [[Float]] = [
-        [Float](repeating: 0, count: 20),
-        [Float](repeating: 0, count: 20),
-        [Float](repeating: 0, count: 20),
-        [Float](repeating: 0, count: 20)
+        [Float](repeating: 0, count: 32),
+        [Float](repeating: 0, count: 32),
+        [Float](repeating: 0, count: 32),
+        [Float](repeating: 0, count: 32)
     ]
+    
+    @Published public var masterSamples: [Float] = [Float](repeating: 0, count: 128)
     
     // Vorallozierte DSP-Daten
     private let channels = [DSPChannel(index: 1), DSPChannel(index: 2), DSPChannel(index: 3), DSPChannel(index: 4)]
@@ -94,8 +104,10 @@ public final class ModPlayerCoordinator: ObservableObject {
     // ARC-managed state captured by the AVAudioSourceNode closure
     private var playbackState: RealtimePlaybackState?
     
-    // Peak levels raw pointer for atomic visual synchronization
+    // Raw pointers for atomic visual synchronization (preallocated, thread-safe, lock-free)
     nonisolated(unsafe) private let peakLevelsPointer: UnsafeMutablePointer<Float>
+    nonisolated(unsafe) private let masterWavesPointer: UnsafeMutablePointer<Float>
+    nonisolated(unsafe) private let channelWavesPointer: UnsafeMutablePointer<Float>
     
     // Timer for VU meter visual updates
     private var vuUpdateTimer: Timer?
@@ -105,10 +117,20 @@ public final class ModPlayerCoordinator: ObservableObject {
         for i in 0..<4 {
             self.peakLevelsPointer[i] = 0.0
         }
+        self.masterWavesPointer = UnsafeMutablePointer<Float>.allocate(capacity: 128)
+        for i in 0..<128 {
+            self.masterWavesPointer[i] = 0.0
+        }
+        self.channelWavesPointer = UnsafeMutablePointer<Float>.allocate(capacity: 128) // 4 channels * 32 samples
+        for i in 0..<128 {
+            self.channelWavesPointer[i] = 0.0
+        }
     }
     
     deinit {
         peakLevelsPointer.deallocate()
+        masterWavesPointer.deallocate()
+        channelWavesPointer.deallocate()
     }
     
     public func setMod(_ mod: Mod) {
@@ -168,10 +190,12 @@ public final class ModPlayerCoordinator: ObservableObject {
         
         let dspChannels = channels
         let vuBuffer = RealtimeVUBuffer(pointer: peakLevelsPointer)
+        let waveBuffer = RealtimeWaveBuffer(channelWaves: channelWavesPointer)
         
         let renderBlock = Self.createRenderBlock(
             state: state,
             vuBuffer: vuBuffer,
+            waveBuffer: waveBuffer,
             dspChannels: dspChannels,
             mod: mod,
             sampleRate: sampleRate
@@ -194,6 +218,21 @@ public final class ModPlayerCoordinator: ObservableObject {
         engine.connect(sourceNode, to: lowPass, format: stereoFormat)
         engine.connect(lowPass, to: mixer, format: stereoFormat)
         
+        // Setup tap for real-time oscilloscope of the master output
+        let tapFormat = mixer.outputFormat(forBus: 0)
+        let mWaves = self.masterWavesPointer
+        mixer.installTap(onBus: 0, bufferSize: 1024, format: tapFormat) { buffer, time in
+            guard let channelData = buffer.floatChannelData?[0] else { return }
+            let frameLength = Int(buffer.frameLength)
+            let step = max(1, frameLength / 128)
+            for i in 0..<128 {
+                let idx = i * step
+                if idx < frameLength {
+                    mWaves[i] = channelData[idx]
+                }
+            }
+        }
+        
         // iOS spezifisch: AudioSession aktivieren (Dummy-Aufruf auf macOS, funktioniert überall)
         #if os(iOS)
         do {
@@ -215,7 +254,10 @@ public final class ModPlayerCoordinator: ObservableObject {
     }
     
     public func stop() {
-        audioEngine?.stop()
+        if let engine = audioEngine {
+            engine.mainMixerNode.removeTap(onBus: 0)
+            engine.stop()
+        }
         audioEngine = nil
         sourceNode = nil
         isPlaying = false
@@ -286,12 +328,23 @@ public final class ModPlayerCoordinator: ObservableObject {
         }
         self.vuLevels = newLevels
         
-        var newWaveforms = self.channelWaveforms
+        // Update true channel waveforms from channelWavesPointer
+        var newWaves = self.channelWaveforms
         for i in 0..<4 {
-            newWaveforms[i].removeFirst()
-            newWaveforms[i].append(newLevels[i])
+            var wave = [Float](repeating: 0.0, count: 32)
+            for j in 0..<32 {
+                wave[j] = self.channelWavesPointer[i * 32 + j]
+            }
+            newWaves[i] = wave
         }
-        self.channelWaveforms = newWaveforms
+        self.channelWaveforms = newWaves
+        
+        // Update true master oscilloscope samples from masterWavesPointer
+        var newMasterOsc = [Float](repeating: 0.0, count: 128)
+        for j in 0..<128 {
+            newMasterOsc[j] = self.masterWavesPointer[j]
+        }
+        self.masterSamples = newMasterOsc
         
         // Read progress directly from shared state (100% lock-free, allocation-free)
         if let state = self.playbackState {
@@ -336,6 +389,7 @@ public final class ModPlayerCoordinator: ObservableObject {
     nonisolated private static func createRenderBlock(
         state: RealtimePlaybackState,
         vuBuffer: RealtimeVUBuffer,
+        waveBuffer: RealtimeWaveBuffer,
         dspChannels: [DSPChannel],
         mod: Mod,
         sampleRate: Double
@@ -473,9 +527,16 @@ public final class ModPlayerCoordinator: ObservableObject {
                 
                 let hasSolo = dspChannels.contains(where: { $0.isSoloed })
                 
+                // Roll the wave sample write index
+                state.waveWriteIndex = (state.waveWriteIndex + 1) % 32
+                let wIdx = state.waveWriteIndex
+                
                 for i in 0..<4 {
                     let ch = dspChannels[i]
-                    guard let inst = ch.instrument, inst.bytes.count > 0 else { continue }
+                    guard let inst = ch.instrument, inst.bytes.count > 0 else {
+                        waveBuffer.channelWavesPointer[i * 32 + wIdx] = 0.0
+                        continue
+                    }
                     
                     var sampleVal: Float = 0.0
                     let idx = Int(ch.sampleIndex)
@@ -517,11 +578,15 @@ public final class ModPlayerCoordinator: ObservableObject {
                     }
                     
                     if isChannelMuted {
+                        waveBuffer.channelWavesPointer[i * 32 + wIdx] = 0.0
                         continue
                     }
                     
                     let volumeFactor = ch.currentVolume / 64.0
                     let outputSample = sampleVal * volumeFactor
+                    
+                    // Write to channel waves buffer (Thread-safe, preallocated)
+                    waveBuffer.channelWavesPointer[i * 32 + wIdx] = outputSample
                     
                     // Panning LRRL mit Separation
                     let p = ch.panning
@@ -567,9 +632,14 @@ public final class ModPlayerCoordinator: ObservableObject {
         ch.playing = true
     }
     
-    public func exportActiveModToWav(destinationURL: URL, durationSeconds: Double = 180.0) throws {
-        guard let mod = activeMod else { return }
-        
+    nonisolated public func exportActiveModToWav(
+        mod: Mod,
+        stereoSeparation: Float,
+        useInterpolation: Bool,
+        palClock: Bool,
+        destinationURL: URL,
+        durationSeconds: Double = 180.0
+    ) throws {
         let sampleRate = 44100.0
         guard let stereoFormat = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2) else {
             throw NSError(domain: "ModPlayer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Konnte Audio-Format nicht erstellen"])
@@ -587,18 +657,24 @@ public final class ModPlayerCoordinator: ObservableObject {
         state.bpm = 125
         state.outputsPerTick = sampleRate * 60.0 / (125.0 * 24.0)
         state.outputsUntilNextTick = 0.0
-        state.stereoSeparation = self.stereoSeparation
-        state.useInterpolation = self.useInterpolation
-        state.palClock = self.palClock
+        state.stereoSeparation = stereoSeparation
+        state.useInterpolation = useInterpolation
+        state.palClock = palClock
         
         let dummyPeaks = UnsafeMutablePointer<Float>.allocate(capacity: 4)
         defer { dummyPeaks.deallocate() }
         for j in 0..<4 { dummyPeaks[j] = 0.0 }
         let vuBuffer = RealtimeVUBuffer(pointer: dummyPeaks)
         
+        let dummyWaves = UnsafeMutablePointer<Float>.allocate(capacity: 128)
+        defer { dummyWaves.deallocate() }
+        for j in 0..<128 { dummyWaves[j] = 0.0 }
+        let waveBuffer = RealtimeWaveBuffer(channelWaves: dummyWaves)
+        
         let block = Self.createRenderBlock(
             state: state,
             vuBuffer: vuBuffer,
+            waveBuffer: waveBuffer,
             dspChannels: renderChannels,
             mod: mod,
             sampleRate: sampleRate

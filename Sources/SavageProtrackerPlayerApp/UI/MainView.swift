@@ -67,9 +67,6 @@ struct MainView: View {
     @State private var diskRotation: Double = 0.0
     @State private var isDiskAnimating = false
     
-    // Dynamic Master Oscilloscope history
-    @State private var masterOscilloscope: [CGFloat] = [CGFloat](repeating: 0, count: 40)
-    
     // Active Preview hover card
     @State private var hoveredInstrumentIndex: Int? = nil
     
@@ -261,6 +258,7 @@ struct MainView: View {
             .onAppear {
                 isDiskAnimating = coordinator.isPlaying
                 setupNotifications()
+                loadLocalAudioFolder()
             }
             .onChange(of: coordinator.isPlaying) { isPlaying in
                 isDiskAnimating = isPlaying
@@ -342,7 +340,7 @@ struct MainView: View {
                     if let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles]) {
                         while let fileURL = enumerator.nextObject() as? URL {
                             let fileAccessed = fileURL.startAccessingSecurityScopedResource()
-                            if fileURL.pathExtension.lowercased() == "mod" {
+                            if isModFile(fileURL) {
                                 let uniquePrefix = UUID().uuidString
                                 let destURL = tempDir.appendingPathComponent("\(uniquePrefix)_\(fileURL.lastPathComponent)")
                                 try? fm.removeItem(at: destURL)
@@ -358,7 +356,7 @@ struct MainView: View {
                             }
                         }
                     }
-                } else if url.pathExtension.lowercased() == "mod" {
+                } else if isModFile(url) {
                     let uniquePrefix = UUID().uuidString
                     let destURL = tempDir.appendingPathComponent("\(uniquePrefix)_\(url.lastPathComponent)")
                     try? fm.removeItem(at: destURL)
@@ -432,6 +430,35 @@ struct MainView: View {
         return name
     }
     
+    private func isModFile(_ url: URL) -> Bool {
+        let ext = url.pathExtension.lowercased()
+        let name = url.lastPathComponent.lowercased()
+        return ext == "mod" || name.hasPrefix("mod.")
+    }
+    
+    private func loadLocalAudioFolder() {
+        let fm = FileManager.default
+        var candidateDirs: [URL] = []
+        candidateDirs.append(URL(fileURLWithPath: fm.currentDirectoryPath).appendingPathComponent("audio"))
+        if let bundlePath = Bundle.main.bundlePath as String? {
+            let appDir = URL(fileURLWithPath: bundlePath).deletingLastPathComponent()
+            candidateDirs.append(appDir.appendingPathComponent("audio"))
+        }
+        for dir in candidateDirs {
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: dir.path, isDirectory: &isDir), isDir.boolValue else { continue }
+            guard let contents = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { continue }
+            let mods = contents.filter { isModFile($0) }
+                .sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending })
+            if mods.isEmpty { continue }
+            handleDroppedURLs(mods)
+            if currentPlaylistIndex == 0 {
+                coordinator.play()
+            }
+            return
+        }
+    }
+    
     private func triggerDemoPlay() {
         let demoMod = ModParser.generateDemoMod()
         coordinator.setMod(demoMod)
@@ -453,7 +480,12 @@ struct MainView: View {
     
     // MARK: - WAV Export helper
     private func runWavExport() {
-        guard coordinator.activeMod != nil else { return }
+        guard let mod = coordinator.activeMod else { return }
+        let sep = coordinator.stereoSeparation
+        let interp = coordinator.useInterpolation
+        let pal = coordinator.palClock
+        let limit = exportSecondsLimit
+        let playerCoordinator = coordinator
         
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [UTType.wav]
@@ -467,7 +499,14 @@ struct MainView: View {
                 
                 DispatchQueue.global(qos: .userInitiated).async {
                     do {
-                        try coordinator.exportActiveModToWav(destinationURL: destURL, durationSeconds: exportSecondsLimit)
+                        try playerCoordinator.exportActiveModToWav(
+                            mod: mod,
+                            stereoSeparation: sep,
+                            useInterpolation: interp,
+                            palClock: pal,
+                            destinationURL: destURL,
+                            durationSeconds: limit
+                        )
                         DispatchQueue.main.async {
                             self.isExporting = false
                             self.exportStatusMessage = "Erfolgreich gesichert!"
@@ -883,8 +922,10 @@ struct MainView: View {
                     .onAppear {
                         // Increment rotation
                         Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { _ in
-                            if isDiskAnimating {
-                                diskRotation += 4.0
+                            Task { @MainActor in
+                                if isDiskAnimating {
+                                    diskRotation += 4.0
+                                }
                             }
                         }
                     }
@@ -1143,20 +1184,17 @@ struct MainView: View {
             
             GeometryReader { geo in
                 Path { path in
-                    let count = masterOscilloscope.count
-                    guard count > 0 else { return }
-                    let step = geo.size.width / CGFloat(count - 1)
+                    let samples = coordinator.masterSamples
+                    guard samples.count > 0 else { return }
+                    let step = geo.size.width / CGFloat(samples.count - 1)
                     
-                    path.move(to: CGPoint(x: 0, y: geo.size.height * 0.5))
-                    for idx in 0..<count {
-                        let val = masterOscilloscope[idx]
-                        // Bouncing lines centered on y = height/2
-                        let offset = geo.size.height * 0.45 * val
+                    path.move(to: CGPoint(x: 0, y: geo.size.height * CGFloat(0.5 - Double(samples[0]) * 0.5)))
+                    for idx in 1..<samples.count {
+                        let val = Double(samples[idx])
                         let x = CGFloat(idx) * step
-                        path.addLine(to: CGPoint(x: x, y: geo.size.height * 0.5 - offset))
-                        path.move(to: CGPoint(x: x, y: geo.size.height * 0.5 + offset))
+                        let y = geo.size.height * CGFloat(0.5 - val * 0.5)
+                        path.addLine(to: CGPoint(x: x, y: y))
                     }
-                    path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height * 0.5))
                 }
                 .stroke(theme == .workbench ? Color.amigaOrange : Color.spaceAccent, lineWidth: 1.5)
             }
@@ -1167,19 +1205,6 @@ struct MainView: View {
                 RoundedRectangle(cornerRadius: 4)
                     .stroke(Color.spaceAccent.opacity(0.15), lineWidth: 1)
             )
-            .onAppear {
-                // Update oscilloscope rolling buffer from active coordinator VU peaks
-                Timer.scheduledTimer(withTimeInterval: 0.04, repeats: true) { _ in
-                    let leftPeak = coordinator.vuLevels[0] + coordinator.vuLevels[3]
-                    let rightPeak = coordinator.vuLevels[1] + coordinator.vuLevels[2]
-                    let mixPeak = CGFloat(min(1.0, (leftPeak + rightPeak) * 0.6))
-                    
-                    var newOsc = masterOscilloscope
-                    newOsc.removeFirst()
-                    newOsc.append(mixPeak)
-                    self.masterOscilloscope = newOsc
-                }
-            }
             
             // Stereo Separation bleed adjustment slider
             HStack(spacing: 8) {

@@ -74,9 +74,9 @@ p_savage_protracker/
 - [x] **Todo 3**: Swift-Dateien verschieben & Paket- und Quelltext-Umbenennung zu `SavageProtrackerPlayer` durchführen
 - [x] **Todo 4**: macOS Hilfsskripte (`build_app.sh`, `build_dmg.sh`, `publish_github.sh`) integrieren
 - [x] **Todo 5**: Grafische Assets (`AppIcon.png` & `DmgBackground.png`) für App und DMG generieren
-- [ ] **Todo 6**: Echtzeit-Oszilloskope im Swift-Player implementieren:
-  - [ ] Master-Mix-Wellenform über `installTap` auf `audioEngine.mainMixerNode` abgreifen
-  - [ ] Echte 4-Kanal-Audio-Wellenformen über safe Puffer im `AVAudioSourceNode` Render-Block mitschreiben
-- [ ] **Todo 7**: Swift-UI-Layout anpassen & Performance-Fokussierung (flüssigeres Scrollen des Tracker-Grids)
-- [ ] **Todo 8**: Builds verifizieren und `swift test` ausführen
+- [x] **Todo 6**: Echtzeit-Oszilloskope im Swift-Player implementieren:
+  - [x] Master-Mix-Wellenform über `installTap` auf `audioEngine.mainMixerNode` abgreifen
+  - [x] Echte 4-Kanal-Audio-Wellenformen über safe Puffer im `AVAudioSourceNode` Render-Block mitschreiben
+- [x] **Todo 7**: Swift-UI-Layout anpassen & Performance-Fokussierung (flüssigeres Scrollen des Tracker-Grids)
+- [x] **Todo 8**: Builds verifizieren und `swift test` ausführen
 - [ ] **Todo 9**: Ausführliche, ansprechende `README.md` im Stammverzeichnis anlegen (Gegenstück zu `vicious-sidplayer`)
