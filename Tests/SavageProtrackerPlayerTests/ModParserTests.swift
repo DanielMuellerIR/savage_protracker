@@ -148,6 +148,33 @@ final class ModParserTests: XCTestCase {
         channel.performTick(tick: -5, sampleRate: 44100.0, clockRate: 3546894.6)
         XCTAssertTrue(channel.sampleSpeed >= 0.0)
     }
+
+    func testLongOneShotSampleKeepsAdvancing() {
+        let bytes = [Int8](repeating: 64, count: 12_000)
+        let instrument = Instrument(
+            index: 1,
+            name: "Long One Shot",
+            length: bytes.count,
+            finetune: 0,
+            volume: 64,
+            repeatOffset: 0,
+            repeatLength: 0,
+            bytes: bytes,
+            isLooped: false
+        )
+        let channel = DSPChannel(index: 1)
+        let note = Note(instrument: 1, period: 428, effectId: 0, effectData: 0)
+
+        channel.playNote(note, instruments: [nil, instrument])
+        channel.performTick(tick: 0, sampleRate: 44100.0, clockRate: 3546894.6)
+
+        for _ in 0..<4_000 {
+            channel.sampleIndex += channel.sampleSpeed
+        }
+
+        XCTAssertGreaterThan(channel.sampleIndex, 0)
+        XCTAssertLessThan(Int(channel.sampleIndex), instrument.length)
+    }
     
     func testParserErrorResilience() {
         // Test parsing too small data
@@ -239,17 +266,25 @@ final class ModParserTests: XCTestCase {
         print("---------------------------")
     }
     
-    func testExponentialFinetuneTuning() {
-        // C-1 standard note period = 856
-        let basePeriod: Float = 856.0
-        
-        // Finetune -8 (1 semitone down) -> should be ~907
-        let pDown8 = basePeriod * pow(2.0, -(-8.0) / 96.0)
-        XCTAssertEqual(round(pDown8), 907.0)
-        
-        // Finetune +7 (7/8 semitones up) -> should be ~814
-        let pUp7 = basePeriod * pow(2.0, -(7.0) / 96.0)
-        XCTAssertEqual(round(pUp7), 814.0)
+    func testSwiftFinetuneMatchesHtmlWorkletApproximation() {
+        let instrument = Instrument(
+            index: 1,
+            name: "Fine",
+            length: 8,
+            finetune: 7,
+            volume: 64,
+            repeatOffset: 0,
+            repeatLength: 0,
+            bytes: [1, 2, 3, 4, 5, 6, 7, 8],
+            isLooped: false
+        )
+        let channel = DSPChannel(index: 1)
+        let note = Note(instrument: 1, period: 856, effectId: 0, effectData: 0)
+
+        channel.playNote(note, instruments: [nil, instrument])
+
+        XCTAssertEqual(channel.period, 849.0)
+        XCTAssertEqual(channel.currentPeriod, 849.0)
     }
     
     func testDemoModGeneration() {

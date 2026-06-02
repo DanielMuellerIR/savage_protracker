@@ -181,8 +181,9 @@ public final class DSPChannel: Sendable {
         if note.period > 0 {
             let activeInst = self.setInstrument ?? self.instrument
             let finetune = Float(activeInst?.finetune ?? 0)
-            // Mathematical exponential finetuning: period = period * 2^(-finetune / 96)
-            self.setPeriod = Float(note.period) * pow(2.0, -finetune / 96.0)
+            // Gleiche Finetune-Näherung wie im HTML-Worklet: Period minus
+            // signed nibble. Das hält Swift und Browser klanglich synchron.
+            self.setPeriod = Float(note.period) - finetune
             self.setCurrentPeriod = true
             self.setSampleIndex = 0.0
         }

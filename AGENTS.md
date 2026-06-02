@@ -67,7 +67,7 @@ p_savage_protracker/
 
 ---
 
-## Aktuelle Todos (Release 1.2.9-dev)
+## Aktuelle Todos (Release 1.2.10-dev)
 
 - [x] **Todo 1**: Git-Repository initialisieren & Stammdateien anlegen (`VERSION`, `LICENSE`, `.gitignore`, `AGENTS.md`)
 - [x] **Todo 2**: HTML5-Dateien verschieben & `build.py` anpassen (Ausgabe zu `savage-protracker-player.html`)
@@ -83,6 +83,7 @@ p_savage_protracker/
 - [x] **Todo 10**: Swift-App-Startcrash reproduzieren, Ursache beheben und mit `swift test` plus App-Start selbstständig verifizieren
 - [x] **Todo 11**: HTML5-Variante so anpassen, dass gedroppte MOD-Dateien oder Ordner sofort die Wiedergabe starten
 - [x] **Todo 12**: Copyright-geschützte Test-MODs im Ordner `audio/` strikt aus Git heraushalten und vor GitHub-Veröffentlichung erneut prüfen
+- [x] **Todo 13**: Swift-Finetune wieder an HTML-Worklet-Näherung angleichen und langen One-Shot-Sample-Fortschritt per Test absichern
 
 ## Pflicht-Regressionstests
 

@@ -617,7 +617,7 @@ public final class ModPlayerCoordinator: ObservableObject {
         
         // C-3 note period = 214
         let finetune = Float(inst.finetune)
-        ch.period = 214.0 * Float(pow(2.0, -Double(finetune / 96.0)))
+        ch.period = 214.0 - finetune
         ch.currentPeriod = ch.period
         ch.sampleIndex = 0.0
         ch.playing = true
