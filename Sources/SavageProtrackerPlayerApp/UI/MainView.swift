@@ -452,9 +452,6 @@ struct MainView: View {
                 .sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending })
             if mods.isEmpty { continue }
             handleDroppedURLs(mods)
-            if currentPlaylistIndex == 0 {
-                coordinator.play()
-            }
             return
         }
     }
@@ -467,10 +464,19 @@ struct MainView: View {
     
     // MARK: - Notification helper
     private func setupNotifications() {
+        #if os(macOS)
+        // SwiftPM startet die App als nacktes Executable ohne .app-Bundle.
+        // UserNotifications crasht in diesem Fall beim Zugriff auf
+        // current(), deshalb werden Notifications dort übersprungen.
+        guard Bundle.main.bundleURL.pathExtension == "app" else { return }
+        #endif
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
     
     private func fireNotification(for track: String) {
+        #if os(macOS)
+        guard Bundle.main.bundleURL.pathExtension == "app" else { return }
+        #endif
         let content = UNMutableNotificationContent()
         content.title = "Amiga ModPlayer spielt:"
         content.body = track

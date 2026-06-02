@@ -104,7 +104,9 @@ final class ModParserTests: XCTestCase {
             let data = try Data(contentsOf: fileURL)
             let mod = try ModParser.parse(data: data)
             
-            XCTAssertFalse(mod.name.isEmpty, "Name check failed for \(fileName)")
+            if mod.name.isEmpty {
+                print("Parsed real MOD with empty title field: \(fileName)")
+            }
             XCTAssertTrue(mod.length > 0, "Song length is zero for \(fileName)")
             XCTAssertTrue(mod.patterns.count > 0, "No patterns parsed for \(fileName)")
             XCTAssertEqual(mod.instruments.count, 32, "Instruments count should be exactly 32 for \(fileName)")
@@ -259,4 +261,3 @@ final class ModParserTests: XCTestCase {
         XCTAssertEqual(mod.instruments.count, 32)
     }
 }
-

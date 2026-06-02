@@ -108,7 +108,7 @@ fileInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (file) {
     addMods([file]);
-    loadFile(file);
+    loadFile(file, { autoplay: true });
   }
 });
 
@@ -124,7 +124,7 @@ folderInput.addEventListener('change', (e) => {
     return;
   }
   addMods(mods);
-  loadFile(mods[0]);
+  loadFile(mods[0], { autoplay: true });
 });
 
 volumeSlider.addEventListener('input', (e) => {
@@ -216,7 +216,7 @@ modSelect.addEventListener('change', (e) => {
   if (v === '') return;
   const idx = Number(v);
   const entry = modList[idx];
-  if (entry) loadFile(entry.file);
+  if (entry) loadFile(entry.file, { autoplay: true });
 });
 
 // Markiert den aktuell geladenen Eintrag im Dropdown (per Name+Size-Match).
@@ -313,6 +313,8 @@ window.addEventListener('dragleave', (e) => {
 });
 window.addEventListener('drop', async (e) => {
   e.preventDefault();
+  // AudioContext direkt während der Drop-User-Geste entsperren. Ordner-
+  // Traversal ist async; danach kann Browser-Autoplay sonst blockieren.
   player.resumeContext();
   dragDepth = 0;
   playerEl.classList.remove('drag-over');
@@ -324,7 +326,7 @@ window.addEventListener('drop', async (e) => {
       return;
     }
     addMods(mods);
-    loadFile(mods[0]);
+    await loadFile(mods[0], { autoplay: true });
   } catch (err) {
     console.error('Drop-Verarbeitung fehlgeschlagen:', err);
     // Fallback: nur direkt gedroppte Files nehmen (z. B. wenn
@@ -332,7 +334,7 @@ window.addEventListener('drop', async (e) => {
     const file = e.dataTransfer.files && e.dataTransfer.files[0];
     if (file) {
       addMods([file]);
-      loadFile(file);
+      await loadFile(file, { autoplay: true });
     }
   }
 });
@@ -376,7 +378,8 @@ async function walkEntry(entry, out) {
 
 // ─── 6. File-Laden + Rendering ───────────────────────────────────────────────
 
-async function loadFile(file) {
+async function loadFile(file, options = {}) {
+  const autoplay = options.autoplay !== false;
   try {
     const buf = await file.arrayBuffer();
     const mod = parseModBuffer(buf, file.name);
@@ -403,10 +406,15 @@ async function loadFile(file) {
     positionScrubber.value = 0;
     positionScrubber.disabled = false;
     
-    // Direkt abspielen (User-Geste durch File-Picker/Drop ist gerade aktiv).
-    player.resumeContext();
-    await player.play();
-    setPlayingUI(true);
+    if (autoplay) {
+      // Direkt abspielen: File-Picker, Dropdown oder Drop liefern die
+      // nötige User-Geste; bei Ordner-Drops wurde Audio oben schon entsperrt.
+      player.resumeContext();
+      await player.play();
+      setPlayingUI(true);
+    } else {
+      setPlayingUI(false);
+    }
   } catch (err) {
     console.error('loadFile fehlgeschlagen:', err);
     showError('Fehler beim Laden: ' + err.message);
@@ -452,7 +460,7 @@ function setUpPlayerCallbacks() {
         }
         const entry = modList[nextIdx];
         if (entry) {
-          loadFile(entry.file);
+          loadFile(entry.file, { autoplay: true });
           return;
         }
       }

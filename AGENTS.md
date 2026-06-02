@@ -67,7 +67,7 @@ p_savage_protracker/
 
 ---
 
-## Aktuelle Todos (Release 1.2.5-dev)
+## Aktuelle Todos (Release 1.2.8-dev)
 
 - [x] **Todo 1**: Git-Repository initialisieren & Stammdateien anlegen (`VERSION`, `LICENSE`, `.gitignore`, `AGENTS.md`)
 - [x] **Todo 2**: HTML5-Dateien verschieben & `build.py` anpassen (Ausgabe zu `savage-protracker-player.html`)
@@ -79,4 +79,7 @@ p_savage_protracker/
   - [x] Echte 4-Kanal-Audio-Wellenformen über safe Puffer im `AVAudioSourceNode` Render-Block mitschreiben
 - [x] **Todo 7**: Swift-UI-Layout anpassen & Performance-Fokussierung (flüssigeres Scrollen des Tracker-Grids)
 - [x] **Todo 8**: Builds verifizieren und `swift test` ausführen
-- [ ] **Todo 9**: Ausführliche, ansprechende `README.md` im Stammverzeichnis anlegen (Gegenstück zu `vicious-sidplayer`)
+- [x] **Todo 9**: Ausführliche, ansprechende `README.md` im Stammverzeichnis anlegen (Gegenstück zu `vicious-sidplayer`)
+- [x] **Todo 10**: Swift-App-Startcrash reproduzieren, Ursache beheben und mit `swift test` plus App-Start selbstständig verifizieren
+- [x] **Todo 11**: HTML5-Variante so anpassen, dass gedroppte MOD-Dateien oder Ordner sofort die Wiedergabe starten
+- [x] **Todo 12**: Copyright-geschützte Test-MODs im Ordner `audio/` strikt aus Git heraushalten und vor GitHub-Veröffentlichung erneut prüfen
