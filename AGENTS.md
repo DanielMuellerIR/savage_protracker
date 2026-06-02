@@ -67,7 +67,7 @@ p_savage_protracker/
 
 ---
 
-## Aktuelle Todos (Release 1.2.15-dev)
+## Aktuelle Todos (Release 1.2.16-dev)
 
 - [x] **Todo 1**: Git-Repository initialisieren & Stammdateien anlegen (`VERSION`, `LICENSE`, `.gitignore`, `AGENTS.md`)
 - [x] **Todo 2**: HTML5-Dateien verschieben & `build.py` anpassen (Ausgabe zu `savage-protracker-player.html`)
@@ -89,6 +89,7 @@ p_savage_protracker/
 - [x] **Todo 16**: Swift-App-Playlist sichtbar alphabetisch sortieren, Playlist-Einzelklick direkt abspielen und Dark-/Light-Farbpalette auf bessere Lesbarkeit umstellen
 - [x] **Todo 17**: `README.md` auf aktuellen Swift-App-Stand bringen und ins Git aufnehmen
 - [x] **Todo 18**: Swift-Playlist-Klickziele vergrößern und Freiraum zwischen Playlist-Zeilen entfernen
+- [x] **Todo 19**: Swift-Light-Mode von Retro-Overlays befreien und `.gitignore` gegen versehentliche Audio-/Release-Artefakte härten
 
 ## Pflicht-Regressionstests
 

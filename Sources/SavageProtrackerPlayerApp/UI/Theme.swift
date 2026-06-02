@@ -32,7 +32,7 @@ public extension Color {
     static let spaceTextSecondary = Color(red: 0.620, green: 0.660, blue: 0.690) // #9EA8B0
 }
 
-// MARK: - Premium Glassmorphic & Retro Visual Assets
+// MARK: - Native macOS Visual Assets
 
 #if os(macOS)
 public struct VisualEffectView: NSViewRepresentable {
@@ -59,41 +59,6 @@ public struct VisualEffectView: NSViewRepresentable {
 }
 #endif
 
-public struct CRTScanlinesOverlay: View {
-    public init() {}
-    
-    public var body: some View {
-        GeometryReader { geo in
-            Path { path in
-                let height = geo.size.height
-                let width = geo.size.width
-                var y: CGFloat = 0
-                while y < height {
-                    path.move(to: CGPoint(x: 0, y: y))
-                    path.addLine(to: CGPoint(x: width, y: y))
-                    y += 3.0 // Step size of scanlines
-                }
-            }
-            .stroke(Color.black.opacity(0.12), lineWidth: 1.0)
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-public struct CRTVignetteOverlay: View {
-    public init() {}
-    
-    public var body: some View {
-        RadialGradient(
-            gradient: Gradient(colors: [Color.clear, Color.black.opacity(0.25)]),
-            center: .center,
-            startRadius: 100,
-            endRadius: 500
-        )
-        .allowsHitTesting(false)
-    }
-}
-
 public struct PremiumHoverButtonStyle: ButtonStyle {
     let theme: PlayerTheme
     
@@ -113,4 +78,3 @@ public struct PremiumHoverButtonStyle: ButtonStyle {
         }
     }
 }
-

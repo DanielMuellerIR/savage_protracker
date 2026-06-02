@@ -8,4 +8,14 @@ Savage Protracker Player.app/
 build/
 savage-protracker-player.html
 *.mod
+*.sid
+*.wav
+*.aiff
+*.aif
+*.mp3
+*.flac
+*.dmg
+*.zip
+*.tar
+*.tar.gz
 audio/

@@ -227,14 +227,6 @@ struct MainView: View {
                 }
                 return true
             }
-            .overlay(
-                Group {
-                    if theme == .workbench {
-                        CRTScanlinesOverlay()
-                        CRTVignetteOverlay()
-                    }
-                }
-            )
             .onAppear {
                 isDiskAnimating = coordinator.isPlaying
                 setupNotifications()
