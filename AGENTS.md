@@ -67,7 +67,7 @@ p_savage_protracker/
 
 ---
 
-## Aktuelle Todos (Release 1.2.19-dev)
+## Aktuelle Todos (Release 1.2.20-dev)
 
 - [x] **Todo 1**: Git-Repository initialisieren & Stammdateien anlegen (`VERSION`, `LICENSE`, `.gitignore`, `AGENTS.md`)
 - [x] **Todo 2**: HTML5-Dateien verschieben & `build.py` anpassen (Ausgabe zu `savage-protracker-player.html`)
@@ -93,6 +93,7 @@ p_savage_protracker/
 - [x] **Todo 20**: GitHub-Erstveröffentlichung vorbereiten: Single-File-HTML tracken, Release-/DMG-Skripte härten, Codesign/Notary-Pfad dokumentieren und Player-Herkunft prüfen
 - [x] **Todo 21**: DMG selbst per Developer ID signieren, damit Gatekeeper nach Notary-Stapling `spctl -t open` akzeptiert
 - [x] **Todo 22**: README klarstellen, dass GitHub-Release-DMGs notarisierte Builds sind
+- [x] **Todo 23**: GitHub-Remote und README-Releases-Link auf das tatsächliche Repository `DanielMuellerIR/savage_protracker` korrigieren
 
 ## Pflicht-Regressionstests
 

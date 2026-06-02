@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-REMOTE_URL="${REMOTE_URL:-https://github.com/DanielMuellerIR/savage-protracker-player.git}"
+REMOTE_URL="${REMOTE_URL:-https://github.com/DanielMuellerIR/savage_protracker.git}"
 BRANCH="${BRANCH:-main}"
 REQUIRE_CLEAN="${REQUIRE_CLEAN:-1}"
 VERSION="$(cat VERSION 2>/dev/null || echo "0.0.0")"
