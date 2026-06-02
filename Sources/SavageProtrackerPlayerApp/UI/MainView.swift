@@ -619,7 +619,7 @@ struct MainView: View {
                 .background(theme == .workbench ? Color.amigaBlue.opacity(0.5) : Color.spaceBackground.opacity(0.5))
                 
                 ScrollView {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 0) {
                         ForEach(filteredPlaylist, id: \.self) { fileURL in
                             let playlistIndex = playlist.firstIndex(of: fileURL) ?? -1
                             let isPlayingSong = playlistIndex == currentPlaylistIndex
@@ -635,8 +635,10 @@ struct MainView: View {
                                         .lineLimit(1)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+                                .contentShape(Rectangle())
                                 .background(
                                     RoundedRectangle(cornerRadius: theme == .workbench ? 0 : 6)
                                         .fill(
@@ -648,9 +650,6 @@ struct MainView: View {
                                 .foregroundColor(isPlayingSong ? (theme == .workbench ? .amigaOrange : .white) : (theme == .workbench ? .amigaWhite : .spaceTextSecondary))
                             }
                             .buttonStyle(PremiumHoverButtonStyle(theme: theme))
-                            .simultaneousGesture(TapGesture(count: 2).onEnded {
-                                selectPlaylistSong(at: playlistIndex)
-                            })
                         }
                     }
                 }
