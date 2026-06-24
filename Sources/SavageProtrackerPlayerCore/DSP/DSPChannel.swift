@@ -43,6 +43,8 @@ public final class DSPChannel: Sendable {
     // Sample Playback
     nonisolated(unsafe) public var sampleIndex: Double = 0.0
     nonisolated(unsafe) public var sampleSpeed: Double = 0.0
+    // 9xx-Offset-Memory: 900 (ohne Parameter) wiederholt den letzten Offset.
+    nonisolated(unsafe) public var sampleOffsetMemory: Double = 0.0
     
     // ProTracker loop / delay states
     nonisolated(unsafe) public var patternLoopStartRow: Int = 0
@@ -98,6 +100,7 @@ public final class DSPChannel: Sendable {
         volumeSlide = 0
         sampleIndex = 0.0
         sampleSpeed = 0.0
+        sampleOffsetMemory = 0.0
         patternLoopStartRow = 0
         patternLoopCount = -1
         cutNoteTick = -1
@@ -298,7 +301,11 @@ public final class DSPChannel: Sendable {
         case 0x08: // PANNING
             self.panning = Float(effectData) / 255.0
         case 0x09: // SAMPLE_OFFSET
-            self.setSampleIndex = Double(effectData) * 256.0
+            // 900 ohne Parameter wiederholt den letzten Offset (PT-Memory).
+            if effectData > 0 {
+                self.sampleOffsetMemory = Double(effectData) * 256.0
+            }
+            self.setSampleIndex = self.sampleOffsetMemory
         case 0x0A: // VOLUME_SLIDE
             if effectHigh > 0 {
                 self.volumeSlide = Float(effectHigh)

@@ -99,6 +99,20 @@ final class DSPChannelTimingTests: XCTestCase {
                        "Auf Tick 0 darf der Vibrato-Index nicht weiterdrehen")
     }
 
+    /// 9xx-Sample-Offset-Memory: 900 (Parameter 0) wiederholt den letzten
+    /// 9xx-Offset statt hart auf 0 zu springen.
+    func testSampleOffsetMemoryReusesLastOffset() {
+        let inst = Instrument(index: 1, name: "x", length: 4096, finetune: 0, volume: 64,
+                              repeatOffset: 0, repeatLength: 0, bytes: [Int8](repeating: 1, count: 4096), isLooped: false)
+        let ch = DSPChannel(index: 1)
+        // 904 -> Offset 0x04 * 256 = 1024.
+        ch.playNote(Note(instrument: 1, period: 428, effectId: 0x09, effectData: 0x04), instruments: [nil, inst])
+        XCTAssertEqual(ch.sampleIndex, 1024, accuracy: 0.001)
+        // 900 -> muss 1024 wiederholen, nicht 0.
+        ch.playNote(Note(instrument: 1, period: 428, effectId: 0x09, effectData: 0x00), instruments: [nil, inst])
+        XCTAssertEqual(ch.sampleIndex, 1024, accuracy: 0.001, "900 muss letzten Offset wiederholen")
+    }
+
     /// Arpeggio (jetzt allokationsfrei via Skalare statt [Int]) muss weiterhin
     /// den Zyklus [0, x, y] ueber tick % 3 liefern.
     func testArpeggioCyclesWithoutArray() {

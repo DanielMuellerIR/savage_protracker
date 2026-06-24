@@ -157,6 +157,15 @@ function check(name, actual, expected, eps = 1e-4) {
     check('tremolo-amplitude: depth*255/64', maxDelta, 4 * 255 / 64, 1e-2);
 }
 
+// 9xx-Sample-Offset-Memory: 900 wiederholt den letzten Offset.
+{
+    const ch = makeChannel();
+    ch.effect({ hasEffect: true, effectId: 0x09, effectData: 4, effectHigh: 0, effectLow: 4 });
+    check('sample-offset 904 -> 1024', ch.setSampleIndex, 1024);
+    ch.effect({ hasEffect: true, effectId: 0x09, effectData: 0, effectHigh: 0, effectLow: 0 });
+    check('sample-offset 900 wiederholt 1024', ch.setSampleIndex, 1024);
+}
+
 if (failures > 0) {
     console.error(`\n${failures} Fehler — Worklet-Timing weicht ab.`);
     process.exit(1);

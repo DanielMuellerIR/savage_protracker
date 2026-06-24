@@ -49,6 +49,9 @@ class Channel {
         this.arpeggio = false;
         this.sampleSpeed = 0.0;
         this.sampleIndex = 0;
+        // 9xx-Sample-Offset-Memory: 900 (ohne Parameter) wiederholt den letzten
+        // Offset, statt hart auf 0 zu springen (ProTracker n_sampleoffset).
+        this.sampleOffsetMemory = 0;
         this.volume = 64;
         this.currentVolume = 64;
         
@@ -65,9 +68,14 @@ class Channel {
 
     nextOutput() {
         if (!this.instrument || !this.period || !this.instrument.bytes || this.instrument.bytes.length === 0) return 0.0;
-        
+
         const idx = this.sampleIndex | 0;
-        if (idx < 0 || idx >= this.instrument.bytes.length) {
+        // One-shot endet, BEVOR ein out-of-range-Index gelesen wird; so wird das
+        // letzte gueltige Byte (idx == length-1) noch gespielt (Paula-/Swift-Parity).
+        const end = this.instrument.isLooped
+            ? this.instrument.bytes.length
+            : Math.min(this.instrument.length, this.instrument.bytes.length);
+        if (idx < 0 || idx >= end) {
             return 0.0;
         }
         const sample = this.instrument.bytes[idx];
@@ -75,13 +83,16 @@ class Channel {
         this.sampleIndex += this.sampleSpeed;
 
         if (this.instrument.isLooped) {
-            const loopEnd = this.instrument.repeatOffset + this.instrument.repeatLength;
-            if (this.sampleIndex >= loopEnd) {
-                this.sampleIndex = this.instrument.repeatOffset;
+            // Modulo-Wrap mit Byte-Clamp wie DSPChannel.wrapLoopedSampleIndexIfNeeded
+            // (bewahrt den Bruchteil-Ueberschuss -> kein Phasendrift gegen Swift).
+            const byteCount = this.instrument.bytes.length;
+            const loopStart = Math.max(0, Math.min(this.instrument.repeatOffset, byteCount - 1));
+            const declaredEnd = this.instrument.repeatOffset + this.instrument.repeatLength;
+            const loopEnd = Math.max(loopStart + 1, Math.min(declaredEnd, byteCount));
+            const length = loopEnd - loopStart;
+            if (length > 0 && this.sampleIndex >= loopEnd) {
+                this.sampleIndex = loopStart + ((this.sampleIndex - loopStart) % length);
             }
-        }
-        else if (this.sampleIndex >= this.instrument.length) {
-            return 0.0;
         }
 
         if (typeof sample !== 'number' || isNaN(sample)) {
@@ -303,7 +314,10 @@ class Channel {
                 this.setVolume = Math.max(0, this.volume - effectData);
                 break;
             case SAMPLE_OFFSET:
-                this.setSampleIndex = effectData * 256;
+                if (effectData > 0) {
+                    this.sampleOffsetMemory = effectData * 256;
+                }
+                this.setSampleIndex = this.sampleOffsetMemory;
                 break;
             case SET_VOLUME:
                 this.setVolume = effectData;
@@ -316,9 +330,12 @@ class Channel {
                 if (effectData >= 1 && effectData <= 31) {
                     this.worklet.setTicksPerRow(effectData);
                 }
-                else {
+                else if (effectData >= 32) {
                     this.worklet.setBpm(effectData);
                 }
+                // F00 (effectData === 0) wird ignoriert — wie die Swift-Variante.
+                // Frueher rief der else-Zweig setBpm(0) -> outputsPerTick = Infinity
+                // (Division durch 0) und ein subscription-abhaengiges Einfrieren.
                 break;
             case RETRIGGER_NOTE:
                 this.retrigger = effectData;
