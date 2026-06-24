@@ -99,6 +99,16 @@ final class DSPChannelTimingTests: XCTestCase {
                        "Auf Tick 0 darf der Vibrato-Index nicht weiterdrehen")
     }
 
+    /// Fine-Porta E1x wird auf die anstehende Note-Period angewandt (falls in
+    /// dieser Row gesetzt), nicht auf die alte — Parität zur JS-Variante.
+    func testFinePortaUsesPendingPeriod() {
+        let ch = DSPChannel(index: 1)
+        ch.period = 300
+        ch.setPeriod = 200 // anstehende Note-Period
+        ch.applyEffect(note: Note(instrument: 0, period: 0, effectId: 0xE1, effectData: 5))
+        XCTAssertEqual(ch.setPeriod, 195, "E1x muss auf die anstehende Period (200-5) wirken")
+    }
+
     /// 9xx-Sample-Offset-Memory: 900 (Parameter 0) wiederholt den letzten
     /// 9xx-Offset statt hart auf 0 zu springen.
     func testSampleOffsetMemoryReusesLastOffset() {

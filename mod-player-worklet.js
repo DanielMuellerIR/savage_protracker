@@ -280,10 +280,12 @@ class Channel {
                 this.setSampleIndex = false;
                 break;
             case PORTA_UP_FINE:
-                this.setPeriod = this.period - effectData;
+                // Auf die anstehende Note-Period (falls in dieser Row gesetzt)
+                // anwenden, sonst auf die laufende — wie DSPChannel.swift.
+                this.setPeriod = (this.setPeriod !== false ? this.setPeriod : this.period) - effectData;
                 break;
             case PORTA_DOWN_FINE:
-                this.setPeriod = this.period + effectData;
+                this.setPeriod = (this.setPeriod !== false ? this.setPeriod : this.period) + effectData;
                 break;
             case VIBRATO:
                 if (effectHigh) this.vibratoSpeed = effectHigh;

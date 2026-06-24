@@ -166,6 +166,15 @@ function check(name, actual, expected, eps = 1e-4) {
     check('sample-offset 900 wiederholt 1024', ch.setSampleIndex, 1024);
 }
 
+// Fine-Porta E1x: auf die anstehende Note-Period anwenden (falls gesetzt).
+{
+    const ch = makeChannel();
+    ch.period = 300;
+    ch.setPeriod = 200; // anstehende Note-Period dieser Row
+    ch.effect({ hasEffect: true, effectId: 0xe1, effectData: 5, effectHigh: 0, effectLow: 5 });
+    check('fine-porta E1x auf anstehende Period', ch.setPeriod, 195);
+}
+
 if (failures > 0) {
     console.error(`\n${failures} Fehler — Worklet-Timing weicht ab.`);
     process.exit(1);
