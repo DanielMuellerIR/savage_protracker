@@ -107,8 +107,11 @@ public class ModParser {
         }
 
         // 1. Songname parsen (Offset 0, 20 Bytes)
-        let nameBytes = data.subdata(in: 0..<20)
-        let name = String(decoding: nameBytes.filter { $0 != 0 }, as: UTF8.self)
+        // Amiga-Strings sind roh/Latin-1, nicht UTF-8 — UTF-8-Dekodierung
+        // verstuemmelte High-Bytes (z.B. © 0xA9 -> "?"). isoLatin1 mappt jedes
+        // Byte direkt auf U+00XX und stimmt mit der JS-Variante (fromCodePoint) ueberein.
+        let nameBytes = data.subdata(in: 0..<20).filter { $0 != 0 }
+        let name = (String(bytes: nameBytes, encoding: .isoLatin1) ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         // 2. Signatur prüfen (Offset 1080, 4 Bytes)
@@ -149,8 +152,9 @@ public class ModParser {
             let offset = 20 + i * 30
             let header = data.subdata(in: offset..<(offset + 30))
 
-            let instNameBytes = header.subdata(in: 0..<22)
-            let instName = String(decoding: instNameBytes.filter { $0 != 0 }, as: UTF8.self)
+            // Wie der Songname: roh/Latin-1 dekodieren (parity zur JS-Variante).
+            let instNameBytes = header.subdata(in: 0..<22).filter { $0 != 0 }
+            let instName = (String(bytes: instNameBytes, encoding: .isoLatin1) ?? "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             // Big-Endian Words
@@ -173,7 +177,11 @@ public class ModParser {
             let bytes = sampleData.map { Int8(bitPattern: $0) }
             sampleStartOffset += instLength
 
-            let isLooped = repeatOffset > 0 || repeatLength > 2
+            // Eine Probe loopt genau dann, wenn die Loop-Laenge > 1 Word (> 2 Bytes)
+            // ist. Ein repeatOffset > 0 allein markiert KEINEN Loop — sonst wuerde
+            // ein One-Shot mit gesetztem Offset, aber 2-Byte-Sentinel-Laenge faelsch
+            // eine winzige Region loopen (Brummen statt Ausklang).
+            let isLooped = repeatLength > 2
 
             let instrument = Instrument(
                 index: i + 1,

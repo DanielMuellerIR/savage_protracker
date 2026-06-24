@@ -34,7 +34,10 @@ export class Instrument {
     const actualSampleStart = Math.min(sampleStart, modfile.byteLength);
     const actualLength = Math.min(this.length, modfile.byteLength - actualSampleStart);
     this.bytes = new Int8Array(modfile, actualSampleStart, actualLength);
-    this.isLooped = this.repeatOffset !== 0 || this.repeatLength > 2;
+    // Loop genau dann, wenn die Loop-Laenge > 1 Word (> 2 Bytes) ist. repeatOffset
+    // allein markiert KEINEN Loop (sonst loopt ein One-Shot mit 2-Byte-Sentinel
+    // faelschlich eine winzige Region). Identisch zu ModParser.swift.
+    this.isLooped = this.repeatLength > 2;
   }
 }
 

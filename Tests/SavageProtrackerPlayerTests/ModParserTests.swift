@@ -342,6 +342,22 @@ final class ModParserTests: XCTestCase {
         XCTAssertEqual(channel.currentPeriod, 849.0)
     }
     
+    func testOneShotSentinelNotLooped() throws {
+        var data = Data(repeating: 0, count: 2108)
+        data.replaceSubrange(1080..<1084, with: Data("M.K.".utf8))
+        data[950] = 1
+        data[952] = 0
+        // Instrument 1: Laenge 10 Words, repeatOffset 3 Words (>0), repeatLength 1
+        // Word (= 2 Bytes Sentinel). Darf NICHT als Loop gelten.
+        data[42] = 0x00; data[43] = 0x0A
+        data[45] = 64
+        data[46] = 0x00; data[47] = 0x03
+        data[48] = 0x00; data[49] = 0x01
+        let mod = try ModParser.parse(data: data)
+        XCTAssertEqual(mod.instruments[1]?.isLooped, false,
+                       "repeatLength 1 Word (Sentinel) darf trotz repeatOffset>0 nicht loopen")
+    }
+
     func testDemoModGeneration() {
         let mod = ModParser.generateDemoMod()
         XCTAssertEqual(mod.name, "Cyber Synth Demo")
