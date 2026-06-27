@@ -70,6 +70,35 @@ final class CoordinatorSequencingTests: XCTestCase {
         XCTAssertGreaterThan(peak, 0.001, "Demo-Mod muss hoerbares Audio rendern")
     }
 
+    /// Regressionstest fuer die toten BPM-/Speed-Stepper: vor dem Fix hatten
+    /// `coordinator.bpm`/`coordinator.speed` keinen `didSet`, der den Wert an den
+    /// Echtzeit-Zustand durchreichte. Eine Stepper-Aenderung wurde deshalb nie
+    /// wirksam und ausserdem beim naechsten VU-Poll wieder vom Render-Zustand
+    /// ueberschrieben. Nach dem Fix muss eine gesetzte BPM/Speed bestehen bleiben,
+    /// auch nachdem der VU-Poller mehrfach gelaufen ist.
+    @MainActor
+    func testTempoSteppersPersistThroughVUPoll() async throws {
+        let mod = ModParser.generateDemoMod()
+        let coordinator = ModPlayerCoordinator()
+        coordinator.setMod(mod)
+        coordinator.play()
+        XCTAssertTrue(coordinator.isPlaying)
+
+        // Vom Default (125 BPM / Speed 6) bewusst weg auf eindeutige Testwerte.
+        coordinator.bpm = 140
+        coordinator.speed = 4
+
+        // Laenger warten als ein VU-Poll-Intervall (0,02 s), damit der Poller
+        // mehrfach gelaufen ist und einen alten Render-Zustand wieder
+        // zurueckschreiben koennte — was er nach dem Fix nicht mehr tut.
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertEqual(coordinator.bpm, 140, "Stepper-BPM darf nicht vom VU-Poll ueberschrieben werden")
+        XCTAssertEqual(coordinator.speed, 4, "Stepper-Speed darf nicht vom VU-Poll ueberschrieben werden")
+
+        coordinator.stop()
+    }
+
     /// Ein wohlgeformtes Break (D32 = Zeile 32) muss exakt diese Zielzeile
     /// erreichen und NICHT umgelenkt werden.
     @MainActor

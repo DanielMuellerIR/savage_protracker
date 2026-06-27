@@ -73,8 +73,31 @@ public final class ModPlayerCoordinator: ObservableObject {
     @Published public var isPlaying = false
     @Published public var currentPosition = 0
     @Published public var currentRow = 0
-    @Published public var bpm = 125
-    @Published public var speed = 6
+    // Die BPM-/Speed-Stepper in der UI schreiben in diese beiden Properties.
+    // Damit eine Aenderung auch wirklich die laufende Wiedergabe beeinflusst,
+    // muss sie an den Echtzeit-Zustand (`playbackState`) durchgereicht werden —
+    // sonst liest der Render-Block weiter die alten `state.bpm`/`state.ticksPerRow`
+    // und die Stepper waeren wirkungslos (sie wuerden ausserdem beim naechsten
+    // VU-Poll wieder vom Render-Zustand ueberschrieben).
+    @Published public var bpm = 125 {
+        didSet {
+            // Nur durchschreiben, wenn der Wert tatsaechlich von der UI kommt.
+            // Der VU-Poller setzt `bpm` selbst aus `state.bpm` — in dem Fall sind
+            // beide Werte schon gleich und wir sparen uns die Neuberechnung.
+            guard let state = playbackState, state.bpm != bpm, bpm > 0 else { return }
+            state.bpm = bpm
+            // Tick-Laenge in Output-Frames neu bestimmen (gleiche Formel wie play()/seek()).
+            let sampleRate = audioEngine?.mainMixerNode.outputFormat(forBus: 0).sampleRate ?? 44100.0
+            state.outputsPerTick = sampleRate * 60.0 / (Double(bpm) * 24.0)
+        }
+    }
+    @Published public var speed = 6 {
+        didSet {
+            // Analog zu `bpm`: Speed = Ticks pro Zeile an den Echtzeit-Zustand geben.
+            guard let state = playbackState, state.ticksPerRow != speed, speed > 0 else { return }
+            state.ticksPerRow = speed
+        }
+    }
     @Published public var trackName = "Kein Song geladen"
     
     // Realtime VU Levels (für SwiftUI gebunden)
