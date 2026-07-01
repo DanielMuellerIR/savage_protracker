@@ -188,6 +188,7 @@ public final class ModPlayerCoordinator: ObservableObject {
         self.trackName = mod.name.isEmpty ? "Unbekannter Track" : mod.name
         self.currentPosition = 0
         self.currentRow = 0
+        // codereview-ok: by-design — neuer Song startet auf ProTracker-Default 125/6 und setzt sein Tempo per Fxx selbst; mit dem didSet-Fix benigne, kein Datenverlust an laufender Wiedergabe (2026-07-01)
         self.bpm = 125
         self.speed = 6
     }
@@ -337,6 +338,14 @@ public final class ModPlayerCoordinator: ObservableObject {
         state.positionJump = -1
         state.patternBreak = -1
         state.patternLoopRow = -1
+        // Auch die per-Channel Pattern-Loop-Zustaende (E6x) neutralisieren. Sonst
+        // greift beim naechsten E6x-Handler der `patternLoopCount < 0`-Guard nicht
+        // (Zaehler noch positiv aus der Zeit vor dem Seek) und der Loop liefe mit
+        // stale Restzaehler weiter — analog zu DSPChannel.reset().
+        for ch in channels {
+            ch.patternLoopCount = -1
+            ch.patternLoopStartRow = 0
+        }
         // Defensiv: ein laufender Pattern-Delay (EEx) wuerde sonst die erste Row
         // nach dem Seek unerwartet verzoegern.
         state.patternDelay = 0

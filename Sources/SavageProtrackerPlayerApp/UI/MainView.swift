@@ -191,10 +191,7 @@ struct MainView: View {
                         .padding()
                         .background(theme == .workbench ? Color.amigaBlue : Color.spaceSurface.opacity(0.4))
                 }
-                .background(
-                    // codereview-ok: by-design — neuer Song startet auf ProTracker-Default 125/6 und setzt sein Tempo per Fxx selbst; mit dem didSet-Fix benigne, kein Datenverlust an laufender Wiedergabe (2026-07-01)
-                    theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground
-                )
+                .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground)
             }
             .frame(minWidth: 1080, minHeight: 720)
             .foregroundColor(theme == .workbench ? Color.amigaWhite : Color.spaceTextPrimary)
