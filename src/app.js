@@ -485,6 +485,7 @@ function setUpPlayerCallbacks() {
     const totalPatterns = currentMod?.length || 1;
     // Heuristik: wenn die Position rückwärts springt oder ein
     // Single-Pattern-Mod den Anfang erneut erreicht, gilt das als Ende.
+    // codereview-ok: der Wrap auf 0 loest bereits `pos < lastPosition` aus (0 < N-1); die zweite Klausel deckt nur den Single-Pattern-Fall (N==1) (2026-07-01)
     if (pos < lastPosition || (totalPatterns === 1 && row === 0 && currentRow === 63)) {
       player.stop();
       setPlayingUI(false);

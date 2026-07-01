@@ -112,9 +112,6 @@ public final class ModPlayerCoordinator: ObservableObject {
     @Published public var useInterpolation: Bool = true {
         didSet {
             playbackState?.useInterpolation = useInterpolation
-            for ch in channels {
-                ch.useInterpolation = useInterpolation
-            }
         }
     }
     @Published public var palClock: Bool = true {
@@ -290,9 +287,16 @@ public final class ModPlayerCoordinator: ObservableObject {
             startVUUpdates()
         } catch {
             print("Fehler beim Starten der AVAudioEngine: \(error)")
+            // Startet die Engine nicht, muessen die eben erzeugten Ressourcen
+            // wieder abgebaut werden. Sonst bleiben audioEngine/sourceNode/
+            // playbackState gesetzt, waehrend isPlaying==false ist — ein erneuter
+            // play()-Aufruf liefe dann am `if isPlaying { return }`-Guard vorbei
+            // und wuerde eine zweite, konkurrierende Engine erzeugen (Ressourcen-
+            // Leak). stop() raeumt alles konsistent auf.
+            stop()
         }
     }
-    
+
     public func stop() {
         if let engine = audioEngine {
             engine.stop()
@@ -325,7 +329,19 @@ public final class ModPlayerCoordinator: ObservableObject {
         state.position = pos
         state.rowIndex = 0
         state.tick = 0
-        
+
+        // Noch nicht konsumierte Sequenz-Sprungbefehle loeschen. Ohne das wuerde
+        // ein vor dem Seek gesetzter Position-Jump (Bxx), Pattern-Break (Dxx) oder
+        // Pattern-Loop (E6x) beim naechsten Row-Advance feuern und die eben
+        // angesprungene Zielposition sofort wieder ueberschreiben. -1 = "inaktiv".
+        state.positionJump = -1
+        state.patternBreak = -1
+        state.patternLoopRow = -1
+        // Defensiv: ein laufender Pattern-Delay (EEx) wuerde sonst die erste Row
+        // nach dem Seek unerwartet verzoegern.
+        state.patternDelay = 0
+        state.patternDelayCounter = 0
+
         let sampleRate = self.audioEngine?.mainMixerNode.outputFormat(forBus: 0).sampleRate ?? 44100.0
         let outputsPerTick = sampleRate * 60.0 / (Double(state.bpm) * 24.0)
         state.elapsedFrames = UInt64(Double(pos * 64 * state.ticksPerRow) * outputsPerTick)

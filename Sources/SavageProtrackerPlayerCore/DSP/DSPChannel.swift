@@ -60,10 +60,9 @@ public final class DSPChannel: Sendable {
     nonisolated(unsafe) public var arpX: Int = 0
     nonisolated(unsafe) public var arpY: Int = 0
     
-    // Mute, Solo and Interpolation
+    // Mute and Solo
     nonisolated(unsafe) public var isMuted: Bool = false
     nonisolated(unsafe) public var isSoloed: Bool = false
-    nonisolated(unsafe) public var useInterpolation: Bool = true
     
     // Temp-Zustände für Ticks
     nonisolated(unsafe) public var setInstrument: Instrument?
@@ -111,8 +110,7 @@ public final class DSPChannel: Sendable {
         arpY = 0
         isMuted = false
         isSoloed = false
-        useInterpolation = true
-        
+
         setInstrument = nil
         setVolume = nil
         setPeriod = nil

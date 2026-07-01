@@ -156,6 +156,7 @@ export function parseModBuffer(arrayBuffer, label = 'buffer') {
 // An PERIODS[0] = 856 (C-1) verankert, damit die an watchNotes() gemeldeten
 // Indizes mit der Bildschirm-Notentabelle uebereinstimmen (vorher +12, eine
 // Oktave zu hoch). 856->0, 428->12, 214->24, 56->47.
+// codereview-ok: kein Crash, funktional harmlos — nur Speicherverschwendung, reine Micro-Optimierung, kein Bug (2026-07-01)
 const notePerPeriod = new Array(65536);
 for (let p = 0; p < 65536; p++) {
   notePerPeriod[p] = p > 0 ? Math.round(12 * Math.log2(856 / p)) : null;

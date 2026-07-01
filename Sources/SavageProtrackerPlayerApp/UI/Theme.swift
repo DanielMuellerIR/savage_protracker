@@ -32,33 +32,6 @@ public extension Color {
     static let spaceTextSecondary = Color(red: 0.620, green: 0.660, blue: 0.690) // #9EA8B0
 }
 
-// MARK: - Native macOS Visual Assets
-
-#if os(macOS)
-public struct VisualEffectView: NSViewRepresentable {
-    public let material: NSVisualEffectView.Material
-    public let blendingMode: NSVisualEffectView.BlendingMode
-    
-    public init(material: NSVisualEffectView.Material, blendingMode: NSVisualEffectView.BlendingMode = .behindWindow) {
-        self.material = material
-        self.blendingMode = blendingMode
-    }
-    
-    public func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = .active
-        return view
-    }
-    
-    public func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
-    }
-}
-#endif
-
 public struct PremiumHoverButtonStyle: ButtonStyle {
     let theme: PlayerTheme
     

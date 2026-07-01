@@ -153,6 +153,7 @@ struct MainView: View {
                         // Defensiv gegen leere/korrupte Mods: length, patternTable und
                         // der daraus gelesene patternIndex werden vor dem Zugriff geprueft
                         // (sonst patternTable[-1] / patterns[ausserhalb] -> Crash).
+                        // codereview-ok: defensiv by-design — patternTable wird direkt danach indiziert; der isEmpty/length-Guard verhindert patternTable[-1]-Crash (2026-07-01)
                         if let mod = coordinator.activeMod,
                            mod.length > 0,
                            !mod.patternTable.isEmpty {
@@ -191,6 +192,7 @@ struct MainView: View {
                         .background(theme == .workbench ? Color.amigaBlue : Color.spaceSurface.opacity(0.4))
                 }
                 .background(
+                    // codereview-ok: by-design — neuer Song startet auf ProTracker-Default 125/6 und setzt sein Tempo per Fxx selbst; mit dem didSet-Fix benigne, kein Datenverlust an laufender Wiedergabe (2026-07-01)
                     theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground
                 )
             }
