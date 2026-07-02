@@ -147,6 +147,19 @@ struct TrackerGridView: View {
         pattern.rows.first?.notes.count ?? 4
     }
 
+    // Bis 4 Kanäle direkt (Zellen füllen die Breite), darüber in einen
+    // horizontalen ScrollView eingepackt.
+    @ViewBuilder
+    private func horizontalWrapper<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if channelCount > 4 {
+            ScrollView(.horizontal) {
+                content()
+            }
+        } else {
+            content()
+        }
+    }
+
     // S3M-Patterns tragen eine Volume-Column (Note.volume >= 0 irgendwo im
     // Pattern) — dann bekommt jede Zelle das zusätzliche Volume-Feld.
     private var hasVolumeColumn: Bool {
@@ -160,36 +173,43 @@ struct TrackerGridView: View {
         let showVolume = hasVolumeColumn
         let fixedCellWidth: CGFloat? = channelCount > 4 ? (showVolume ? 150 : 118) : nil
 
-        ScrollViewReader { proxy in
-            ScrollView(channelCount > 4 ? [.vertical, .horizontal] : .vertical) {
-                // VStack statt LazyVStack: 64 Zeilen × 24 pt = 1536 pt — zu klein
-                // für lazy rendering. LazyVStack kennt die Zeilen-Positionen erst
-                // beim Render, was scrollTo-Sprünge und Jitter verursacht.
-                VStack(spacing: 0) {
-                    ForEach(0..<64, id: \.self) { rIdx in
-                        if rIdx < pattern.rows.count {
-                            TrackerRowView(
-                                rIdx: rIdx,
-                                notes: pattern.rows[rIdx].notes,
-                                isCurrent: currentRow == rIdx,
-                                theme: theme,
-                                fixedCellWidth: fixedCellWidth,
-                                showVolume: showVolume
-                            )
-                            .id(rIdx)
+        // Horizontales Scrollen (bei >4 Kanälen) liegt AUSSEN, das vertikale
+        // Zeilen-Folgen INNEN: scrollTo() im inneren Reader bewegt so nur die
+        // Y-Achse. In einem kombinierten ScrollView([.vertical, .horizontal])
+        // zentrierte der Zeilen-Autoscroll sonst bei jedem Row-Wechsel auch
+        // horizontal und riss die Ansicht seitlich weg.
+        horizontalWrapper {
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) {
+                    // VStack statt LazyVStack: 64 Zeilen × 24 pt = 1536 pt — zu klein
+                    // für lazy rendering. LazyVStack kennt die Zeilen-Positionen erst
+                    // beim Render, was scrollTo-Sprünge und Jitter verursacht.
+                    VStack(spacing: 0) {
+                        ForEach(0..<64, id: \.self) { rIdx in
+                            if rIdx < pattern.rows.count {
+                                TrackerRowView(
+                                    rIdx: rIdx,
+                                    notes: pattern.rows[rIdx].notes,
+                                    isCurrent: currentRow == rIdx,
+                                    theme: theme,
+                                    fixedCellWidth: fixedCellWidth,
+                                    showVolume: showVolume
+                                )
+                                .id(rIdx)
+                            }
                         }
                     }
                 }
-            }
-            .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceSurface)
-            .border(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.15), width: theme == .workbench ? 2 : 1)
-            .cornerRadius(theme == .workbench ? 0 : 8)
-            .onChange(of: currentRow) { newRow in
-                // Kein withAnimation: jede Animation bricht die vorherige ab und
-                // erzeugt die "auf-ab"-Oszillation. SwiftUI ist frame-synchron —
-                // direktes scrollTo landet sauber im nächsten Paint-Zyklus.
-                proxy.scrollTo(newRow, anchor: .center)
+                .onChange(of: currentRow) { newRow in
+                    // Kein withAnimation: jede Animation bricht die vorherige ab und
+                    // erzeugt die "auf-ab"-Oszillation. SwiftUI ist frame-synchron —
+                    // direktes scrollTo landet sauber im nächsten Paint-Zyklus.
+                    proxy.scrollTo(newRow, anchor: .center)
+                }
             }
         }
+        .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceSurface)
+        .border(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.15), width: theme == .workbench ? 2 : 1)
+        .cornerRadius(theme == .workbench ? 0 : 8)
     }
 }

@@ -17,6 +17,10 @@ Ein plattformübergreifender, eigenständiger Tracker-Modul-Player in zwei Varia
 
 Beide Varianten enthalten standardmäßig keine Moduldateien. Musikstücke werden per Drag & Drop oder Datei-Dialog geladen.
 
+<p align="center">
+  <img src="docs/screenshot-dark.png" width="900" alt="Savage Protracker Player (Dark Mode) spielt ein 16-Kanal-ScreamTracker-3-Modul">
+</p>
+
 ---
 
 ## Download

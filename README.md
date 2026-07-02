@@ -17,6 +17,10 @@ A cross-platform, self-contained tracker module player in two flavors:
 
 Neither variant bundles any module files. Songs are loaded via drag & drop or the file dialog.
 
+<p align="center">
+  <img src="docs/screenshot-dark.png" width="900" alt="Savage Protracker Player (dark mode) playing a 16-channel ScreamTracker 3 module">
+</p>
+
 ---
 
 ## Download

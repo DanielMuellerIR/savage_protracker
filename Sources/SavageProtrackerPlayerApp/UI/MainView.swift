@@ -1000,6 +1000,16 @@ struct MainView: View {
         }
     }
     
+    // Kurzes Format-Kuerzel fuer das Badge neben dem Songtitel.
+    private var formatBadgeText: String {
+        switch coordinator.activeMod?.format {
+        case .s3m: return "S3M"
+        case .multichannel: return "MULTICHANNEL"
+        case .soundtracker: return "SOUNDTRACKER"
+        default: return "PROTRACKER"
+        }
+    }
+
     private var headerView: some View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
@@ -1010,7 +1020,9 @@ struct MainView: View {
                         .lineLimit(1)
                     
                     if theme == .cyber {
-                        Text("PROTRACKER")
+                        // Format-Badge des aktiven Moduls (nicht mehr statisch
+                        // "PROTRACKER" — seit 1.3.0 spielt die App auch S3M & Co.).
+                        Text(formatBadgeText)
                             .font(.system(size: 8, weight: .black, design: .monospaced))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)

@@ -565,8 +565,13 @@ public final class ModPlayerCoordinator: ObservableObject {
             self.elapsedTime = Double(state.elapsedFrames) / sampleRate
             
             if let mod = self.activeMod {
+                // Schaetzung ueber die aktuelle Zeilendauer: Ticks/Zeile *
+                // Tickdauer (60/(BPM*24)). Die alte Formel nahm implizit
+                // Speed 6 an — bei anderen Speeds lief die Elapsed-Zeit dann
+                // ueber die angezeigte Gesamtdauer hinaus.
                 let currentBpm = state.bpm > 0 ? Double(state.bpm) : 125.0
-                self.totalDuration = Double(mod.length * 64 * 60) / (currentBpm * 4.0)
+                let ticksPerRow = Double(max(1, state.ticksPerRow))
+                self.totalDuration = Double(mod.length * 64) * ticksPerRow * 60.0 / (currentBpm * 24.0)
             }
         }
     }
