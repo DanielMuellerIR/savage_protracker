@@ -577,12 +577,17 @@ public final class ModPlayerCoordinator: ObservableObject {
     }
     
     private func startVUUpdates() {
-        vuUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 0.02, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             Task { @MainActor in
                 self.updateVULevelsTick()
             }
         }
+        // .common statt Default-Mode: der Default-RunLoop-Mode pausiert
+        // waehrend Maus-Drags (Slider, Fenster-Resize) — VU, Scopes und die
+        // Tracker-Ansicht froren dann ein, obwohl der Ton weiterlief.
+        RunLoop.main.add(timer, forMode: .common)
+        vuUpdateTimer = timer
     }
     
     private func stopVUUpdates() {

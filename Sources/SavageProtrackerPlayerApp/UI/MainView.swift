@@ -2,6 +2,7 @@ import SwiftUI
 import SavageProtrackerPlayerCore
 import UniformTypeIdentifiers
 import UserNotifications
+import MediaPlayer
 
 final class DropURLsContainer: @unchecked Sendable {
     private let lock = NSLock()
@@ -71,6 +72,10 @@ struct MainView: View {
     // Disk rotation state
     @State private var diskRotation: Double = 0.0
     @State private var isDiskAnimating = false
+    // Fokus-Steuerung des Playlist-Suchfelds (kein Autofokus beim Start).
+    @FocusState private var searchFieldFocused: Bool
+    // MPRemoteCommandCenter nur einmal verdrahten (onAppear kann mehrfach feuern).
+    @State private var mediaCommandsConfigured = false
     
     // Active Preview hover card
     @State private var hoveredInstrumentIndex: Int? = nil
@@ -248,11 +253,18 @@ struct MainView: View {
                 isDiskAnimating = coordinator.isPlaying
                 setupNotifications()
                 installKeyMonitor()
+                setupMediaRemoteCommands()
                 startOrStopDiskSpin()
                 // Gespeicherte Lautstaerke in den Coordinator spiegeln, damit der
                 // erste play()-Aufruf sie auf den Mixer anwenden kann.
                 coordinator.setVolume(Float(volume))
                 loadLocalAudioFolder()
+                // Autofokus des Suchfelds wieder wegnehmen — macOS setzt den
+                // First Responder erst nach dem Fensteraufbau, daher verzoegert.
+                DispatchQueue.main.async {
+                    searchFieldFocused = false
+                    NSApp.keyWindow?.makeFirstResponder(nil)
+                }
             }
             .onDisappear {
                 removeKeyMonitor()
@@ -283,6 +295,21 @@ struct MainView: View {
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("menuStop"))) { _ in
                 stopPlayback()
             }
+            // Media-Tasten: explizites Play/Pause (im Gegensatz zum Toggle).
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("mediaPlay"))) { _ in
+                if coordinator.isPaused {
+                    coordinator.resume()
+                } else if !coordinator.isPlaying {
+                    togglePlayback()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("mediaPause"))) { _ in
+                coordinator.pause()
+            }
+            // "Now Playing"-Infos fuer die Media-Tasten-Zuordnung aktuell halten.
+            .onChange(of: coordinator.isPaused) { _ in updateNowPlayingInfo() }
+            .onChange(of: coordinator.isPlaying) { _ in updateNowPlayingInfo() }
+            .onChange(of: coordinator.trackName) { _ in updateNowPlayingInfo() }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("menuNextTrack"))) { _ in
                 nextTrack()
             }
@@ -327,12 +354,6 @@ struct MainView: View {
 
     private func stopPlayback() {
         coordinator.stop()
-    }
-
-    // Eine Song-Position (Pattern-Eintrag der Playlist) vor/zurueck springen.
-    private func seekPosition(by delta: Int) {
-        guard coordinator.isPlaying else { return }
-        coordinator.seek(toPosition: coordinator.currentPosition + delta)
     }
 
     private func nextTrack() {
@@ -577,8 +598,14 @@ struct MainView: View {
                     .stroke(theme == .workbench ? Color.amigaOrange : Color.spaceAccent, lineWidth: 1.2)
                 }
                 .frame(width: 44, height: 50)
-                .background(Color.black.opacity(0.2))
+                // Wie das Master-Oszilloskop: im Light-Mode weisser Hintergrund
+                // mit dezentem Rahmen (einheitliche Scope-Optik).
+                .background(theme == .workbench ? Color.white : Color.black.opacity(0.2))
                 .cornerRadius(3)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(theme == .workbench ? Color.amigaGrey.opacity(0.35) : Color.clear, lineWidth: 1)
+                )
             }
 
             HStack(spacing: 8) {
@@ -615,13 +642,19 @@ struct MainView: View {
     // kein run-loop-Timer, der leakt und im Idle CPU/Akku frisst.
     private func startOrStopDiskSpin() {
         #if os(macOS)
-        if coordinator.isPlaying {
+        // isDiskAnimating (statt coordinator.isPlaying) beruecksichtigt auch
+        // Pause: die Disk steht, sobald kein Ton laeuft.
+        if isDiskAnimating {
             diskRotation = 0
             withAnimation(.linear(duration: 2.7).repeatForever(autoreverses: false)) {
                 diskRotation = 360
             }
         } else {
-            withAnimation(.easeOut(duration: 0.3)) {
+            // repeatForever zuverlaessig abbrechen: Wert OHNE Animation setzen
+            // (ein withAnimation-Override liess die Drehung teils weiterlaufen).
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
                 diskRotation = 0
             }
         }
@@ -667,6 +700,64 @@ struct MainView: View {
             keyMonitor = nil
         }
         #endif
+    }
+
+    // MARK: - Media-Tasten (F7/F8/F9 bzw. Touch Bar / AirPods)
+    // Registriert die App im System als "Now Playing"-App: Play/Pause- und
+    // Titel-Sprung-Kommandos der Media-Tasten landen dann hier. Die Handler
+    // posten dieselben Notifications wie die Menuepunkte — die onReceive-
+    // Blöcke oben verarbeiten beide Quellen einheitlich auf dem Main-Thread.
+    private func setupMediaRemoteCommands() {
+        guard !mediaCommandsConfigured else { return }
+        mediaCommandsConfigured = true
+
+        let center = MPRemoteCommandCenter.shared()
+        center.togglePlayPauseCommand.addTarget { _ in
+            NotificationCenter.default.post(name: NSNotification.Name("menuPlayStop"), object: nil)
+            return .success
+        }
+        center.playCommand.addTarget { _ in
+            NotificationCenter.default.post(name: NSNotification.Name("mediaPlay"), object: nil)
+            return .success
+        }
+        center.pauseCommand.addTarget { _ in
+            NotificationCenter.default.post(name: NSNotification.Name("mediaPause"), object: nil)
+            return .success
+        }
+        center.stopCommand.addTarget { _ in
+            NotificationCenter.default.post(name: NSNotification.Name("menuStop"), object: nil)
+            return .success
+        }
+        center.nextTrackCommand.addTarget { _ in
+            NotificationCenter.default.post(name: NSNotification.Name("menuNextTrack"), object: nil)
+            return .success
+        }
+        center.previousTrackCommand.addTarget { _ in
+            NotificationCenter.default.post(name: NSNotification.Name("menuPrevTrack"), object: nil)
+            return .success
+        }
+    }
+
+    // Haelt die "Now Playing"-Infos des Systems aktuell (Titel, Dauer,
+    // Position, laeuft/pausiert) — Voraussetzung dafuer, dass die Media-Tasten
+    // an diese App geroutet werden.
+    private func updateNowPlayingInfo() {
+        let infoCenter = MPNowPlayingInfoCenter.default()
+        guard coordinator.activeMod != nil else {
+            infoCenter.nowPlayingInfo = nil
+            infoCenter.playbackState = .stopped
+            return
+        }
+        let activelyPlaying = coordinator.isPlaying && !coordinator.isPaused
+        infoCenter.nowPlayingInfo = [
+            MPMediaItemPropertyTitle: coordinator.trackName,
+            MPMediaItemPropertyPlaybackDuration: coordinator.totalDuration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: coordinator.elapsedTime,
+            MPNowPlayingInfoPropertyPlaybackRate: activelyPlaying ? 1.0 : 0.0
+        ]
+        infoCenter.playbackState = coordinator.isPlaying
+            ? (coordinator.isPaused ? .paused : .playing)
+            : .stopped
     }
 
     // MARK: - Notification helper
@@ -775,6 +866,10 @@ struct MainView: View {
                 TextField("Titel filtern...", text: $playlistSearchQuery)
                     .textFieldStyle(PlainTextFieldStyle())
                     .font(.system(size: 11, design: .monospaced))
+                    // Kein Autofokus: macOS macht das erste Textfeld sonst zum
+                    // First Responder und der Cursor blinkt dauerhaft in der
+                    // Sidebar. Fokus bekommt das Feld erst per Klick.
+                    .focused($searchFieldFocused)
                 if !playlistSearchQuery.isEmpty {
                     Button(action: { playlistSearchQuery = "" }) {
                         Image(systemName: "xmark.circle.fill")
@@ -1227,6 +1322,10 @@ struct MainView: View {
                     .pickerStyle(DefaultPickerStyle())
                     .labelsHidden()
                     .fixedSize()
+                    // Das native Popup folgt sonst dem System-Erscheinungsbild:
+                    // Im Dark-Theme der App war der gewaehlte Wert auf hellem
+                    // System kaum lesbar. Control-Optik ans App-Theme koppeln.
+                    .colorScheme(theme == .workbench ? .light : .dark)
                     .help("Was nach dem Songende passiert: Playlist fortsetzen, den Song wiederholen oder stoppen.")
                 }
             }
@@ -1443,8 +1542,10 @@ struct MainView: View {
                     .fill(Color.spaceSurface)
                     .overlay(Circle().stroke(Color.spaceAccent.opacity(0.3), lineWidth: 1))
             } else {
+                // Volle Akzentfarbe wie der Play-Button — das abgeschwaechte
+                // Orange sah im Light-Mode wie "deaktiviert" aus.
                 Rectangle()
-                    .fill(Color.amigaOrange.opacity(0.3))
+                    .fill(Color.amigaOrange)
             }
             Image(systemName: systemName)
                 .font(.system(size: 11))
@@ -1501,30 +1602,6 @@ struct MainView: View {
                 .cornerRadius(theme == .workbench ? 0 : 15)
                 .disabled(!coordinator.isPlaying)
                 .help("Stopp: Wiedergabe beenden — der nächste Start beginnt wieder am Songanfang.")
-
-                Divider()
-                    .frame(height: 20)
-
-                // Song-Position zurueck/vor (Pattern-Eintraege innerhalb des Songs)
-                Button(action: {
-                    seekPosition(by: -1)
-                }) {
-                    transportButtonLabel(systemName: "backward.frame.fill")
-                }
-                .buttonStyle(PremiumHoverButtonStyle(theme: theme))
-                .cornerRadius(theme == .workbench ? 0 : 15)
-                .disabled(!coordinator.isPlaying)
-                .help("Eine Song-Position zurückspringen (Pattern-Eintrag innerhalb des Songs).")
-
-                Button(action: {
-                    seekPosition(by: 1)
-                }) {
-                    transportButtonLabel(systemName: "forward.frame.fill")
-                }
-                .buttonStyle(PremiumHoverButtonStyle(theme: theme))
-                .cornerRadius(theme == .workbench ? 0 : 15)
-                .disabled(!coordinator.isPlaying)
-                .help("Eine Song-Position vorspringen (Pattern-Eintrag innerhalb des Songs).")
 
                 Divider()
                     .frame(height: 20)
