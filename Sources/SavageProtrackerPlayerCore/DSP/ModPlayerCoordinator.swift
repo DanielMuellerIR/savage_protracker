@@ -523,11 +523,14 @@ public final class ModPlayerCoordinator: ObservableObject {
         mod: Mod,
         sampleRate: Double
     ) -> @Sendable (UnsafeMutablePointer<ObjCBool>, UnsafePointer<AudioTimeStamp>, UInt32, UnsafeMutablePointer<AudioBufferList>) -> OSStatus {
-        // Kanalzahl und Mix-Gain einmalig ableiten: Mehr als 4 Kanäle würden
-        // sonst deutlich heißer in den tanh-Limiter laufen als das klassische
-        // 4-Kanal-Bild — 4/N hält die Summenlautstärke vergleichbar.
+        // Kanalzahl und Mix-Gain einmalig ableiten: Mehr als 4 Kanäle laufen
+        // sonst deutlich heißer in den tanh-Limiter als das klassische
+        // 4-Kanal-Bild. Equal-Power-Skalierung sqrt(4/N) statt linearem 4/N:
+        // unkorrelierte Kanäle addieren sich in Leistung, nicht in Amplitude —
+        // lineares 4/N machte 16-Kanal-S3Ms ~12 dB zu leise (praktisch stumm).
+        // Rest-Spitzen fängt der tanh-Limiter weich ab.
         let channelCount = dspChannels.count
-        let mixGain: Float = channelCount > 4 ? 4.0 / Float(channelCount) : 1.0
+        let mixGain: Float = channelCount > 4 ? (4.0 / Float(channelCount)).squareRoot() : 1.0
 
         return { (isSilence, timestamp, frameCount, outputData) -> OSStatus in
             let buffers = UnsafeMutableAudioBufferListPointer(outputData)

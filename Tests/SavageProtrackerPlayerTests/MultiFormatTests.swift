@@ -334,7 +334,18 @@ final class MultiFormatTests: XCTestCase {
             let probes = coordinator.renderProbe(mod: mod, durationSeconds: 2.0)
             let peak = probes.flatMap { $0.channelOutputs }.map { abs($0) }.max() ?? 0
             XCTAssertGreaterThan(peak, 0.01, "\(fileName) rendert nur Stille")
-            print("✓ S3M geparst + gerendert: \(fileName) (\"\(mod.name)\"), \(mod.channelCount) Kanäle, Peak \(peak)")
+
+            // Zusaetzlich den ECHTEN Quick-Look-Pfad pruefen: die gerenderte
+            // WAV muss hoerbares Signal enthalten (nicht nur RIFF-Header).
+            let wav = try ModuleRenderer.renderWavData(mod: mod, maxDurationSeconds: 5.0)
+            let payload = wav.subdata(in: 44..<wav.count)
+            let wavPeak = payload.withUnsafeBytes { buf -> Int in
+                buf.bindMemory(to: Int16.self).map { abs(Int($0)) }.max() ?? 0
+            }
+            // Nach Peak-Normalisierung muss die Vorschau ordentlich
+            // ausgesteuert sein (Ziel ~29000, Toleranz fuer Gain-Deckel).
+            XCTAssertGreaterThan(wavPeak, 8000, "\(fileName): WAV (Quick-Look-Pfad) ist zu leise")
+            print("✓ S3M geparst + gerendert: \(fileName) (\"\(mod.name)\"), \(mod.channelCount) Kanäle, Probe-Peak \(peak), WAV-Peak \(wavPeak), WAV \(wav.count) Bytes")
         }
     }
 

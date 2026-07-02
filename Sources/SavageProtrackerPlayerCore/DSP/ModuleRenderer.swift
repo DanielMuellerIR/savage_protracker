@@ -87,7 +87,31 @@ public enum ModuleRenderer {
             }
         }
 
+        normalizePeak(&pcmData)
         return makeWavFile(pcmData: pcmData, sampleRate: Int(sampleRate))
+    }
+
+    // Peak-Normalisierung (nur Anhebung): Module mit vielen Kanälen oder
+    // niedriger Global Volume landen sonst weit unter Vollaussteuerung und
+    // klingen in der Quick-Look-Vorschau wie stumm. Ziel ~-1 dBFS, Anhebung
+    // gedeckelt (16x), niemals absenken.
+    private static func normalizePeak(_ pcmData: inout Data) {
+        let target = 29000 // ~0.89 * Int16.max
+        var peak = 0
+        pcmData.withUnsafeBytes { buf in
+            for s in buf.bindMemory(to: Int16.self) {
+                let a = abs(Int(s))
+                if a > peak { peak = a }
+            }
+        }
+        guard peak > 0, peak < target else { return }
+        let gain = min(16.0, Double(target) / Double(peak))
+        pcmData.withUnsafeMutableBytes { buf in
+            let samples = buf.bindMemory(to: Int16.self)
+            for i in 0..<samples.count {
+                samples[i] = Int16(clamping: Int(Double(samples[i]) * gain))
+            }
+        }
     }
 
     // Kompletter WAV-Container (RIFF-Header + 16-Bit-Stereo-PCM-Daten).
