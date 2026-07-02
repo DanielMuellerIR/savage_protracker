@@ -9,7 +9,10 @@ on:
 
 jobs:
   build-test:
-    runs-on: macos-14
+    # macos-15 bringt standardmaessig Xcode 16 / Swift 6.0 mit; der aeltere
+    # macos-14-Runner hatte nur Swift 5.10 und scheiterte an
+    # 'swift-tools-version: 6.0' in Package.swift.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
