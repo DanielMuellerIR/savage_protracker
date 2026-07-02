@@ -1363,17 +1363,18 @@ struct MainView: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.left.and.right")
                     .font(.system(size: 11))
-                    .foregroundColor(.spaceTextSecondary)
-                
+                    .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+
                 Slider(value: $coordinator.stereoSeparation, in: 0.0...1.0)
                     .accentColor(theme == .workbench ? .amigaOrange : .spaceAccent)
                     .frame(width: 80)
-                
+
                 Text(String(format: "%d%%", Int(coordinator.stereoSeparation * 100)))
                     .font(.system(size: 9, design: .monospaced))
-                    .foregroundColor(.spaceTextSecondary)
+                    .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
                     .frame(width: 32, alignment: .trailing)
             }
+            .help("Stereo-Separation: 100 % = hartes Amiga-Panning (Kanäle ganz links/rechts), 0 % = Mono. Dazwischen wird Übersprechen beigemischt, das Kopfhörer-Ermüdung vermeidet. Am deutlichsten mit Kopfhörern hörbar; über Laptop-Lautsprecher kaum.")
         }
     }
     
