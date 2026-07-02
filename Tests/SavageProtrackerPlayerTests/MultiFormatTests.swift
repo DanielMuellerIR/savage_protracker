@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 @testable import SavageProtrackerPlayerCore
 
 // Tests für die neuen Modul-Formate: Multichannel-MOD-Varianten (6CHN/8CHN/
@@ -346,6 +347,55 @@ final class MultiFormatTests: XCTestCase {
             // ausgesteuert sein (Ziel ~29000, Toleranz fuer Gain-Deckel).
             XCTAssertGreaterThan(wavPeak, 8000, "\(fileName): WAV (Quick-Look-Pfad) ist zu leise")
             print("✓ S3M geparst + gerendert: \(fileName) (\"\(mod.name)\"), \(mod.channelCount) Kanäle, Probe-Peak \(peak), WAV-Peak \(wavPeak), WAV \(wav.count) Bytes")
+        }
+    }
+
+    // MARK: - Instrument-Vorschau (eigener Render-Pfad, previewInstrument)
+
+    // Der Preview-Render-Block muss (a) hoerbares Signal liefern, solange das
+    // Frame-Budget laeuft, und (b) danach exakt Stille — sonst wuerde ein
+    // gelooptes Instrument endlos droehnen. Laeuft rein rechnerisch ueber einen
+    // AVAudioPCMBuffer, ohne echtes Audiogeraet.
+    func testPreviewRenderBlockProducesSignalThenSilence() throws {
+        // Konstantes, nicht-gelooptes Sample: jeder gueltige Index liefert Signal.
+        let inst = Instrument(index: 1, name: "P", length: 64, finetune: 0, volume: 64,
+                              repeatOffset: 0, repeatLength: 0,
+                              bytes: [Int8](repeating: 50, count: 64),
+                              isLooped: false, c2spd: 8363)
+        let ch = DSPChannel(index: 1)
+        ch.instrument = inst
+        ch.volume = 64
+        ch.currentVolume = 64
+        ch.period = 214
+        ch.currentPeriod = 214
+        ch.sampleIndex = 0.0
+        ch.sampleSpeed = 0.375 // ~ 3546894.6 / 214 / 44100 (MOD/PAL-Takt)
+        ch.playing = true
+
+        let budget = 40
+        let voice = PreviewVoice(framesLeft: budget)
+        let block = ModPlayerCoordinator.createPreviewRenderBlock(
+            channel: ch, voice: voice, useInterpolation: false)
+
+        let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2))
+        let frames: AVAudioFrameCount = 128
+        let pcm = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames))
+        pcm.frameLength = frames
+        var silence = ObjCBool(false)
+        var ts = AudioTimeStamp()
+        let status = block(&silence, &ts, frames, pcm.mutableAudioBufferList)
+        XCTAssertEqual(status, noErr)
+
+        let left = try XCTUnwrap(pcm.floatChannelData)[0]
+        let right = try XCTUnwrap(pcm.floatChannelData)[1]
+        // Innerhalb des Budgets: Signal, und mittig (L == R).
+        for i in 0..<budget {
+            XCTAssertGreaterThan(abs(left[i]), 0.01, "Frame \(i) sollte Signal tragen")
+            XCTAssertEqual(left[i], right[i], accuracy: 0.0, "mittig gepannt")
+        }
+        // Nach dem Budget: exakt Stille.
+        for i in budget..<Int(frames) {
+            XCTAssertEqual(left[i], 0.0, "Frame \(i) nach Budget muss still sein")
         }
     }
 

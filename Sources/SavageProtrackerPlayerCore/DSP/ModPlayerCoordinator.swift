@@ -2,6 +2,14 @@ import Foundation
 import AVFoundation
 import Combine
 
+// Haelt den verbleibenden Frame-Zaehler der laufenden Instrument-Vorschau.
+// Wird vom Preview-Render-Block (Audio-Thread) heruntergezaehlt — daher dieselbe
+// nonisolated(unsafe)-Konvention wie RealtimePlaybackState.
+public final class PreviewVoice: Sendable {
+    nonisolated(unsafe) public var framesLeft: Int
+    public init(framesLeft: Int) { self.framesLeft = framesLeft }
+}
+
 public final class RealtimePlaybackState: Sendable {
     nonisolated(unsafe) public var position: Int = -1
     nonisolated(unsafe) public var rowIndex: Int = 63
@@ -145,6 +153,10 @@ public final class ModPlayerCoordinator: ObservableObject {
     private var audioEngine: AVAudioEngine?
     private var sourceNode: AVAudioSourceNode?
     private var lowPassFilterNode: AVAudioUnitEQ?
+
+    // Getrennte Engine nur fuer die Instrument-Vorschau (previewInstrument).
+    private var previewEngine: AVAudioEngine?
+    private var previewSourceNode: AVAudioSourceNode?
     
     @Published public var ledFilterActive: Bool = false {
         didSet {
@@ -257,6 +269,8 @@ public final class ModPlayerCoordinator: ObservableObject {
     }
     
     public func play() {
+        // Eine evtl. laufende Instrument-Vorschau weicht der Song-Wiedergabe.
+        stopPreview()
         guard let mod = activeMod, mod.length > 0 else { return }
         if isPlaying { return }
         
@@ -382,6 +396,7 @@ public final class ModPlayerCoordinator: ObservableObject {
     }
 
     public func stop() {
+        stopPreview()
         if let engine = audioEngine {
             engine.stop()
         }
@@ -853,30 +868,103 @@ public final class ModPlayerCoordinator: ObservableObject {
         }
     }
     
+    // Spielt eine einzelne Instrument-Grundnote in einer EIGENEN, vom Song
+    // voellig getrennten Audio-Engine ab. Dadurch klingt die Vorschau auch im
+    // gestoppten Zustand (die Song-Engine existiert dann gar nicht) und kapert
+    // niemals einen Song-Kanal (frueher wurde channels.last uebernommen und dabei
+    // dessen Mute/Solo geloescht).
     public func previewInstrument(index: Int) {
         guard let mod = activeMod, index >= 1 && index < mod.instruments.count, let inst = mod.instruments[index], inst.bytes.count > 0 else { return }
 
-        // Preview auf dem letzten Kanal antriggern
-        guard let ch = channels.last else { return }
-        ch.reset()
-        Self.configure(channels: [ch], for: mod)
+        // Laufende Vorschau zuerst abbauen — erneuter Klick startet frisch.
+        stopPreview()
+
+        // Eigener Kanal, nur fuer die Vorschau. Kein configure()/performTick noetig:
+        // renderChannelSample braucht bloss Instrument, Periode, sampleSpeed und
+        // Lautstaerke — es gibt keinen Sequencer und keine Effekte in der Vorschau.
+        let ch = DSPChannel(index: 1)
         ch.instrument = inst
         ch.volume = Float(inst.volume)
         ch.currentVolume = Float(inst.volume)
-
         if mod.format == .s3m {
             // C-4 im ST3-Periodenmodell (Key 48) mit Instrument-C2Spd.
             ch.period = DSPChannel.s3mPeriod(key: 48, c2spd: inst.c2spd)
         } else {
             // C-3 note period = 214
-            let finetune = Float(inst.finetune)
-            ch.period = 214.0 - finetune
+            ch.period = 214.0 - Float(inst.finetune)
         }
         ch.currentPeriod = ch.period
         ch.sampleIndex = 0.0
         ch.playing = true
+
+        let engine = AVAudioEngine()
+        let mixer = engine.mainMixerNode
+        var sampleRate = mixer.outputFormat(forBus: 0).sampleRate
+        if sampleRate <= 0.0 || sampleRate.isNaN || sampleRate.isInfinite { sampleRate = 44100.0 }
+        guard let stereoFormat = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2) else { return }
+
+        // sampleSpeed aus der Periode ableiten — dieselbe Formel wie in
+        // performTick (Paula-Frequenz / Ausgabe-Rate). clockRate wie im Song-Pfad:
+        // S3M nutzt den festen ST3-Takt, MOD den PAL/NTSC-Amiga-Takt.
+        let clockRate = mod.format == .s3m ? 14317056.0 : (self.palClock ? 3546894.6 : 3579545.25)
+        ch.sampleSpeed = ch.currentPeriod > 0 ? (clockRate / Double(ch.currentPeriod)) / sampleRate : 0.0
+
+        // Frame-Budget: geloopte Samples nach ~1,6 s ausklingen lassen (sonst
+        // droehnen sie endlos); nicht-geloopte enden ohnehin von selbst, weil
+        // renderChannelSample hinter dem Sample-Ende 0 liefert.
+        let voice = PreviewVoice(framesLeft: Int(sampleRate * 1.6))
+        let renderBlock = Self.createPreviewRenderBlock(channel: ch, voice: voice, useInterpolation: self.useInterpolation)
+
+        let sourceNode = AVAudioSourceNode(renderBlock: renderBlock)
+        engine.attach(sourceNode)
+        engine.connect(sourceNode, to: mixer, format: stereoFormat)
+        do {
+            try engine.start()
+            mixer.outputVolume = lastVolume * lastVolume
+            self.previewEngine = engine
+            self.previewSourceNode = sourceNode
+        } catch {
+            print("Fehler beim Starten der Preview-Engine: \(error)")
+        }
     }
-    
+
+    // Minimaler Render-Block der Vorschau: genau EIN Kanal, mittig gepannt, ohne
+    // Sequencer/Effekte. Nach Ablauf des Frame-Budgets gibt er Stille aus.
+    nonisolated static func createPreviewRenderBlock(
+        channel ch: DSPChannel,
+        voice: PreviewVoice,
+        useInterpolation: Bool
+    ) -> @Sendable (UnsafeMutablePointer<ObjCBool>, UnsafePointer<AudioTimeStamp>, UInt32, UnsafeMutablePointer<AudioBufferList>) -> OSStatus {
+        return { (_, _, frameCount, outputData) -> OSStatus in
+            let buffers = UnsafeMutableAudioBufferListPointer(outputData)
+            guard buffers.count >= 2, let leftPtr = buffers[0].mData, let rightPtr = buffers[1].mData else { return noErr }
+            let left = leftPtr.assumingMemoryBound(to: Float.self)
+            let right = rightPtr.assumingMemoryBound(to: Float.self)
+            for frame in 0..<Int(frameCount) {
+                var s: Float = 0.0
+                if voice.framesLeft > 0 {
+                    s = Self.renderChannelSample(channel: ch, useInterpolation: useInterpolation)
+                    voice.framesLeft -= 1
+                }
+                // Mittig; tanh als weicher Schutz gegen Clipping (der Song-Limiter
+                // fehlt hier, ein Einzel-Sample bleibt aber ohnehin bei ~+/-0,5).
+                let limited = tanh(s)
+                left[frame] = limited
+                right[frame] = limited
+            }
+            return noErr
+        }
+    }
+
+    // Vorschau-Engine abbauen (idempotent). Wird bei erneutem Preview-Klick sowie
+    // beim Start/Stopp der Song-Wiedergabe und beim Songwechsel gerufen, damit nie
+    // zwei Engines nebeneinander laufen.
+    public func stopPreview() {
+        if let engine = previewEngine { engine.stop() }
+        previewEngine = nil
+        previewSourceNode = nil
+    }
+
     // Frisch konfigurierte Offline-Render-Kanäle für ein Modul (Panning +
     // Format-Modell), z.B. für WAV-Export, Render-Probe und Quick-Look.
     nonisolated static func makeRenderChannels(for mod: Mod) -> [DSPChannel] {

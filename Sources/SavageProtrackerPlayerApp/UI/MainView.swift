@@ -526,7 +526,18 @@ struct MainView: View {
         }
         return modFiles
     }
-    
+
+    // Loescht die Temp-Kopien frueherer App-Laeufe (ModPlayerTemp/). Wird einmalig
+    // beim App-Start gerufen (AppMain.init): die pro-Drop angelegten UUID-
+    // Verzeichnisse bleiben innerhalb einer Sitzung bestehen (die Playlist
+    // referenziert sie noch), wuerden sich sonst aber ueber Laeufe hinweg
+    // unbegrenzt ansammeln.
+    nonisolated static func cleanStaleTempRoot() {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("ModPlayerTemp", isDirectory: true)
+        try? FileManager.default.removeItem(at: root)
+    }
+
     private func selectPlaylistSong(at index: Int, autoPlay: Bool = true) {
         guard index >= 0 && index < playlist.count else { return }
         self.currentPlaylistIndex = index
@@ -595,17 +606,24 @@ struct MainView: View {
         let fm = FileManager.default
         var candidateDirs: [URL] = []
         candidateDirs.append(URL(fileURLWithPath: fm.currentDirectoryPath).appendingPathComponent("audio"))
-        if let bundlePath = Bundle.main.bundlePath as String? {
-            let appDir = URL(fileURLWithPath: bundlePath).deletingLastPathComponent()
-            candidateDirs.append(appDir.appendingPathComponent("audio"))
-        }
+        // Bundle.main.bundlePath ist immer ein (non-optional) String.
+        let appDir = URL(fileURLWithPath: Bundle.main.bundlePath).deletingLastPathComponent()
+        candidateDirs.append(appDir.appendingPathComponent("audio"))
         for dir in candidateDirs {
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: dir.path, isDirectory: &isDir), isDir.boolValue else { continue }
-            guard let contents = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { continue }
-            let mods = sortedByDisplayName(contents.filter { Self.isModFile($0) })
-            if mods.isEmpty { continue }
-            handleDroppedURLs(mods, autoPlay: true)
+            // Rekursiv absteigen (wie beim Ordner-Drop in copyModFilesToTemp), damit
+            // auch eine audio/Autor/<mod>-Struktur gefunden wird statt nur die
+            // oberste Verzeichnisebene.
+            var mods: [URL] = []
+            if let enumerator = fm.enumerator(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+                while let fileURL = enumerator.nextObject() as? URL {
+                    if Self.isModFile(fileURL) { mods.append(fileURL) }
+                }
+            }
+            let sorted = sortedByDisplayName(mods)
+            if sorted.isEmpty { continue }
+            handleDroppedURLs(sorted, autoPlay: true)
             return
         }
     }
@@ -687,7 +705,10 @@ struct MainView: View {
         #if os(macOS)
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            // Nicht in Textfelder (Suche/Export) eingreifen.
+            // Nicht in Textfelder (Suche/Export) eingreifen. Der Feld-Editor eines
+            // fokussierten SwiftUI-TextField IST eine NSText-Subklasse (NSTextView),
+            // daher greift dieser Guard tatsaechlich — kein toter Code.
+            // codereview-ok: NSText-Guard ist funktional, kein toter Zweig (2026-07-02)
             if NSApp.keyWindow?.firstResponder is NSText { return event }
             switch event.keyCode {
             case 49: // Leertaste
@@ -1097,10 +1118,17 @@ struct MainView: View {
                                                 .foregroundColor(theme == .workbench ? .amigaWhite.opacity(0.6) : .spaceTextSecondary)
                                         }
                                     }
+                                    // Padding + contentShape INS Label ziehen, damit
+                                    // die GANZE Zeile (auch der Leerraum neben dem Namen)
+                                    // die Vorschau ausloest — nicht nur der Text. Der
+                                    // verschachtelte DL-Button faengt seine Klicks selbst
+                                    // ab und bleibt ausgenommen.
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(PlainButtonStyle())
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
                                 // Light-Mode: nur duenner Rahmen ohne Fuellung,
                                 // Hover hebt die Zeile weiss hervor. Der dunkle
                                 // Fuellton passte nicht ins helle Theme.
@@ -2052,9 +2080,13 @@ struct TabButton: View {
                     .frame(height: 2)
                     .shadow(color: isSelected && theme == .cyber ? Color.spaceAccent.opacity(0.8) : Color.clear, radius: 4)
             }
+            // Volle Breite + vertikales Polster + contentShape: der ganze
+            // Tab-Bereich (nicht nur der Text) schaltet um.
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
-        .frame(maxWidth: .infinity)
     }
 }
 

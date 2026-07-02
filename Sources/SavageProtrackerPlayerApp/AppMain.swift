@@ -5,6 +5,13 @@ import AppKit
 
 @main
 struct SavageProtrackerPlayerApp: App {
+    init() {
+        // Temp-Kopien frueherer App-Laeufe einmalig beim Start aufraeumen.
+        // (Innerhalb einer Sitzung bleiben die pro-Drop-Verzeichnisse bestehen,
+        // weil die Playlist sie noch referenziert — siehe cleanStaleTempRoot.)
+        MainView.cleanStaleTempRoot()
+    }
+
     var body: some Scene {
         WindowGroup {
             MainView()

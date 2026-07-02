@@ -146,6 +146,21 @@ Swift-Variante um weitere Tracker-Formate + Quick-Look-Plugin erweitert (Details
 - **Erledigt damit**: das frühere Deferred-Item „echte Multichannel-Unterstützung (6/8 Kanäle)".
 - **Offen/optional**: XM/IT bewusst NICHT geplant (eigene Instrument-Engine nötig).
 
+## Fix-Runde 2026-07-02 (Release 1.3.1)
+
+Nachlese zum Code-Review + GUI-Feedback (je mit Test/Verifikation):
+- **Instrument-Vorschau**: eigener, vom Song getrennter Wiedergabe-Pfad (separate `previewEngine` + eigener Kanal). Klingt jetzt auch im gestoppten Zustand und kapert nie mehr einen Song-Kanal (behob den stillen Mute/Solo-Verlust). Headless-Test: Render-Block liefert Signal im Frame-Budget, danach Stille.
+- **Auto-Load `audio/`** rekursiv (findet `audio/Autor/x.mod`), und die Temp-Kopien früherer App-Läufe werden beim Start aufgeräumt (`AppMain.init`).
+- **GUI**: Klickflächen der Instrument-Zeilen (ganze Box außer DL-Button) und der PLAYLIST/INSTRUMENTE-Tabs vergrößert (`contentShape`); tautologisches `if let bundlePath` entfernt.
+- **Code-Review-Fehlalarm** dokumentiert: der NSText-First-Responder-Guard ist funktional (der Feld-Editor eines fokussierten SwiftUI-`TextField` ist eine `NSText`-Subklasse), `codereview-ok`-Marker gesetzt.
+- **CI**: Runner auf `macos-15` (Swift 6.0) — der `macos-14`-Runner scheiterte an `swift-tools-version: 6.0`.
+
+## Ideen / Backlog (Stand: 2026-07-02)
+
+- **Rotierende Disc als Play/Pause-Schalter**: Die drehende Vinyl-/Disc-Animation
+  selbst als kombinierten Play/Pause-Button nutzen (statt separatem Transport-Button);
+  die Play/Pause-Symbole optional dezent darüberlegen. (Idee Daniel, 2026-07-02.)
+
 ## Fallen / Agent-Hinweise
 
 - **Quick Look + VLC (verifiziert 2026-07-02)**: Ist eine App installiert, die `.mod` als Medien-UTI EXPORTIERT (VLC → `org.videolan.mod`, konform zu `public.audio`), nimmt Quick Look für `.mod` seinen System-Medien-Fast-Path und fragt Dritt-Preview-Extensions GAR NICHT an (bekannte QL-Einschränkung, gleiches Prinzip wie bei mp3). `.s3m` ist davon nicht betroffen — dort spawnt unsere Extension nachweislich (`pgrep -lf SavageProtrackerQuickLook` während `qlmanage -p file.s3m`). Ohne VLC greift die importierte `public.data`-UTI der App und auch `.mod` läuft über unsere Extension. Nicht dagegen ankämpfen (eigener UTI-Export wäre ein unzuverlässiger Koinflip gegen VLC).
