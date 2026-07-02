@@ -49,6 +49,16 @@ cat <<EOF > "$QL_APPEX/Contents/Info.plist"
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- Standard-Keys, die Xcode fuer Appexes immer setzt — ExtensionFoundation
+         reagiert auf fehlende Werte teils mit NSException (nil-Insert). -->
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>MacOSX</string>
+    </array>
     <key>CFBundleDisplayName</key>
     <string>Savage Protracker Quick Look</string>
     <key>CFBundleExecutable</key>

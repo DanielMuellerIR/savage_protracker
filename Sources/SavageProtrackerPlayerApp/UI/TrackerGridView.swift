@@ -9,6 +9,8 @@ struct TrackerRowView: View {
     // Ab 5 Kanälen bekommt jede Zelle eine feste Breite und das Grid scrollt
     // horizontal — sonst würden die Zellen unleserlich zusammengequetscht.
     let fixedCellWidth: CGFloat?
+    // S3M-Patterns haben eine eigene Volume-Column; bei MOD bleibt sie weg.
+    let showVolume: Bool
 
     var body: some View {
         let rowIndexColor: Color = isCurrent ? .amigaOrange : (theme == .workbench ? .amigaOrange : .spaceAccentGlow)
@@ -77,9 +79,17 @@ struct TrackerRowView: View {
         let instColor: Color = hasInst ? (theme == .workbench ? .amigaGrey : .codeInstrument) : (theme == .workbench ? .amigaWhite.opacity(0.3) : .codeDim)
         let effColor: Color = hasEff ? (theme == .workbench ? .amigaOrange : .codeEffect) : (theme == .workbench ? .amigaWhite.opacity(0.3) : .codeDim)
 
+        // Volume-Column (nur S3M): "v40" bzw. gedimmtes "..." ohne Angabe.
+        let hasVol = note.volume >= 0
+        let volStr = hasVol ? String(format: "v%02d", note.volume) : "..."
+        let volColor: Color = hasVol ? (theme == .workbench ? .amigaGrey : .codeInstrument) : (theme == .workbench ? .amigaWhite.opacity(0.3) : .codeDim)
+
         return HStack(spacing: 8) {
             Text(noteStr).foregroundColor(noteColor)
             Text(instStr).foregroundColor(instColor)
+            if showVolume {
+                Text(volStr).foregroundColor(volColor)
+            }
             Text(effStr).foregroundColor(effColor)
         }
         .font(.system(size: 12, weight: isCurrent ? .bold : .semibold, design: .monospaced))
@@ -137,10 +147,18 @@ struct TrackerGridView: View {
         pattern.rows.first?.notes.count ?? 4
     }
 
+    // S3M-Patterns tragen eine Volume-Column (Note.volume >= 0 irgendwo im
+    // Pattern) — dann bekommt jede Zelle das zusätzliche Volume-Feld.
+    private var hasVolumeColumn: Bool {
+        pattern.rows.contains { $0.notes.contains { $0.volume >= 0 } }
+    }
+
     var body: some View {
         // Bis 4 Kanäle füllen die Zellen die Breite (klassisches Layout);
-        // darüber feste Zellbreite + horizontales Scrollen.
-        let fixedCellWidth: CGFloat? = channelCount > 4 ? 118 : nil
+        // darüber feste Zellbreite + horizontales Scrollen (mit Volume-Column
+        // entsprechend breiter).
+        let showVolume = hasVolumeColumn
+        let fixedCellWidth: CGFloat? = channelCount > 4 ? (showVolume ? 150 : 118) : nil
 
         ScrollViewReader { proxy in
             ScrollView(channelCount > 4 ? [.vertical, .horizontal] : .vertical) {
@@ -155,7 +173,8 @@ struct TrackerGridView: View {
                                 notes: pattern.rows[rIdx].notes,
                                 isCurrent: currentRow == rIdx,
                                 theme: theme,
-                                fixedCellWidth: fixedCellWidth
+                                fixedCellWidth: fixedCellWidth,
+                                showVolume: showVolume
                             )
                             .id(rIdx)
                         }

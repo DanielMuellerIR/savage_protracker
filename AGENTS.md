@@ -144,4 +144,10 @@ Swift-Variante um weitere Tracker-Formate + Quick-Look-Plugin erweitert (Details
 - **Parser**: Multichannel-MOD (xCHN/xxCH/CD81/OKTA, FLT8 als Pattern-Paare), Ur-Soundtracker-15-Heuristik (strenge Struktur-Checks gegen False-Positives; Repeat-Offset dort in Bytes statt Words), neuer `S3MParser` (Order-Filterung 254/255 mit Bxx-Remap, gepackte Patterns, unsigned→signed Samples).
 - **Engine**: Kanäle dynamisch bis 32 (Puffer vorher fix 4), ST3-Periodenmodell pro Kanal konfigurierbar, S3M-Effekte (geteiltes Effekt-Memory D/E/F/I, Fine-/Extra-Fine-Porta, Tremor, Fine-Vibrato, Global Volume, Set Speed/Tempo als eigene interne IDs), Mix-Gain 4/N ab 5 Kanälen, Initial-Tempo/-Speed/-GlobalVolume aus dem Modul-Header.
 - **Erledigt damit**: das frühere Deferred-Item „echte Multichannel-Unterstützung (6/8 Kanäle)".
-- **Offen/optional**: S3M-Volume-Column im Tracker-Grid anzeigen; XM/IT bewusst NICHT geplant (eigene Instrument-Engine nötig).
+- **Offen/optional**: XM/IT bewusst NICHT geplant (eigene Instrument-Engine nötig).
+
+## Fallen / Agent-Hinweise
+
+- **Quick Look + VLC (verifiziert 2026-07-02)**: Ist eine App installiert, die `.mod` als Medien-UTI EXPORTIERT (VLC → `org.videolan.mod`, konform zu `public.audio`), nimmt Quick Look für `.mod` seinen System-Medien-Fast-Path und fragt Dritt-Preview-Extensions GAR NICHT an (bekannte QL-Einschränkung, gleiches Prinzip wie bei mp3). `.s3m` ist davon nicht betroffen — dort spawnt unsere Extension nachweislich (`pgrep -lf SavageProtrackerQuickLook` während `qlmanage -p file.s3m`). Ohne VLC greift die importierte `public.data`-UTI der App und auch `.mod` läuft über unsere Extension. Nicht dagegen ankämpfen (eigener UTI-Export wäre ein unzuverlässiger Koinflip gegen VLC).
+- **Appex-Registrierung nach Rebuild**: `build_app.sh` löscht/erzeugt das .app neu — danach kennt PluginKit den Appex u. U. nicht mehr. Für lokale Tests: `pluginkit -a "<app>/Contents/PlugIns/SavageProtrackerQuickLook.appex"`; Kontrolle mit `pluginkit -m -p com.apple.quicklook.preview`. Bei Installation nach `/Applications` passiert das automatisch.
+- **`qlmanage -p -o dir` (headless) nutzt moderne Preview-Extensions NICHT** — nur den Legacy-Pfad. Ein leeres Ergebnis dort heißt nicht, dass die Extension kaputt ist; Prozess-Spawn-Check (siehe oben) ist der verlässliche Headless-Beweis.
