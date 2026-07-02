@@ -4,67 +4,85 @@
 
 <h1 align="center">Savage Protracker Player</h1>
 
+**🌐 Sprache / Language:** [English](README.md) · [Deutsch](README.de.md)
+
 <p align="center">
-  <strong>Amiga-/Tracker-Modul-Player als Single-File-HTML5-Version und native SwiftUI-macOS-App.</strong>
+  <strong>Amiga/tracker module player as a single-file HTML5 app and a native SwiftUI macOS app with a Quick Look plugin.</strong>
 </p>
 
-Ein plattformübergreifender, eigenständiger Tracker-Modul-Player in zwei Varianten:
+A cross-platform, self-contained tracker module player in two flavors:
 
-1. **HTML5 (`savage-protracker-player.html`)** — Eine einzelne HTML-Datei (unter 50 KB), die ohne Webserver direkt per Doppelklick aus dem Dateisystem funktioniert. Spielt klassische 4-Kanal-ProTracker-MODs.
-2. **Native macOS App (`Savage Protracker Player.app`)** — SwiftUI-Desktop-Anwendung mit `AVAudioEngine`, `AVAudioSourceNode`, echten Echtzeit-Oszilloskopen und Pegel-Metern. Spielt zusätzlich Multichannel-MODs (6/8/… Kanäle, u. a. `6CHN`/`8CHN`/`FLT8`), 15-Sample-Soundtracker-Module und **ScreamTracker 3 (`.s3m`)** — und bringt ein **Quick-Look-Plugin** mit: Leertaste auf einer `.mod`/`.s3m` im Finder öffnet eine abspielbare Audio-Vorschau.
+1. **HTML5 (`savage-protracker-player.html`)** — a single HTML file (under 50 KB) that runs straight from the file system with a double click, no web server required. Plays classic 4-channel ProTracker MODs.
+2. **Native macOS app (`Savage Protracker Player.app`)** — a SwiftUI desktop application built on `AVAudioEngine`/`AVAudioSourceNode` with true real-time oscilloscopes and VU meters. Additionally plays multichannel MODs (6/8/… channels, including `6CHN`/`8CHN`/`FLT8`), 15-sample Soundtracker modules, and **ScreamTracker 3 (`.s3m`)** — and ships with a **Quick Look plugin**: pressing the space bar on a `.mod`/`.s3m` file in Finder opens a playable audio preview.
 
-Beide Varianten enthalten standardmäßig keine Moduldateien. Musikstücke werden per Drag & Drop oder Datei-Dialog geladen.
+Neither variant bundles any module files. Songs are loaded via drag & drop or the file dialog.
 
 ---
 
 ## Download
 
-Fertige Builds der macOS-App stehen als notarisierte DMGs auf der [Releases-Seite](https://github.com/DanielMuellerIR/savage_protracker/releases) bereit. DMG herunterladen, öffnen und die App in den Programme-Ordner ziehen.
+Ready-made builds of the macOS app are available as notarized DMGs on the [releases page](https://github.com/DanielMuellerIR/savage_protracker/releases). Download the DMG, open it, and drag the app into your Applications folder.
 
-Der HTML5-Player benötigt keinen Download über die Releases hinaus: Die Datei `savage-protracker-player.html` lässt sich direkt im Browser öffnen.
-
----
-
-## Funktionsumfang
-
-- **Formatvielfalt (macOS-App)**: ProTracker-MOD, Multichannel-MOD (`xCHN`/`xxCH`/`CD81`/`OKTA`/`FLT8`), 15-Sample-Soundtracker und ScreamTracker 3 (`.s3m`) inklusive Volume-Column, Panning und S3M-Effekten. Der HTML5-Player bleibt bewusst kompakt und spielt 4-Kanal-MODs.
-- **Quick-Look-Vorschau (macOS-App)**: Das mitgelieferte Quick-Look-Plugin rendert `.mod`/`.s3m` mit der Player-Engine und zeigt im Finder (Leertaste) den nativen Audio-Player mit Play und Scrubbing.
-- **Drag & Drop**: Einzelne `.mod`-/`.s3m`-Dateien oder ganze Ordner (rekursiv) können auf den Player gezogen werden.
-- **Automatische Playlist**: Wenn im selben Ordner wie der Player oder die App ein Unterordner namens `audio/` vorhanden ist, wird dieser beim Start automatisch gescannt und als alphabetisch sortierte Playlist geladen.
-- **Playlist-Bedienung**: Einzelklick auf einen Playlist-Eintrag lädt und startet den Titel direkt. Nach dem Songende kann die Playlist automatisch weiterlaufen.
-- **Echtzeit-Oszilloskope**: 
-  - Ein echtes Stereo-Master-Mischungs-Oszilloskop direkt aus dem Audio-Renderpfad.
-  - Vier separate Spur-Oszilloskope, die die tatsächlichen Schwingungsformen direkt aus dem Synthesizer-Render-Block visualisieren.
-- **Multi-Theme**: 
-  - **Dark**: Graphit-/Schwarzpalette mit gutem Kontrast und gedämpften Akzentfarben.
-  - **Light**: klassischer, heller macOS-naher Stil mit nüchternem Kontrast.
-- **PAL- & NTSC-Taktfrequenzen**: Umschaltbare Paula-Taktung (7,09 MHz PAL vs. 7,16 MHz NTSC).
-- **Lautstärke & Stereo-Separation**: Psychoakustische (quadratische) Lautstärkeskalierung und einstellbare Stereo-Separation (Bleed von 0% Mono bis 100% Hard-Panning).
-- **Hi-Fi Resampling**: Umschaltbares linear-interpoliertes Sample-Playback für weicheren Sound (deaktivierbar für originalen 8-Bit-Crunch).
-- **WAV- & Stem-Export**: Export des gesamten Songs in eine Stereo-WAV-Datei sowie Export einzelner Instrumentensamples als WAV.
-- **Komplette Tastatursteuerung**: Leertaste für Play/Pause, Pfeiltasten links/rechts für Song-Positionen, Pfeiltasten oben/unten für Song-Wechsel in der Playlist.
+The HTML5 player needs no download beyond the repository itself: simply open `savage-protracker-player.html` in a browser.
 
 ---
 
-## Technischer Hintergrund
+## Installing the Quick Look plugin
 
-### Synthese & Paula-Emulation
+The Quick Look plugin is embedded in the app bundle (`Contents/PlugIns/`) — there is nothing to install separately:
 
-Die Audio-Engine simuliert das Amiga Paula-Hardwareverhalten:
-- **Taktung**: Der Taktgeber rechnet mit der PAL-Paula-Frequenz von `3.546.894,6 Hz`. Der Pitch-Faktor ergibt sich aus dem Frequenzverhältnis zur aktuellen Audio-Ausgaberate.
-- **Stereo-Panning**: Amiga-typisches Hardware-Panning (Kanäle 1 und 4 links, Kanäle 2 und 3 rechts) mit einstellbarer Software-Mischung zur Vermeidung von Kopfhörer-Ermüdung.
-- **Effekte**: Vollständige Wiedergabetreue für alle Standard-ProTracker-Befehle, einschließlich Arpeggio (`0x0`), Slides (`0x1`/`0x2`), Tone Portamento (`0x3`), Vibrato (`0x4`), Volume Slides (`0xA`), Position Jump (`0xB`), Volume Set (`0xC`), Pattern Break (`0xD`), Extended Effects (`0xE` wie Loop, Cut, Note Delay, Retrigger) und Tempo-Steuerung (`0xF`).
+1. Drag the app from the DMG into **`/Applications`**.
+2. **Launch the app once** (this is when macOS registers the bundled Quick Look extension).
+3. Select a `.mod` or `.s3m` file in Finder and press the **space bar** — the preview shows the macOS audio player with the fully rendered song (play, scrubbing, volume). The first invocation takes a second or two because the song is rendered through the player engine in its entirety.
 
-### Architektur
+If no preview appears:
 
-| Schicht | HTML5 | macOS (Swift) |
+- Reload the Quick Look service: run `qlmanage -r` in Terminal, then open the preview again.
+- Check the registration: `pluginkit -m -p com.apple.quicklook.preview | grep -i savage` should list an entry; if it does not, launch the app once or copy it to `/Applications` again.
+- **Note on `.mod` and VLC**: if VLC (or another app that registers `.mod` as an audio/video type) is installed, macOS intercepts `.mod` files with its built-in media preview before third-party plugins are consulted — a Quick Look system limitation. `.s3m` previews always work regardless.
+
+---
+
+## Features
+
+- **Format support (macOS app)**: ProTracker MOD, multichannel MOD (`xCHN`/`xxCH`/`CD81`/`OKTA`/`FLT8`), 15-sample Soundtracker, and ScreamTracker 3 (`.s3m`) including the volume column, panning, and S3M effects. The HTML5 player deliberately stays compact and plays 4-channel MODs.
+- **Quick Look preview (macOS app)**: the bundled Quick Look plugin renders `.mod`/`.s3m` with the player engine and shows the native audio player with play and scrubbing in Finder (space bar).
+- **Drag & drop**: drop individual `.mod`/`.s3m` files or entire folders (recursively) onto the player.
+- **Automatic playlist**: if a subfolder named `audio/` exists next to the player or the app, it is scanned at startup and loaded as an alphabetically sorted playlist.
+- **Playlist handling**: a single click on a playlist entry loads and starts the track. When a song ends, the playlist can advance automatically.
+- **Real-time oscilloscopes**:
+  - A true stereo master-mix oscilloscope fed straight from the audio render path.
+  - Separate per-channel scopes (dynamic channel count) visualizing the actual waveforms from the synthesizer render block.
+- **Multiple themes**:
+  - **Dark**: graphite/black palette with good contrast and muted accent colors.
+  - **Light**: a classic, bright macOS-like style with sober contrast.
+- **PAL & NTSC clocks**: switchable Paula clocking (7.09 MHz PAL vs. 7.16 MHz NTSC).
+- **Volume & stereo separation**: psychoacoustic (quadratic) volume scaling and adjustable stereo separation (bleed from 0% mono to 100% hard panning).
+- **Hi-fi resampling**: switchable linearly interpolated sample playback for a smoother sound (can be disabled for the original 8-bit crunch).
+- **WAV & stem export**: export the entire song to a stereo WAV file, or export individual instrument samples as WAV.
+- **Full keyboard control**: space bar for play/pause, left/right arrows for song positions, up/down arrows to switch songs in the playlist.
+
+---
+
+## Technical background
+
+### Synthesis & Paula emulation
+
+The audio engine simulates the Amiga Paula hardware behavior:
+- **Clocking**: the clock generator uses the PAL Paula frequency of `3,546,894.6 Hz`. The pitch factor is derived from the ratio to the current audio output rate.
+- **Stereo panning**: Amiga-style hardware panning (channels 1 and 4 left, channels 2 and 3 right) with adjustable software blending to avoid headphone fatigue.
+- **Effects**: faithful playback of all standard ProTracker commands, including arpeggio (`0x0`), slides (`0x1`/`0x2`), tone portamento (`0x3`), vibrato (`0x4`), volume slides (`0xA`), position jump (`0xB`), volume set (`0xC`), pattern break (`0xD`), extended effects (`0xE` such as loop, cut, note delay, retrigger), and tempo control (`0xF`).
+
+For ScreamTracker 3 the engine switches to the ST3 period model (C2Spd-based periods against the 14.3 MHz ST3 clock) instead of Amiga Paula periods; the ProTracker effect set is extended with S3M specifics (fine/extra-fine slides with effect memory, tremor, fine vibrato, global volume).
+
+### Architecture
+
+| Layer | HTML5 | macOS (Swift) |
 |---|---|---|
 | Parser | `modplayer.js` | `ModuleLoader`/`ModParser`/`S3MParser` (SavageProtrackerPlayerCore) |
-| DSP / Mixer | `mod-player-worklet.js` (AudioWorklet) | `ModPlayerCoordinator.swift` (`AVAudioSourceNode`, bis 32 Kanäle) |
-| UI | Vanilla JS + CSS Grid | SwiftUI + Canvas |
-| Quick Look | — | `quicklook/PreviewProvider.swift` (Appex, WAV-Offline-Render) |
-
-Für S3M rechnet die Engine im ScreamTracker-Periodenmodell (C2Spd-basierte Perioden gegen die ST3-Clock 14,3 MHz) statt in Amiga-Paula-Perioden; die ProTracker-Effekte werden um S3M-Spezifika (Fine-/Extra-Fine-Slides mit Effekt-Memory, Tremor, Fine-Vibrato, Global Volume) ergänzt.
+| DSP / mixer | `mod-player-worklet.js` (AudioWorklet) | `ModPlayerCoordinator.swift` (`AVAudioSourceNode`, up to 32 channels) |
+| UI | vanilla JS + CSS grid | SwiftUI + Canvas |
+| Quick Look | — | `quicklook/PreviewProvider.swift` (appex, offline WAV render) |
 
 ---
 
@@ -74,36 +92,41 @@ Für S3M rechnet die Engine im ScreamTracker-Periodenmodell (C2Spd-basierte Peri
 
 ```bash
 python3 build.py                  # → savage-protracker-player.html (~48 KB)
-python3 build.py --no-min         # ohne Minifizierung
+python3 build.py --no-min         # without minification
 ```
 
-Die erzeugte Single-File-Variante `savage-protracker-player.html` ist Teil des
-Repositories, damit der Player auch ohne lokalen Build direkt genutzt werden
-kann.
+The generated single-file variant `savage-protracker-player.html` is part of
+the repository so the player can be used directly without a local build.
 
-### macOS App
+### macOS app
 
 ```bash
-bash build_app.sh                 # → "Savage Protracker Player.app"
+bash build_app.sh                 # → "Savage Protracker Player.app" (incl. Quick Look appex)
 ```
 
-Die App sucht beim Start nach einem `audio/`-Verzeichnis neben der Anwendung und lädt dort gefundene `.mod`-Dateien (oder `mod.*`-Dateien) automatisch in die Playlist. Diese Dateien sind nur lokale Testdaten und gehören nicht ins Git-Repository.
+Besides the app itself, `build_app.sh` compiles the Quick Look extension
+(`quicklook/`) and places it inside the app bundle under `Contents/PlugIns/`.
 
-Für Release-Builds signiert `build_app.sh` automatisch mit der Developer-ID
-`Developer ID Application: Daniel Mueller (9QSWKSR4NQ)`, sofern sie im
-Schlüsselbund verfügbar ist. Lokale unsignierte Builds sind mit
-`SIGN_APP=0 bash build_app.sh` möglich.
+At startup the app looks for an `audio/` directory next to the application and
+automatically loads any `.mod`/`.s3m` files (or `mod.*` files) found there into
+the playlist. These files are local test data only and do not belong in the
+git repository.
 
-### DMG (für Releases)
+For release builds, `build_app.sh` automatically signs with the Developer ID
+`Developer ID Application: Daniel Mueller (9QSWKSR4NQ)` if it is available in
+the keychain. Local unsigned builds are possible with
+`SIGN_APP=0 bash build_app.sh`.
+
+### DMG (for releases)
 
 ```bash
 bash build_dmg.sh                 # → build/Savage Protracker Player.dmg
-bash build_dmg.sh --notarize      # DMG signieren, notarisieren und stapeln
+bash build_dmg.sh --notarize      # sign, notarize, and staple the DMG
 ```
 
-Das DMG enthält ein Retina-kompatibles Hintergrundbild (1x/2x TIFF via `tiffutil`).
-Für die Notarisierung wird ein Keychain-Profil erwartet, standardmäßig
-`SavageProtrackerNotary`. Es kann einmalig interaktiv angelegt werden:
+The DMG contains a Retina-compatible background image (1x/2x TIFF via
+`tiffutil`). Notarization expects a keychain profile, by default
+`SavageProtrackerNotary`. It can be created once interactively:
 
 ```bash
 xcrun notarytool store-credentials SavageProtrackerNotary
@@ -113,41 +136,42 @@ xcrun notarytool store-credentials SavageProtrackerNotary
 
 ```bash
 swift test
-swift test --filter ModParserTests/testRealtimePlaybackSurvivesFiveSeconds
-swift test --filter ModParserTests/testRTypeFourthChannelSampleSurvivesPastRow16
+swift test --filter MultiFormatTests
+node Tests/js/worklet-timing.mjs
 ```
 
-Der 5-Sekunden-Lauftest wählt zufällig ein echtes MOD aus `audio/`, startet die Wiedergabe und prüft, dass die App ohne Crash weiterläuft. Der RType-Test sichert ein langes Loop-Sample in Pattern 0, Row 16, Kanal 4 ab.
+The suite covers the parsers (all MOD variants, S3M, synthetic and real files),
+DSP timing, sequencing, the Quick Look plugin's offline WAV renderer, and the
+parity between the Swift and browser DSP implementations.
 
 ---
 
-## GitHub-Veröffentlichung
+## Publishing to GitHub
 
 ```bash
 bash publish_github.sh --dry-run --release
 bash publish_github.sh --release
 ```
 
-Das Veröffentlichungsskript setzt `origin` auf
-`https://github.com/DanielMuellerIR/savage_protracker.git`, blockt
-versehentlich getrackte Audio- und Release-Artefakte und erzeugt bei
-`--release` den passenden GitHub-Release-Eintrag mit DMG-Asset.
+The publishing script sets `origin` to
+`https://github.com/DanielMuellerIR/savage_protracker.git`, blocks accidentally
+tracked audio and release artifacts, and with `--release` creates the matching
+GitHub release entry with the DMG asset.
 
-## Herkunft
+## Origin
 
-Die ProTracker-Engine entstand zuerst im Schwesterprojekt
-[FraktalLab](https://github.com/DanielMuellerIR/FraktalLab) als eigene
-TypeScript-/AudioWorklet-Implementierung (`AmiModPanel` / `utils/modplayer`,
-kein `libopenmpt`). Für dieses Projekt wurde sie als eigenständiger
-Single-File-HTML-Player herausgelöst und zusätzlich als native Swift-Engine mit
-`AVAudioSourceNode` portiert. Mitgelieferte MOD-Dateien sind nicht Teil dieses
-Repositories.
+The ProTracker engine was first developed in the sister project
+[FraktalLab](https://github.com/DanielMuellerIR/FraktalLab) as a custom
+TypeScript/AudioWorklet implementation (`AmiModPanel` / `utils/modplayer`, no
+`libopenmpt`). For this project it was extracted into a standalone single-file
+HTML player and additionally ported to a native Swift engine built on
+`AVAudioSourceNode`. Bundled MOD files are not part of this repository.
 
-## KI-Unterstützung
+## AI assistance
 
-Bei Umsetzung, Portierung und Fehlersuche wurde KI-gestütztes Pair-Programming
-als Werkzeug genutzt. Autor und Maintainer ist Daniel Müller.
+AI-assisted pair programming was used as a tool during implementation, porting,
+and debugging. The author and maintainer is Daniel Müller.
 
-## Lizenz
+## License
 
-**MIT-Lizenz** — siehe [LICENSE](LICENSE).
+**MIT license** — see [LICENSE](LICENSE).

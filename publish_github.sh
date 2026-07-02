@@ -117,9 +117,17 @@ if [[ "$DO_RELEASE" == "1" ]]; then
         run gh release upload "$TAG" "$DMG_PATH" --clobber
     else
         echo "Lege Release ${TAG} an."
-        run gh release create "$TAG" "$DMG_PATH" \
-            --title "Savage Protracker Player ${VERSION}" \
-            --notes "macOS-App als DMG. MOD-Dateien sind nicht enthalten; Musik wird lokal per Drag & Drop oder aus einem lokalen audio-Ordner geladen."
+        # Liegt eine RELEASE_NOTES.md im Repo, wird sie als Release-Text
+        # verwendet; sonst der generische Standardtext.
+        if [[ -f RELEASE_NOTES.md ]]; then
+            run gh release create "$TAG" "$DMG_PATH" \
+                --title "Savage Protracker Player ${VERSION}" \
+                --notes-file RELEASE_NOTES.md
+        else
+            run gh release create "$TAG" "$DMG_PATH" \
+                --title "Savage Protracker Player ${VERSION}" \
+                --notes "macOS-App als DMG. MOD-Dateien sind nicht enthalten; Musik wird lokal per Drag & Drop oder aus einem lokalen audio-Ordner geladen."
+        fi
     fi
 fi
 
