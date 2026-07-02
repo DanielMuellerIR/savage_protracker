@@ -12,11 +12,16 @@ struct SavageProtrackerPlayerApp: App {
         .commands {
             #if os(macOS)
             CommandMenu("Wiedergabe") {
-                Button("Abspielen / Stoppen") {
+                Button("Abspielen / Pause") {
                     NotificationCenter.default.post(name: NSNotification.Name("menuPlayStop"), object: nil)
                 }
                 .keyboardShortcut("p", modifiers: .command)
-                
+
+                Button("Stopp") {
+                    NotificationCenter.default.post(name: NSNotification.Name("menuStop"), object: nil)
+                }
+                .keyboardShortcut(".", modifiers: .command)
+
                 Button("Nächster Titel") {
                     NotificationCenter.default.post(name: NSNotification.Name("menuNextTrack"), object: nil)
                 }

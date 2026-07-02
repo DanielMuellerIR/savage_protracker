@@ -258,7 +258,12 @@ struct MainView: View {
                 removeKeyMonitor()
             }
             .onChange(of: coordinator.isPlaying) { isPlaying in
-                isDiskAnimating = isPlaying
+                isDiskAnimating = isPlaying && !coordinator.isPaused
+                startOrStopDiskSpin()
+            }
+            // Pause haelt auch die Disk-Animation an (isPlaying bleibt true).
+            .onChange(of: coordinator.isPaused) { isPaused in
+                isDiskAnimating = coordinator.isPlaying && !isPaused
                 startOrStopDiskSpin()
             }
             .onChange(of: coordinator.trackName) { newTrackName in
@@ -274,6 +279,9 @@ struct MainView: View {
             // sie posteten bisher NSNotifications, die niemand beobachtet hat.
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("menuPlayStop"))) { _ in
                 togglePlayback()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("menuStop"))) { _ in
+                stopPlayback()
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("menuNextTrack"))) { _ in
                 nextTrack()
@@ -304,20 +312,34 @@ struct MainView: View {
         }
     }
     
+    // Play/Pause-Toggle: pausiert statt zu stoppen — resume() setzt nahtlos
+    // fort. Endgueltiges Stoppen macht der separate Stop-Button (stopPlayback).
     private func togglePlayback() {
         guard coordinator.activeMod != nil else { return }
-        if coordinator.isPlaying {
-            coordinator.stop()
+        if coordinator.isPaused {
+            coordinator.resume()
+        } else if coordinator.isPlaying {
+            coordinator.pause()
         } else {
             coordinator.play()
         }
     }
-    
+
+    private func stopPlayback() {
+        coordinator.stop()
+    }
+
+    // Eine Song-Position (Pattern-Eintrag der Playlist) vor/zurueck springen.
+    private func seekPosition(by delta: Int) {
+        guard coordinator.isPlaying else { return }
+        coordinator.seek(toPosition: coordinator.currentPosition + delta)
+    }
+
     private func nextTrack() {
         guard !playlist.isEmpty else { return }
         // Transportzustand erhalten: setMod() in loadModFile ruft stop(), daher
-        // VOR dem Wechsel merken, ob gerade gespielt wurde.
-        let wasPlaying = coordinator.isPlaying
+        // VOR dem Wechsel merken, ob gerade aktiv (nicht pausiert) gespielt wurde.
+        let wasPlaying = coordinator.isPlaying && !coordinator.isPaused
         let nextIndex = currentPlaylistIndex + 1
         if nextIndex < playlist.count {
             selectPlaylistSong(at: nextIndex, autoPlay: wasPlaying)
@@ -328,7 +350,7 @@ struct MainView: View {
 
     private func prevTrack() {
         guard !playlist.isEmpty else { return }
-        let wasPlaying = coordinator.isPlaying
+        let wasPlaying = coordinator.isPlaying && !coordinator.isPaused
         let prevIndex = currentPlaylistIndex - 1
         if prevIndex >= 0 {
             selectPlaylistSong(at: prevIndex, autoPlay: wasPlaying)
@@ -370,9 +392,31 @@ struct MainView: View {
                 self.playlist = sorted
                 self.selectedSidebarTab = 0 // Playlist fokussieren
                 self.currentPlaylistIndex = 0
-                self.loadModFile(from: sorted[0])
+                // Headless-/Agent-Steuerung: "--autoplay [filter]" startet die
+                // Wiedergabe sofort (optional den ersten Titel, dessen Name den
+                // Filter enthaelt) — fuer Screenshots und Smoke-Tests ohne Klicks.
+                if let autoplayIndex = Self.autoplayIndex(in: sorted) {
+                    self.selectPlaylistSong(at: autoplayIndex, autoPlay: true)
+                } else {
+                    self.loadModFile(from: sorted[0])
+                }
             }
         }
+    }
+
+    // Wertet das Kommandozeilen-Argument "--autoplay [filter]" aus. Liefert den
+    // Playlist-Index des zu startenden Titels oder nil (kein Autoplay gewuenscht).
+    nonisolated private static func autoplayIndex(in urls: [URL]) -> Int? {
+        let args = CommandLine.arguments
+        guard let flagIndex = args.firstIndex(of: "--autoplay") else { return nil }
+        let next = flagIndex + 1
+        if next < args.count, !args[next].hasPrefix("--") {
+            let filter = args[next].lowercased()
+            if let match = urls.firstIndex(where: { $0.lastPathComponent.lowercased().contains(filter) }) {
+                return match
+            }
+        }
+        return 0
     }
 
     // Hintergrund-Worker: kopiert alle .mod-Dateien aus den gedroppten URLs (inkl.
@@ -1378,6 +1422,25 @@ struct MainView: View {
         }
     }
     
+    // Einheitliche Optik der kleinen Transport-Buttons (Stop, Positions- und
+    // Titel-Spruenge) — rund im Dark-, eckig im Light-Theme.
+    private func transportButtonLabel(systemName: String) -> some View {
+        ZStack {
+            if theme == .cyber {
+                Circle()
+                    .fill(Color.spaceSurface)
+                    .overlay(Circle().stroke(Color.spaceAccent.opacity(0.3), lineWidth: 1))
+            } else {
+                Rectangle()
+                    .fill(Color.amigaOrange.opacity(0.3))
+            }
+            Image(systemName: systemName)
+                .font(.system(size: 11))
+                .foregroundColor(.white)
+        }
+        .frame(width: 30, height: 30)
+    }
+
     private var controlPanelView: some View {
         HStack(spacing: 24) {
             // Left block: Play controls
@@ -1391,18 +1454,19 @@ struct MainView: View {
                             Circle()
                                 .fill(
                                     LinearGradient(
-                                        colors: coordinator.isPlaying ? [.red.opacity(0.8), .red] : [.spaceAccent, .spaceAccentGlow],
+                                        colors: [.spaceAccent, .spaceAccentGlow],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
                                 )
-                                .shadow(color: (coordinator.isPlaying ? Color.red : Color.spaceAccent).opacity(0.4), radius: 6)
+                                .shadow(color: Color.spaceAccent.opacity(0.4), radius: 6)
                         } else {
                             Rectangle()
                                 .fill(Color.amigaOrange)
                         }
-                        
-                        Image(systemName: coordinator.isPlaying ? "stop.fill" : "play.fill")
+
+                        // Play/Pause-Toggle: pausiert (fortsetzbar), stoppt NICHT.
+                        Image(systemName: coordinator.isPlaying && !coordinator.isPaused ? "pause.fill" : "play.fill")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
                     }
@@ -1411,52 +1475,69 @@ struct MainView: View {
                 .buttonStyle(PremiumHoverButtonStyle(theme: theme))
                 .cornerRadius(theme == .workbench ? 0 : 18)
                 .disabled(coordinator.activeMod == nil)
-                
-                // Previous button
+                .help(coordinator.isPlaying && !coordinator.isPaused
+                      ? "Pause — die Wiedergabe lässt sich an derselben Stelle fortsetzen (Leertaste)."
+                      : "Abspielen bzw. pausierte Wiedergabe fortsetzen (Leertaste).")
+
+                // Stop button (setzt an den Songanfang zurueck)
+                Button(action: {
+                    stopPlayback()
+                }) {
+                    transportButtonLabel(systemName: "stop.fill")
+                }
+                .buttonStyle(PremiumHoverButtonStyle(theme: theme))
+                .cornerRadius(theme == .workbench ? 0 : 15)
+                .disabled(!coordinator.isPlaying)
+                .help("Stopp: Wiedergabe beenden — der nächste Start beginnt wieder am Songanfang.")
+
+                Divider()
+                    .frame(height: 20)
+
+                // Song-Position zurueck/vor (Pattern-Eintraege innerhalb des Songs)
+                Button(action: {
+                    seekPosition(by: -1)
+                }) {
+                    transportButtonLabel(systemName: "backward.frame.fill")
+                }
+                .buttonStyle(PremiumHoverButtonStyle(theme: theme))
+                .cornerRadius(theme == .workbench ? 0 : 15)
+                .disabled(!coordinator.isPlaying)
+                .help("Eine Song-Position zurückspringen (Pattern-Eintrag innerhalb des Songs).")
+
+                Button(action: {
+                    seekPosition(by: 1)
+                }) {
+                    transportButtonLabel(systemName: "forward.frame.fill")
+                }
+                .buttonStyle(PremiumHoverButtonStyle(theme: theme))
+                .cornerRadius(theme == .workbench ? 0 : 15)
+                .disabled(!coordinator.isPlaying)
+                .help("Eine Song-Position vorspringen (Pattern-Eintrag innerhalb des Songs).")
+
+                Divider()
+                    .frame(height: 20)
+
+                // Previous button (Playlist-Titel)
                 Button(action: {
                     prevTrack()
                 }) {
-                    ZStack {
-                        if theme == .cyber {
-                            Circle()
-                                .fill(Color.spaceSurface)
-                                .overlay(Circle().stroke(Color.spaceAccent.opacity(0.3), lineWidth: 1))
-                        } else {
-                            Rectangle()
-                                .fill(Color.amigaOrange.opacity(0.3))
-                        }
-                        Image(systemName: "backward.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.white)
-                    }
-                    .frame(width: 30, height: 30)
+                    transportButtonLabel(systemName: "backward.end.fill")
                 }
                 .buttonStyle(PremiumHoverButtonStyle(theme: theme))
                 .cornerRadius(theme == .workbench ? 0 : 15)
                 .disabled(playlist.isEmpty)
-                
-                // Next button
+                .help("Vorheriger Titel der Playlist (⌘← oder Pfeil links).")
+
+                // Next button (Playlist-Titel)
                 Button(action: {
                     nextTrack()
                 }) {
-                    ZStack {
-                        if theme == .cyber {
-                            Circle()
-                                .fill(Color.spaceSurface)
-                                .overlay(Circle().stroke(Color.spaceAccent.opacity(0.3), lineWidth: 1))
-                        } else {
-                            Rectangle()
-                                .fill(Color.amigaOrange.opacity(0.3))
-                        }
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.white)
-                    }
-                    .frame(width: 30, height: 30)
+                    transportButtonLabel(systemName: "forward.end.fill")
                 }
                 .buttonStyle(PremiumHoverButtonStyle(theme: theme))
                 .cornerRadius(theme == .workbench ? 0 : 15)
                 .disabled(playlist.isEmpty)
+                .help("Nächster Titel der Playlist (⌘→ oder Pfeil rechts).")
             }
             
             // Middle block: Progress Timeline
@@ -1465,7 +1546,20 @@ struct MainView: View {
                     Text(formatTime(coordinator.elapsedTime))
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.spaceTextSecondary)
-                    
+
+                    // Zeitsprung zurueck — bequeme Alternative zum Slider.
+                    Button(action: { coordinator.seek(bySeconds: -15) }) {
+                        Image(systemName: "gobackward.15")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(!coordinator.isPlaying)
+                    .help("15 Sekunden zurückspringen (zeilengenau; bei Tempo-Wechseln näherungsweise).")
+
+                    // Der Slider springt pro Song-Position und funktioniert auch
+                    // im gestoppten Zustand: Play startet dann ab der gewaehlten
+                    // Stelle.
                     Slider(
                         value: Binding(
                             get: { Double(coordinator.currentPosition) },
@@ -1475,7 +1569,18 @@ struct MainView: View {
                         step: 1.0
                     )
                     .accentColor(theme == .workbench ? .amigaOrange : .spaceAccent)
-                    
+                    .help("Song-Position wählen — funktioniert auch bei gestoppter Wiedergabe: Play startet dann ab dieser Stelle.")
+
+                    // Zeitsprung vor.
+                    Button(action: { coordinator.seek(bySeconds: 30) }) {
+                        Image(systemName: "goforward.30")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(!coordinator.isPlaying)
+                    .help("30 Sekunden vorspringen (zeilengenau; bei Tempo-Wechseln näherungsweise).")
+
                     Text(formatTime(coordinator.totalDuration))
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.spaceTextSecondary)
@@ -1610,6 +1715,12 @@ struct MainView: View {
                             .bold()
                             .frame(width: 120, alignment: .leading)
                         Text("Abspielen / Pause")
+                    }
+                    HStack {
+                        Text("⌘ .")
+                            .bold()
+                            .frame(width: 120, alignment: .leading)
+                        Text("Stopp (zurück zum Anfang)")
                     }
                     HStack {
                         Text("PFEIL RECHTS")

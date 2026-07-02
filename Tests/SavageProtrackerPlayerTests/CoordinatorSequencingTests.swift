@@ -40,6 +40,73 @@ final class CoordinatorSequencingTests: XCTestCase {
         return data
     }
 
+    /// Pause haelt die Engine an, ohne den Zustand zu verwerfen; resume() setzt
+    /// fort; stop() raeumt beide Flags auf. Braucht ein echtes Audio-Geraet —
+    /// ohne (z.B. CI) startet play() nicht und der Test wird uebersprungen.
+    @MainActor
+    func testPauseAndResumeKeepPlaybackState() async throws {
+        let coordinator = ModPlayerCoordinator()
+        coordinator.setMod(ModParser.generateDemoMod())
+        coordinator.play()
+        guard coordinator.isPlaying else { return }
+
+        try await Task.sleep(nanoseconds: 200_000_000)
+        coordinator.pause()
+        XCTAssertTrue(coordinator.isPaused)
+        XCTAssertTrue(coordinator.isPlaying, "Pause darf die Engine nicht abbauen")
+        let pausedPosition = coordinator.currentPosition
+
+        try await Task.sleep(nanoseconds: 200_000_000)
+        coordinator.resume()
+        XCTAssertFalse(coordinator.isPaused)
+        XCTAssertTrue(coordinator.isPlaying)
+        // Nach dem Fortsetzen laeuft es an derselben Stelle weiter (die
+        // Position kann nur >= der Pausen-Position sein, nie zurueckspringen).
+        XCTAssertGreaterThanOrEqual(coordinator.currentPosition, pausedPosition)
+
+        coordinator.stop()
+        XCTAssertFalse(coordinator.isPlaying)
+        XCTAssertFalse(coordinator.isPaused)
+    }
+
+    /// Seek im gestoppten Zustand merkt die Position vor; play() startet dort.
+    @MainActor
+    func testSeekWhileStoppedStartsPlaybackAtPosition() async throws {
+        // makeMod liefert einen 2-Positionen-Song.
+        let mod = try ModParser.parse(data: makeMod(effectId: 0x00, effectData: 0x00))
+        let coordinator = ModPlayerCoordinator()
+        coordinator.setMod(mod)
+
+        coordinator.seek(toPosition: 1)
+        XCTAssertEqual(coordinator.currentPosition, 1, "Slider-Position muss auch gestoppt sichtbar sein")
+
+        coordinator.play()
+        guard coordinator.isPlaying else { return } // kein Audio-Geraet -> skip
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertEqual(coordinator.currentPosition, 1, "Wiedergabe muss an der vorgemerkten Position starten")
+        coordinator.stop()
+    }
+
+    /// Relativer Zeitsprung (+30s) rechnet Sekunden in Zeilen um und springt
+    /// zeilengenau; das Ziel wird ans Songende geklemmt.
+    @MainActor
+    func testSeekBySecondsJumpsForward() async throws {
+        let mod = try ModParser.parse(data: makeMod(effectId: 0x00, effectData: 0x00))
+        let coordinator = ModPlayerCoordinator()
+        coordinator.setMod(mod)
+        coordinator.play()
+        guard coordinator.isPlaying else { return }
+
+        try await Task.sleep(nanoseconds: 200_000_000)
+        // Bei 125 BPM / Speed 6 dauert eine Zeile 0,12s -> +10s = ~83 Zeilen,
+        // also mitten in Position 1 (weit genug vor dem Songende, damit der
+        // Song waehrend der Pruef-Wartezeit nicht auf Position 0 wrappt).
+        coordinator.seek(bySeconds: 10)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(coordinator.currentPosition, 1)
+        coordinator.stop()
+    }
+
     /// Vor dem Fix: ein Dxx mit BCD-Wert > 63 (z.B. D99 = 99) setzte rowIndex
     /// auf 99; der Wrap-Test `== 64` traf nie, also kletterte die Zeile endlos
     /// und der Song hing stumm fest. Jetzt muss rowIndex immer 0..63 bleiben.

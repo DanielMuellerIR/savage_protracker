@@ -78,6 +78,10 @@ struct RenderProbeSample: Sendable {
 @MainActor
 public final class ModPlayerCoordinator: ObservableObject {
     @Published public var isPlaying = false
+    // Pausiert: Engine steht, aber der komplette Wiedergabezustand (Position,
+    // Kanäle, Effekt-Memory) bleibt erhalten — resume() spielt nahtlos weiter.
+    // isPlaying bleibt dabei true (die Engine ist weiterhin alloziert).
+    @Published public var isPaused = false
     @Published public var currentPosition = 0
     @Published public var currentRow = 0
     // Die BPM-/Speed-Stepper in der UI schreiben in diese beiden Properties.
@@ -215,6 +219,8 @@ public final class ModPlayerCoordinator: ObservableObject {
 
         self.currentPosition = 0
         self.currentRow = 0
+        // Eine fuer den alten Song vorgemerkte Startposition gilt nicht mehr.
+        self.pendingStartPosition = nil
         // codereview-ok: by-design — neuer Song startet auf seinem Header-Tempo
         // (MOD: ProTracker-Default 125/6, S3M: Initial Speed/Tempo) und setzt
         // sein Tempo per Effekt selbst; mit dem didSet-Fix benigne, kein
@@ -288,6 +294,15 @@ public final class ModPlayerCoordinator: ObservableObject {
         state.clockRateOverride = mod.format == .s3m ? 14317056.0 : 0
         state.elapsedFrames = 0
 
+        // Wurde im gestoppten Zustand per Slider eine Startposition gewaehlt,
+        // dort beginnen: eine Position davor auf der letzten Zeile stehen —
+        // der erste Tick-Boundary laedt dann (startPos, Zeile 0) frisch.
+        if let startPos = pendingStartPosition, startPos > 0, startPos < mod.length {
+            state.position = startPos - 1
+            state.elapsedFrames = UInt64(Double(startPos * 64 * mod.initialSpeed) * state.outputsPerTick)
+        }
+        pendingStartPosition = nil
+
         self.playbackState = state
         
         let dspChannels = channels
@@ -337,6 +352,7 @@ public final class ModPlayerCoordinator: ObservableObject {
             // Ausgabe sofort zum UI-Slider passt (nicht erst nach Slider-Bewegung).
             mixer.outputVolume = lastVolume * lastVolume
             isPlaying = true
+            isPaused = false
             startVUUpdates()
         } catch {
             print("Fehler beim Starten der AVAudioEngine: \(error)")
@@ -357,12 +373,37 @@ public final class ModPlayerCoordinator: ObservableObject {
         audioEngine = nil
         sourceNode = nil
         isPlaying = false
+        isPaused = false
         stopVUUpdates()
-        
+
         self.playbackState = nil
-        
+
         for ch in channels {
             ch.reset()
+        }
+    }
+
+    // Wiedergabe anhalten, ohne den Zustand zu verwerfen. Gegenstück: resume().
+    public func pause() {
+        guard isPlaying, !isPaused, let engine = audioEngine else { return }
+        engine.pause()
+        isPaused = true
+        // VU-Timer anhalten — die Meter fallen auf 0, elapsedTime friert ein.
+        stopVUUpdates()
+    }
+
+    // Pausierte Wiedergabe nahtlos fortsetzen.
+    public func resume() {
+        guard isPaused, let engine = audioEngine else { return }
+        do {
+            try engine.start()
+            isPaused = false
+            startVUUpdates()
+        } catch {
+            print("Fehler beim Fortsetzen der AVAudioEngine: \(error)")
+            // Engine nicht wiederbelebbar -> sauber aufraeumen statt in einem
+            // halb-pausierten Zustand haengen zu bleiben.
+            stop()
         }
     }
     
@@ -376,12 +417,46 @@ public final class ModPlayerCoordinator: ObservableObject {
         audioEngine?.mainMixerNode.outputVolume = v * v // Psychoacoustic scaling
     }
     
+    // Merkt die per Slider gewaehlte Startposition, wenn gerade nichts spielt.
+    // Der naechste play()-Aufruf startet dann dort statt am Songanfang.
+    private var pendingStartPosition: Int?
+
     public func seek(toPosition: Int) {
-        guard let state = playbackState, let mod = activeMod else { return }
+        guard let mod = activeMod else { return }
         let pos = max(0, min(mod.length - 1, toPosition))
-        state.position = pos
-        state.rowIndex = 0
-        state.tick = 0
+        guard let state = playbackState else {
+            // Gestoppt: Position nur vormerken und in der UI anzeigen —
+            // play() greift sie auf und beginnt an dieser Stelle.
+            pendingStartPosition = pos
+            currentPosition = pos
+            currentRow = 0
+            return
+        }
+        applySeek(state: state, position: pos, row: 0)
+    }
+
+    // Relativer Zeitsprung (z.B. +30s/-15s). Rechnet die gewuenschten Sekunden
+    // ueber die aktuelle Zeilendauer (Speed/BPM) in Pattern-Zeilen um und
+    // springt zeilengenau — bei Tempo-Wechseln im Song eine Naeherung.
+    public func seek(bySeconds delta: Double) {
+        guard let state = playbackState, let mod = activeMod else { return }
+        let bpm = Double(state.bpm > 0 ? state.bpm : 125)
+        let rowDuration = Double(max(1, state.ticksPerRow)) * 60.0 / (bpm * 24.0)
+        guard rowDuration > 0 else { return }
+
+        let currentRows = max(0, state.position) * 64 + max(0, min(63, state.rowIndex))
+        var targetRows = currentRows + Int((delta / rowDuration).rounded())
+        targetRows = max(0, min(mod.length * 64 - 1, targetRows))
+        applySeek(state: state, position: targetRows / 64, row: targetRows % 64)
+    }
+
+    private func applySeek(state: RealtimePlaybackState, position: Int, row: Int) {
+        // Ziel so setzen, dass der naechste Tick-Boundary die Zielzeile LAEDT
+        // und ihre Noten triggert: eine Zeile davor auf dem letzten Tick stehen.
+        // (rowIndex -1 ist fuer row 0 in Ordnung — der Row-Advance rechnet +1.)
+        state.position = position
+        state.rowIndex = row - 1
+        state.tick = state.ticksPerRow - 1
 
         // Noch nicht konsumierte Sequenz-Sprungbefehle loeschen. Ohne das wuerde
         // ein vor dem Seek gesetzter Position-Jump (Bxx), Pattern-Break (Dxx) oder
@@ -405,10 +480,10 @@ public final class ModPlayerCoordinator: ObservableObject {
 
         let sampleRate = self.audioEngine?.mainMixerNode.outputFormat(forBus: 0).sampleRate ?? 44100.0
         let outputsPerTick = sampleRate * 60.0 / (Double(state.bpm) * 24.0)
-        state.elapsedFrames = UInt64(Double(pos * 64 * state.ticksPerRow) * outputsPerTick)
-        
-        self.currentPosition = pos
-        self.currentRow = 0
+        state.elapsedFrames = UInt64(Double((position * 64 + row) * state.ticksPerRow) * outputsPerTick)
+
+        self.currentPosition = position
+        self.currentRow = max(0, row)
     }
     
     public func toggleMute(channelIndex: Int) {
