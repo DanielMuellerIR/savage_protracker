@@ -50,6 +50,11 @@ struct MainView: View {
     // auf, statt stur beim ersten der Liste zu beginnen.
     @AppStorage("savage.lastPlayed") private var lastPlayedSongName: String = ""
 
+    // Autoplay-Ordner aus den Einstellungen (leer = nicht gesetzt, dann greifen
+    // nur die audio/-Fallbacks in loadLocalAudioFolder). Gesetzt wird der Wert
+    // im Einstellungs-Fenster (SettingsView, gleicher Schluessel).
+    @AppStorage("savage.autoplayFolder") private var autoplayFolderPath: String = ""
+
     // Sidebar tabs
     @State private var selectedSidebarTab: Int = 0 // 0 = Playlist, 1 = Instrumente
     
@@ -648,10 +653,11 @@ struct MainView: View {
     private func loadLocalAudioFolder() {
         let fm = FileManager.default
         var candidateDirs: [URL] = []
-        // Primaere Quelle: der Nextcloud-Ordner, der auf allen Macs synct —
-        // dieselbe Playlist unabhaengig davon, wo die App gestartet wird.
-        candidateDirs.append(fm.homeDirectoryForCurrentUser
-            .appendingPathComponent("Nextcloud/Musik/mods", isDirectory: true))
+        // Primaere Quelle: der in den Einstellungen (Cmd+,) konfigurierte
+        // Autoplay-Ordner. Nicht gesetzt = nur die Fallbacks unten.
+        if !autoplayFolderPath.isEmpty {
+            candidateDirs.append(URL(fileURLWithPath: (autoplayFolderPath as NSString).expandingTildeInPath, isDirectory: true))
+        }
         // Fallbacks wie bisher: audio/-Ordner neben Arbeitsverzeichnis bzw. App.
         candidateDirs.append(URL(fileURLWithPath: fm.currentDirectoryPath).appendingPathComponent("audio"))
         // Bundle.main.bundlePath ist immer ein (non-optional) String.

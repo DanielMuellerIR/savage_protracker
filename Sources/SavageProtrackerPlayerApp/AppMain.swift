@@ -74,5 +74,13 @@ struct SavageProtrackerPlayerApp: App {
             }
             #endif
         }
+
+        #if os(macOS)
+        // Natives Einstellungs-Fenster (App-Menue > Einstellungen, Cmd+,) —
+        // aktuell nur der Autoplay-Ordner fuer die Start-Playlist.
+        Settings {
+            SettingsView()
+        }
+        #endif
     }
 }
