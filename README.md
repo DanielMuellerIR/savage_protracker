@@ -51,8 +51,10 @@ If no preview appears:
 
 - **Format support (macOS app)**: ProTracker MOD, multichannel MOD (`xCHN`/`xxCH`/`CD81`/`OKTA`/`FLT8`), 15-sample Soundtracker, and ScreamTracker 3 (`.s3m`) including the volume column, panning, and S3M effects. The HTML5 player deliberately stays compact and plays 4-channel MODs.
 - **Quick Look preview (macOS app)**: the bundled Quick Look plugin renders `.mod`/`.s3m` with the player engine and shows the native audio player with play and scrubbing in Finder (space bar).
-- **Drag & drop**: drop individual `.mod`/`.s3m` files or entire folders (recursively) onto the player.
-- **Automatic playlist**: if a subfolder named `audio/` exists next to the player or the app, it is scanned at startup and loaded as an alphabetically sorted playlist.
+- **Drag & drop**: drop individual `.mod`/`.s3m` files, entire folders (recursively), or Zip/7-Zip archives onto the player.
+- **Automatic playlist**: a configurable autoplay folder (macOS app: Settings, Cmd+,) is scanned at startup and loaded as a playlist; without configuration, an `audio/` subfolder next to the player or the app is used.
+- **Hierarchical playlist**: folders and archives appear as a collapsible tree. Folders start collapsed, the path to the playing track expands automatically, and playback and shuffle run across all folders.
+- **Archives as folders (macOS app)**: Zip and 7-Zip archives are extracted invisibly to a temporary directory (cleaned up on quit) and shown in the playlist like regular folders.
 - **Playlist handling**: a single click on a playlist entry loads and starts the track. When a song ends, the playlist can advance automatically.
 - **Real-time oscilloscopes**:
   - A true stereo master-mix oscilloscope fed straight from the audio render path.
@@ -141,10 +143,11 @@ bash build_app.sh                 # → "Savage Protracker Player.app" (incl. Qu
 Besides the app itself, `build_app.sh` compiles the Quick Look extension
 (`quicklook/`) and places it inside the app bundle under `Contents/PlugIns/`.
 
-At startup the app looks for an `audio/` directory next to the application and
-automatically loads any `.mod`/`.s3m` files (or `mod.*` files) found there into
-the playlist. These files are local test data only and do not belong in the
-git repository.
+At startup the app fills the playlist from the autoplay folder configured in
+the Settings window (Cmd+,). If none is set, it looks for an `audio/` directory
+next to the application and automatically loads any `.mod`/`.s3m` files (or
+`mod.*` files) found there. These files are local test data only and do not
+belong in the git repository.
 
 For release builds, `build_app.sh` automatically signs with the Developer ID
 `Developer ID Application: Daniel Mueller (9QSWKSR4NQ)` if it is available in

@@ -51,8 +51,10 @@ Falls keine Vorschau erscheint:
 
 - **Formatvielfalt (macOS-App)**: ProTracker-MOD, Multichannel-MOD (`xCHN`/`xxCH`/`CD81`/`OKTA`/`FLT8`), 15-Sample-Soundtracker und ScreamTracker 3 (`.s3m`) inklusive Volume-Column, Panning und S3M-Effekten. Der HTML5-Player bleibt bewusst kompakt und spielt 4-Kanal-MODs.
 - **Quick-Look-Vorschau (macOS-App)**: Das mitgelieferte Quick-Look-Plugin rendert `.mod`/`.s3m` mit der Player-Engine und zeigt im Finder (Leertaste) den nativen Audio-Player mit Play und Scrubbing.
-- **Drag & Drop**: Einzelne `.mod`-/`.s3m`-Dateien oder ganze Ordner (rekursiv) können auf den Player gezogen werden.
-- **Automatische Playlist**: Wenn im selben Ordner wie der Player oder die App ein Unterordner namens `audio/` vorhanden ist, wird dieser beim Start automatisch gescannt und als alphabetisch sortierte Playlist geladen.
+- **Drag & Drop**: Einzelne `.mod`-/`.s3m`-Dateien, ganze Ordner (rekursiv) oder Zip-/7-Zip-Archive können auf den Player gezogen werden.
+- **Automatische Playlist**: Ein konfigurierbarer Autoplay-Ordner (macOS-App: Einstellungen, Cmd+,) wird beim Start gescannt und als Playlist geladen; ohne Konfiguration wird ein `audio/`-Unterordner neben dem Player bzw. der App verwendet.
+- **Hierarchische Playlist**: Ordner und Archive erscheinen als auf- und zuklappbarer Baum. Ordner starten zugeklappt, der Pfad zum laufenden Titel klappt automatisch auf, und Wiedergabe wie Shuffle laufen über alle Ordner hinweg.
+- **Archive wie Ordner (macOS-App)**: Zip- und 7-Zip-Archive werden unsichtbar in ein temporäres Verzeichnis entpackt (aufgeräumt beim Beenden) und in der Playlist wie normale Ordner angezeigt.
 - **Playlist-Bedienung**: Einzelklick auf einen Playlist-Eintrag lädt und startet den Titel direkt. Nach dem Songende kann die Playlist automatisch weiterlaufen.
 - **Echtzeit-Oszilloskope**:
   - Ein echtes Stereo-Master-Mischungs-Oszilloskop direkt aus dem Audio-Renderpfad.
@@ -142,7 +144,7 @@ bash build_app.sh                 # → "Savage Protracker Player.app" (inkl. Qu
 `build_app.sh` kompiliert neben der App auch die Quick-Look-Extension
 (`quicklook/`) und legt sie im App-Bundle unter `Contents/PlugIns/` ab.
 
-Die App sucht beim Start nach einem `audio/`-Verzeichnis neben der Anwendung und lädt dort gefundene `.mod`-/`.s3m`-Dateien (oder `mod.*`-Dateien) automatisch in die Playlist. Diese Dateien sind nur lokale Testdaten und gehören nicht ins Git-Repository.
+Die App befüllt die Playlist beim Start aus dem Autoplay-Ordner, der im Einstellungs-Fenster (Cmd+,) konfiguriert ist. Ist keiner gesetzt, sucht sie nach einem `audio/`-Verzeichnis neben der Anwendung und lädt dort gefundene `.mod`-/`.s3m`-Dateien (oder `mod.*`-Dateien) automatisch in die Playlist. Diese Dateien sind nur lokale Testdaten und gehören nicht ins Git-Repository.
 
 Für Release-Builds signiert `build_app.sh` automatisch mit der Developer-ID
 `Developer ID Application: Daniel Mueller (9QSWKSR4NQ)`, sofern sie im
