@@ -4,7 +4,7 @@ import AppKit
 #endif
 
 @main
-struct SavageProtrackerPlayerApp: App {
+struct SavageModPlayerApp: App {
     init() {
         // Temp-Kopien frueherer App-Laeufe einmalig beim Start aufraeumen.
         // (Innerhalb einer Sitzung bleiben die pro-Drop-Verzeichnisse bestehen,
@@ -26,7 +26,7 @@ struct SavageProtrackerPlayerApp: App {
         WindowGroup {
             MainView()
                 #if os(macOS)
-                .navigationTitle("Savage Protracker Player")
+                .navigationTitle("Savage Mod Player")
                 #endif
         }
         .commands {
@@ -36,7 +36,7 @@ struct SavageProtrackerPlayerApp: App {
             // Name und Version kommen automatisch aus dem Bundle). Der verspielte
             // Guru-Meditation-Screen bleibt zusätzlich über den ⓘ-Button erhalten.
             CommandGroup(replacing: .appInfo) {
-                Button("Über Savage Protracker Player") {
+                Button("Über Savage Mod Player") {
                     let credits = NSAttributedString(
                         string: "Entwickelt von Daniel Müller.\n\n"
                             + "ProTracker-/Paula-Engine: Eigenentwicklung (kein libopenmpt), "

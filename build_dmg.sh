@@ -1,16 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-DMG_NAME="Savage Protracker Player"
-APP_NAME="Savage Protracker Player.app"
-VOL_NAME="Savage Protracker Player"
+DMG_NAME="Savage Mod Player"
+APP_NAME="Savage Mod Player.app"
+VOL_NAME="Savage Mod Player"
 BUILD_DIR="build"
 RW_DMG="${BUILD_DIR}/dmg_rw.dmg"
 FINAL_DMG="${BUILD_DIR}/${DMG_NAME}.dmg"
 MOUNT_DIR="/Volumes/${VOL_NAME}"
 NOTARIZE=0
 FINDER_LAYOUT=1
-NOTARY_PROFILE="${NOTARY_PROFILE:-SavageProtrackerNotary}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-SavageModPlayerNotary}"
 APPLE_TEAM_ID="${APPLE_TEAM_ID:-9QSWKSR4NQ}"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-Developer ID Application: Daniel Mueller ($APPLE_TEAM_ID)}"
 SIGN_DMG="${SIGN_DMG:-auto}"
@@ -23,7 +23,7 @@ Usage: bash build_dmg.sh [--notarize] [--no-finder-layout]
   --no-finder-layout  Skip Finder/AppleScript icon layout, useful on headless runs.
 
 Environment:
-  NOTARY_PROFILE      Keychain profile for notarytool (default: SavageProtrackerNotary).
+  NOTARY_PROFILE      Keychain profile for notarytool (default: SavageModPlayerNotary).
   SIGN_DMG            auto/1/0, controls Developer ID signing of the DMG.
 EOF
 }

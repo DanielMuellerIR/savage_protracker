@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="src/AppIcon.png" width="128" alt="Savage Protracker Player Icon">
+  <img src="src/AppIcon.png" width="128" alt="Savage Mod Player Icon">
 </p>
 
-<h1 align="center">Savage Protracker Player</h1>
+<h1 align="center">Savage Mod Player</h1>
 
 **🌐 Sprache / Language:** [English](README.md) · [Deutsch](README.de.md)
 
@@ -12,22 +12,22 @@
 
 A cross-platform, self-contained tracker module player in two flavors:
 
-1. **HTML5 (`savage-protracker-player.html`)** — a single HTML file (under 50 KB) that runs straight from the file system with a double click, no web server required. Plays classic 4-channel ProTracker MODs.
-2. **Native macOS app (`Savage Protracker Player.app`)** — a SwiftUI desktop application built on `AVAudioEngine`/`AVAudioSourceNode` with true real-time oscilloscopes and VU meters. Additionally plays multichannel MODs (6/8/… channels, including `6CHN`/`8CHN`/`FLT8`), 15-sample Soundtracker modules, and **ScreamTracker 3 (`.s3m`)** — and ships with a **Quick Look plugin**: pressing the space bar on a `.mod`/`.s3m` file in Finder opens a playable audio preview.
+1. **HTML5 (`savage-mod-player.html`)** — a single HTML file (under 50 KB) that runs straight from the file system with a double click, no web server required. Plays classic 4-channel ProTracker MODs.
+2. **Native macOS app (`Savage Mod Player.app`)** — a SwiftUI desktop application built on `AVAudioEngine`/`AVAudioSourceNode` with true real-time oscilloscopes and VU meters. Additionally plays multichannel MODs (6/8/… channels, including `6CHN`/`8CHN`/`FLT8`), 15-sample Soundtracker modules, and **ScreamTracker 3 (`.s3m`)** — and ships with a **Quick Look plugin**: pressing the space bar on a `.mod`/`.s3m` file in Finder opens a playable audio preview.
 
 Neither variant bundles any module files. Songs are loaded via drag & drop or the file dialog.
 
 <p align="center">
-  <img src="docs/screenshot-dark.png" width="900" alt="Savage Protracker Player (dark mode) playing a 16-channel ScreamTracker 3 module">
+  <img src="docs/screenshot-dark.png" width="900" alt="Savage Mod Player (dark mode) playing a 16-channel ScreamTracker 3 module">
 </p>
 
 ---
 
 ## Download
 
-Ready-made builds of the macOS app are available as notarized DMGs on the [releases page](https://github.com/DanielMuellerIR/savage_protracker/releases). Download the DMG, open it, and drag the app into your Applications folder.
+Ready-made builds of the macOS app are available as notarized DMGs on the [releases page](https://github.com/DanielMuellerIR/savage_modplayer/releases). Download the DMG, open it, and drag the app into your Applications folder.
 
-The HTML5 player needs no download beyond the repository itself: simply open `savage-protracker-player.html` in a browser.
+The HTML5 player needs no download beyond the repository itself: simply open `savage-mod-player.html` in a browser.
 
 ---
 
@@ -115,7 +115,7 @@ For ScreamTracker 3 the engine switches to the ST3 period model (C2Spd-based per
 
 | Layer | HTML5 | macOS (Swift) |
 |---|---|---|
-| Parser | `modplayer.js` | `ModuleLoader`/`ModParser`/`S3MParser` (SavageProtrackerPlayerCore) |
+| Parser | `modplayer.js` | `ModuleLoader`/`ModParser`/`S3MParser` (SavageModPlayerCore) |
 | DSP / mixer | `mod-player-worklet.js` (AudioWorklet) | `ModPlayerCoordinator.swift` (`AVAudioSourceNode`, up to 32 channels) |
 | UI | vanilla JS + CSS grid | SwiftUI + Canvas |
 | Quick Look | — | `quicklook/PreviewProvider.swift` (appex, offline WAV render) |
@@ -127,17 +127,17 @@ For ScreamTracker 3 the engine switches to the ST3 period model (C2Spd-based per
 ### HTML5
 
 ```bash
-python3 build.py                  # → savage-protracker-player.html (~48 KB)
+python3 build.py                  # → savage-mod-player.html (~48 KB)
 python3 build.py --no-min         # without minification
 ```
 
-The generated single-file variant `savage-protracker-player.html` is part of
+The generated single-file variant `savage-mod-player.html` is part of
 the repository so the player can be used directly without a local build.
 
 ### macOS app
 
 ```bash
-bash build_app.sh                 # → "Savage Protracker Player.app" (incl. Quick Look appex)
+bash build_app.sh                 # → "Savage Mod Player.app" (incl. Quick Look appex)
 ```
 
 Besides the app itself, `build_app.sh` compiles the Quick Look extension
@@ -157,16 +157,16 @@ the keychain. Local unsigned builds are possible with
 ### DMG (for releases)
 
 ```bash
-bash build_dmg.sh                 # → build/Savage Protracker Player.dmg
+bash build_dmg.sh                 # → build/Savage Mod Player.dmg
 bash build_dmg.sh --notarize      # sign, notarize, and staple the DMG
 ```
 
 The DMG contains a Retina-compatible background image (1x/2x TIFF via
 `tiffutil`). Notarization expects a keychain profile, by default
-`SavageProtrackerNotary`. It can be created once interactively:
+`SavageModPlayerNotary`. It can be created once interactively:
 
 ```bash
-xcrun notarytool store-credentials SavageProtrackerNotary
+xcrun notarytool store-credentials SavageModPlayerNotary
 ```
 
 ### Tests
@@ -191,7 +191,7 @@ bash publish_github.sh --release
 ```
 
 The publishing script sets `origin` to
-`https://github.com/DanielMuellerIR/savage_protracker.git`, blocks accidentally
+`https://github.com/DanielMuellerIR/savage_modplayer.git`, blocks accidentally
 tracked audio and release artifacts, and with `--release` creates the matching
 GitHub release entry with the DMG asset.
 

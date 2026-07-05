@@ -1,5 +1,5 @@
 import SwiftUI
-import SavageProtrackerPlayerCore
+import SavageModPlayerCore
 import UniformTypeIdentifiers
 import UserNotifications
 import MediaPlayer
@@ -1966,7 +1966,7 @@ struct MainView: View {
 
                     Text("© 2026 Daniel Müller — Autor & Maintainer")
                         .foregroundColor(.spaceAccentGlow)
-                    Text("WTFPL — Quellcode: github.com/DanielMuellerIR/savage_protracker")
+                    Text("WTFPL — Quellcode: github.com/DanielMuellerIR/savage_modplayer")
                 }
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(.white)

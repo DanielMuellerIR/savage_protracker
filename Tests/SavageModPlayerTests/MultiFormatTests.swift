@@ -1,6 +1,6 @@
 import XCTest
 import AVFoundation
-@testable import SavageProtrackerPlayerCore
+@testable import SavageModPlayerCore
 
 // Tests für die neuen Modul-Formate: Multichannel-MOD-Varianten (6CHN/8CHN/
 // xxCH/FLT8), 15-Sample-Soundtracker und ScreamTracker 3 (S3M) — plus den

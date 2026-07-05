@@ -1,5 +1,5 @@
 import XCTest
-@testable import SavageProtrackerPlayerCore
+@testable import SavageModPlayerCore
 
 /// Regressionstests fuer die Song-Sequenzierung im Render-/Probe-Pfad des
 /// `ModPlayerCoordinator` (Pattern-Break, Wrap, Loop).

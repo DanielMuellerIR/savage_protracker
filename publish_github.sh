@@ -19,12 +19,12 @@
 
 set -euo pipefail
 
-REMOTE_URL="${REMOTE_URL:-https://github.com/DanielMuellerIR/savage_protracker.git}"
+REMOTE_URL="${REMOTE_URL:-https://github.com/DanielMuellerIR/savage_modplayer.git}"
 BRANCH="${BRANCH:-main}"
 REQUIRE_CLEAN="${REQUIRE_CLEAN:-1}"
 VERSION="$(cat VERSION 2>/dev/null || echo "0.0.0")"
 TAG="v${VERSION}"
-DMG_PATH="build/Savage Protracker Player.dmg"
+DMG_PATH="build/Savage Mod Player.dmg"
 DO_RELEASE=0
 DRY_RUN=0
 
@@ -108,7 +108,7 @@ run git push -u origin "$BRANCH"
 
 if [[ "$DO_RELEASE" == "1" ]]; then
     if ! git rev-parse "$TAG" >/dev/null 2>&1; then
-        run git tag -a "$TAG" -m "Savage Protracker Player ${VERSION}"
+        run git tag -a "$TAG" -m "Savage Mod Player ${VERSION}"
     fi
     run git push origin "$TAG"
 
@@ -121,11 +121,11 @@ if [[ "$DO_RELEASE" == "1" ]]; then
         # verwendet; sonst der generische Standardtext.
         if [[ -f RELEASE_NOTES.md ]]; then
             run gh release create "$TAG" "$DMG_PATH" \
-                --title "Savage Protracker Player ${VERSION}" \
+                --title "Savage Mod Player ${VERSION}" \
                 --notes-file RELEASE_NOTES.md
         else
             run gh release create "$TAG" "$DMG_PATH" \
-                --title "Savage Protracker Player ${VERSION}" \
+                --title "Savage Mod Player ${VERSION}" \
                 --notes "macOS-App als DMG. MOD-Dateien sind nicht enthalten; Musik wird lokal per Drag & Drop oder aus einem lokalen audio-Ordner geladen."
         fi
     fi

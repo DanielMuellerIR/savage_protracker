@@ -12,8 +12,8 @@ import UniformTypeIdentifiers
 // Finder (Leertaste) abspielbar, inklusive Scrubbing und Lautstärke.
 //
 // Hinweis zum Build: Dieses File wird NICHT über SwiftPM gebaut, sondern von
-// build_app.sh zusammen mit den SavageProtrackerPlayerCore-Quellen per swiftc
-// in EIN Modul kompiliert (deshalb kein `import SavageProtrackerPlayerCore`).
+// build_app.sh zusammen mit den SavageModPlayerCore-Quellen per swiftc
+// in EIN Modul kompiliert (deshalb kein `import SavageModPlayerCore`).
 class PreviewProvider: QLPreviewProvider, QLPreviewingController {
     func providePreview(for request: QLFilePreviewRequest) async throws -> QLPreviewReply {
         let data = try Data(contentsOf: request.fileURL)

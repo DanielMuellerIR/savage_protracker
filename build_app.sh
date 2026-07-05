@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "=== Building Savage Protracker Player App in Release Mode ==="
+echo "=== Building Savage Mod Player App in Release Mode ==="
 swift build -c release
 APP_VERSION="$(cat VERSION)"
 
 echo "=== Creating macOS App Bundle structure ==="
-APP_DIR="Savage Protracker Player.app"
+APP_DIR="Savage Mod Player.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
@@ -20,15 +20,15 @@ mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
 
 # Copy release binary
-cp ".build/release/SavageProtrackerPlayerApp" "$MACOS_DIR/"
+cp ".build/release/SavageModPlayerApp" "$MACOS_DIR/"
 
 # --- Quick-Look-Extension (Appex) bauen -------------------------------------
 # SwiftPM kann keine .appex-Bundles erzeugen, deshalb kompiliert swiftc die
 # Extension direkt: Core-Quellen + PreviewProvider werden zu EINEM Modul
-# gebaut (darum kein "import SavageProtrackerPlayerCore" im Provider).
+# gebaut (darum kein "import SavageModPlayerCore" im Provider).
 # Der Einstiegspunkt einer NSExtension ist _NSExtensionMain (statt main).
 echo "=== Building Quick Look Extension ==="
-QL_NAME="SavageProtrackerQuickLook"
+QL_NAME="SavageModPlayerQuickLook"
 QL_APPEX="$CONTENTS_DIR/PlugIns/$QL_NAME.appex"
 QL_MACOS_DIR="$QL_APPEX/Contents/MacOS"
 mkdir -p "$QL_MACOS_DIR"
@@ -38,8 +38,8 @@ swiftc -O -parse-as-library \
     -module-name "$QL_NAME" \
     -target "$ARCH-apple-macos13.0" \
     -application-extension \
-    Sources/SavageProtrackerPlayerCore/Parser/*.swift \
-    Sources/SavageProtrackerPlayerCore/DSP/*.swift \
+    Sources/SavageModPlayerCore/Parser/*.swift \
+    Sources/SavageModPlayerCore/DSP/*.swift \
     quicklook/PreviewProvider.swift \
     -Xlinker -e -Xlinker _NSExtensionMain \
     -o "$QL_MACOS_DIR/$QL_NAME"
@@ -60,11 +60,11 @@ cat <<EOF > "$QL_APPEX/Contents/Info.plist"
         <string>MacOSX</string>
     </array>
     <key>CFBundleDisplayName</key>
-    <string>Savage Protracker Quick Look</string>
+    <string>Savage Mod Player Quick Look</string>
     <key>CFBundleExecutable</key>
     <string>$QL_NAME</string>
     <key>CFBundleIdentifier</key>
-    <string>com.viben.SavageProtrackerPlayer.QuickLook</string>
+    <string>com.viben.SavageModPlayer.QuickLook</string>
     <key>CFBundleName</key>
     <string>$QL_NAME</string>
     <key>CFBundlePackageType</key>
@@ -83,8 +83,8 @@ cat <<EOF > "$QL_APPEX/Contents/Info.plist"
             <true/>
             <key>QLSupportedContentTypes</key>
             <array>
-                <string>com.viben.savage-protracker.mod</string>
-                <string>com.viben.savage-protracker.s3m</string>
+                <string>com.viben.savage-modplayer.mod</string>
+                <string>com.viben.savage-modplayer.s3m</string>
                 <!-- Ist VLC (o.ae.) installiert, gewinnen dessen EXPORTIERTE
                      UTIs gegen unsere importierten — .mod ist dann
                      org.videolan.mod. Diese UTIs zusaetzlich claimen, damit
@@ -128,13 +128,13 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>SavageProtrackerPlayerApp</string>
+    <string>SavageModPlayerApp</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.viben.SavageProtrackerPlayer</string>
+    <string>com.viben.SavageModPlayer</string>
     <key>CFBundleName</key>
-    <string>Savage Protracker Player</string>
+    <string>Savage Mod Player</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -157,8 +157,8 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
             <string>Viewer</string>
             <key>LSItemContentTypes</key>
             <array>
-                <string>com.viben.savage-protracker.mod</string>
-                <string>com.viben.savage-protracker.s3m</string>
+                <string>com.viben.savage-modplayer.mod</string>
+                <string>com.viben.savage-modplayer.s3m</string>
             </array>
         </dict>
     </array>
@@ -169,7 +169,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <array>
         <dict>
             <key>UTTypeIdentifier</key>
-            <string>com.viben.savage-protracker.mod</string>
+            <string>com.viben.savage-modplayer.mod</string>
             <key>UTTypeDescription</key>
             <string>Amiga Tracker Module</string>
             <key>UTTypeConformsTo</key>
@@ -186,7 +186,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
         </dict>
         <dict>
             <key>UTTypeIdentifier</key>
-            <string>com.viben.savage-protracker.s3m</string>
+            <string>com.viben.savage-modplayer.s3m</string>
             <key>UTTypeDescription</key>
             <string>ScreamTracker 3 Module</string>
             <key>UTTypeConformsTo</key>
@@ -206,7 +206,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 </plist>
 EOF
 
-QL_ENTITLEMENTS="quicklook/SavageProtrackerQuickLook.entitlements"
+QL_ENTITLEMENTS="quicklook/SavageModPlayerQuickLook.entitlements"
 
 if [[ "$SIGN_APP" != "0" ]]; then
     echo "=== Checking code signing identity ==="
@@ -219,7 +219,7 @@ if [[ "$SIGN_APP" != "0" ]]; then
         # Hardened Runtime ist Pflicht fuer spaetere Notarisierung.
         codesign --force --options runtime --timestamp \
             --entitlements "$QL_ENTITLEMENTS" \
-            --sign "$CODESIGN_IDENTITY" "$APP_DIR/Contents/PlugIns/SavageProtrackerQuickLook.appex"
+            --sign "$CODESIGN_IDENTITY" "$APP_DIR/Contents/PlugIns/SavageModPlayerQuickLook.appex"
         codesign --force --options runtime --timestamp --sign "$CODESIGN_IDENTITY" "$APP_DIR"
         codesign --verify --deep --strict --verbose=2 "$APP_DIR"
     elif [[ "$SIGN_APP" == "1" || "${REQUIRE_CODESIGN:-0}" == "1" ]]; then
@@ -232,7 +232,7 @@ if [[ "$SIGN_APP" != "0" ]]; then
         # Ad-hoc-Signatur reicht lokal, damit Quick Look den sandboxten Appex
         # laedt (ganz unsigniert wird die Extension ignoriert).
         codesign --force --entitlements "$QL_ENTITLEMENTS" --sign - \
-            "$APP_DIR/Contents/PlugIns/SavageProtrackerQuickLook.appex"
+            "$APP_DIR/Contents/PlugIns/SavageModPlayerQuickLook.appex"
         codesign --force --sign - "$APP_DIR"
     fi
 fi

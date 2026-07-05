@@ -1,12 +1,12 @@
-This release turns the flat playlist into a real folder tree, adds archive support, and makes the startup folder configurable.
+Savage Protracker Player is now **Savage Mod Player**. Since the app plays ProTracker MOD, multichannel MOD, Soundtracker, and ScreamTracker 3 modules — with more formats planned — the old name no longer covered what it does. This release contains the rename and no functional changes beyond it.
 
-## New
+## Changed
 
-- **Hierarchical playlist**: folders (and their subfolders) now appear as a collapsible tree instead of a flat list. All folders start collapsed; the path to the currently playing track expands automatically, and any folder can be toggled by clicking. Track navigation, end-of-song advance, and shuffle work across all folders, so playback never stops at a folder boundary. While a search filter is active, matches are shown as a flat list.
-- **Zip and 7-Zip archives**: dropped archives — or archives found inside the startup folder — are treated exactly like folders in the playlist (shown without the file extension). Extraction happens invisibly into a temporary directory, never next to the source files, and is cleaned up when the app quits (plus on launch, as a safety net after crashes). Corrupt archives are skipped silently.
-- **Configurable autoplay folder**: a new native Settings window (app menu > Settings, Cmd+,) lets you pick the folder the playlist is filled from at startup. If no folder is set, the app falls back to the previous behavior and looks for an `audio/` directory next to the app or the working directory.
+- **New name everywhere**: the app bundle is now `Savage Mod Player.app`, the window title, About panel, and DMG follow suit. The HTML5 player file is now `savage-mod-player.html`.
+- **Repository renamed** to `savage_modplayer`. GitHub redirects all old links (web, git remotes, releases) to the new address automatically.
+- **New bundle identifier** (`com.viben.SavageModPlayer`): macOS treats this as a new app, so preferences — including the autoplay folder — start fresh. Set the autoplay folder once again under Settings (Cmd+,). If you still have the old app in your Applications folder, delete it to avoid two Quick Look providers.
 
 ## Notes
 
-- The HTML5 single-file player intentionally stays a compact 4-channel ProTracker player; the playlist tree and archive support are features of the macOS app.
-- The DMG contains the app including the Quick Look plugin; no module files are bundled. Songs are loaded via drag & drop or from the configured autoplay folder.
+- Functionally identical to 1.4.0 (hierarchical playlist, Zip/7-Zip archives, configurable autoplay folder).
+- The DMG contains the app including the Quick Look plugin; no module files are bundled.

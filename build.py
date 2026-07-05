@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-build.py — bündelt alle Quellen zu einer einzigen, minifizierten savage-protracker-player.html.
+build.py — bündelt alle Quellen zu einer einzigen, minifizierten savage-mod-player.html.
 
 Quelldateien (alle im Repo, kein Build-Tool, keine Abhängigkeiten):
 
@@ -21,7 +21,7 @@ Schritte:
 
 Aufruf:
 
-    python3 build.py            # erzeugt savage-protracker-player.html (minifiziert)
+    python3 build.py            # erzeugt savage-mod-player.html (minifiziert)
     python3 build.py --no-min   # ohne Minifizierung (zum Debuggen)
 
 Minifizierung ist konservativ:
@@ -264,7 +264,7 @@ def build(minify: bool = True) -> Path:
         '<head>'
         '<meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<title>Savage Protracker Player</title>'
+        '<title>Savage Mod Player</title>'
         f'<style>{css_src}</style>'
         '</head>'
         '<body>'
@@ -281,7 +281,7 @@ def build(minify: bool = True) -> Path:
         '</html>'
     )
 
-    out = HERE / 'savage-protracker-player.html'
+    out = HERE / 'savage-mod-player.html'
     out.write_text(html)
     return out
 

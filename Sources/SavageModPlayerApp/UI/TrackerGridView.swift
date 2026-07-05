@@ -1,5 +1,5 @@
 import SwiftUI
-import SavageProtrackerPlayerCore
+import SavageModPlayerCore
 
 struct TrackerRowView: View {
     let rIdx: Int
@@ -132,7 +132,7 @@ struct TrackerRowView: View {
 }
 
 struct TrackerGridView: View {
-    let pattern: SavageProtrackerPlayerCore.Pattern
+    let pattern: SavageModPlayerCore.Pattern
     let currentRow: Int
     let theme: PlayerTheme
 

@@ -1,14 +1,14 @@
-# AGENTS.md — Savage Protracker Player
+# AGENTS.md — Savage Mod Player
 
-Diese Datei ist die zentrale Projektdokumentation. Sie beschreibt die Architektur, Konventionen und offene Todos für den **Savage Protracker Player**.
+Diese Datei ist die zentrale Projektdokumentation. Sie beschreibt die Architektur, Konventionen und offene Todos für den **Savage Mod Player**.
 
 ---
 
 ## Projektüberblick
 
-Der **Savage Protracker Player** ist ein plattformübergreifender Amiga-/Tracker-Modul-Player. Er ist als direktes Gegenstück zum **Vicious SID Player** konzipiert und besteht aus zwei Implementierungen:
-1. **HTML5-Variante**: Ein kompakter (unter 40 KB minifizierter) Single-File-Browser-Player (`savage-protracker-player.html`), der ohne Webserver direkt aus dem Dateisystem per Doppelklick gestartet werden kann. Bewusst auf klassische 4-Kanal-ProTracker-MODs beschränkt (Kompaktheit).
-2. **Swift-Variante**: Eine native, hochperformante macOS- & iOS-Anwendung (`Savage Protracker Player.app`), implementiert in SwiftUI und `AVAudioEngine`/`AVAudioSourceNode` für eine ressourcenschonende und latenzfreie Wiedergabe.
+Der **Savage Mod Player** ist ein plattformübergreifender Amiga-/Tracker-Modul-Player. Er ist als direktes Gegenstück zum **Vicious SID Player** konzipiert und besteht aus zwei Implementierungen:
+1. **HTML5-Variante**: Ein kompakter (unter 40 KB minifizierter) Single-File-Browser-Player (`savage-mod-player.html`), der ohne Webserver direkt aus dem Dateisystem per Doppelklick gestartet werden kann. Bewusst auf klassische 4-Kanal-ProTracker-MODs beschränkt (Kompaktheit).
+2. **Swift-Variante**: Eine native, hochperformante macOS- & iOS-Anwendung (`Savage Mod Player.app`), implementiert in SwiftUI und `AVAudioEngine`/`AVAudioSourceNode` für eine ressourcenschonende und latenzfreie Wiedergabe.
 
 ### Unterstützte Formate (Stand 1.3.0)
 
@@ -41,8 +41,8 @@ Da beide Player dieselbe mathematische Logik für Wiedergabe und Synthese teilen
 ## Dateilayout
 
 ```
-p_savage_protracker/
-├── savage-protracker-player.html  ← Fertig gebauter Single-File-Browserplayer
+p_savage_modplayer/
+├── savage-mod-player.html  ← Fertig gebauter Single-File-Browserplayer
 ├── modplayer.js                   ← Mod-Parser & Player-Schnittstelle (Quelle)
 ├── mod-player-worklet.js          ← AudioWorklet DSP-Synthesizer (Quelle)
 ├── src/                           ← Assets für Web & DMG
@@ -53,10 +53,10 @@ p_savage_protracker/
 │   └── DmgBackground.png          ← DMG-Installationshintergrund (1200x1200)
 ├── Package.swift                  ← Swift Package Manager Manifest
 ├── Sources/                       ← Native Swift App & Core (SwiftUI)
-│   ├── SavageProtrackerPlayerApp/ ← SwiftUI Main View & UI-Komponenten
-│   └── SavageProtrackerPlayerCore/← AVAudioEngine, Parser & DSP-Engine
+│   ├── SavageModPlayerApp/ ← SwiftUI Main View & UI-Komponenten
+│   └── SavageModPlayerCore/← AVAudioEngine, Parser & DSP-Engine
 ├── Tests/                         ← XCTest Unittests
-├── build.py                       ← Bündelt & minifiziert savage-protracker-player.html
+├── build.py                       ← Bündelt & minifiziert savage-mod-player.html
 ├── build_app.sh                   ← Kompiliert die native macOS App
 ├── build_dmg.sh                   ← Erzeugt das releasefähige DMG mit Hintergrundbild
 ├── publish_github.sh              ← Pusht Code und optional das DMG-Release nach GitHub
@@ -77,19 +77,19 @@ p_savage_protracker/
 - **UI (`src/`)**: Vanilla JS und CSS, orientiert am Amiga-Workbench-1.3-Look und einem modernen "Cyber Charcoal"-Farbschema.
 
 ### 2. Swift-Variante
-- **Parser (`SavageProtrackerPlayerCore/Parser/`)**: Reines Swift, parst `.mod`-Varianten (`ModParser`) und `.s3m` (`S3MParser`) in typsichere Werttypen (`struct`); Einstieg ist `ModuleLoader`. S3M-Noten liegen als Halbton-Keys (`Note.key`) vor, S3M-Effekte werden auf ProTracker-IDs bzw. `ModuleEffect.*`-IDs (>= 0x100) übersetzt.
-- **DSP / Synthesizer (`SavageProtrackerPlayerCore/DSP/`)**: Verwendet `AVAudioSourceNode` innerhalb von `AVAudioEngine`. Läuft direkt auf dem Core Audio Echtzeit-Thread. Kanalzahl dynamisch (bis 32, vorallozierte Puffer); Frequenzmodell pro Modul: Amiga-Paula-Perioden (MOD) oder ST3-Perioden mit C2Spd + 14,3-MHz-Clock (`DSPChannel.s3mMode`).
+- **Parser (`SavageModPlayerCore/Parser/`)**: Reines Swift, parst `.mod`-Varianten (`ModParser`) und `.s3m` (`S3MParser`) in typsichere Werttypen (`struct`); Einstieg ist `ModuleLoader`. S3M-Noten liegen als Halbton-Keys (`Note.key`) vor, S3M-Effekte werden auf ProTracker-IDs bzw. `ModuleEffect.*`-IDs (>= 0x100) übersetzt.
+- **DSP / Synthesizer (`SavageModPlayerCore/DSP/`)**: Verwendet `AVAudioSourceNode` innerhalb von `AVAudioEngine`. Läuft direkt auf dem Core Audio Echtzeit-Thread. Kanalzahl dynamisch (bis 32, vorallozierte Puffer); Frequenzmodell pro Modul: Amiga-Paula-Perioden (MOD) oder ST3-Perioden mit C2Spd + 14,3-MHz-Clock (`DSPChannel.s3mMode`).
   - *Wichtig*: Keine Heap-Alloziierungen, Sperren oder dynamische Objective-C-Aufrufe im Render-Block!
 - **Offline-Renderer (`ModuleRenderer`)**: rendert Module mit demselben Render-Block zu WAV-Daten (Quick Look, Tests).
-- **UI (`SavageProtrackerPlayerApp/UI/`)**: Deklaratives SwiftUI. Enthält zentrierende Tracker-Zeilen-Tabellen (dynamische Spaltenzahl, horizontales Scrollen ab 5 Kanälen), Visualizer und CRT-Effekt-Filter.
+- **UI (`SavageModPlayerApp/UI/`)**: Deklaratives SwiftUI. Enthält zentrierende Tracker-Zeilen-Tabellen (dynamische Spaltenzahl, horizontales Scrollen ab 5 Kanälen), Visualizer und CRT-Effekt-Filter.
 
 ---
 
 ## Aktuelle Todos (Release 1.2.33)
 
 - [x] **Todo 1**: Git-Repository initialisieren & Stammdateien anlegen (`VERSION`, `LICENSE`, `.gitignore`, `AGENTS.md`)
-- [x] **Todo 2**: HTML5-Dateien verschieben & `build.py` anpassen (Ausgabe zu `savage-protracker-player.html`)
-- [x] **Todo 3**: Swift-Dateien verschieben & Paket- und Quelltext-Umbenennung zu `SavageProtrackerPlayer` durchführen
+- [x] **Todo 2**: HTML5-Dateien verschieben & `build.py` anpassen (Ausgabe zu `savage-mod-player.html`)
+- [x] **Todo 3**: Swift-Dateien verschieben & Paket- und Quelltext-Umbenennung zu `SavageModPlayer` durchführen
 - [x] **Todo 4**: macOS Hilfsskripte (`build_app.sh`, `build_dmg.sh`, `publish_github.sh`) integrieren
 - [x] **Todo 5**: Grafische Assets (`AppIcon.png` & `DmgBackground.png`) für App und DMG generieren
 - [x] **Todo 6**: Echtzeit-Oszilloskope im Swift-Player implementieren:
@@ -111,11 +111,11 @@ p_savage_protracker/
 - [x] **Todo 20**: GitHub-Erstveröffentlichung vorbereiten: Single-File-HTML tracken, Release-/DMG-Skripte härten, Codesign/Notary-Pfad dokumentieren und Player-Herkunft prüfen
 - [x] **Todo 21**: DMG selbst per Developer ID signieren, damit Gatekeeper nach Notary-Stapling `spctl -t open` akzeptiert
 - [x] **Todo 22**: README klarstellen, dass GitHub-Release-DMGs notarisierte Builds sind
-- [x] **Todo 23**: GitHub-Remote und README-Releases-Link auf das tatsächliche Repository `DanielMuellerIR/savage_protracker` korrigieren
+- [x] **Todo 23**: GitHub-Remote und README-Releases-Link auf das tatsächliche Repository `DanielMuellerIR/savage_modplayer` korrigieren
 
 ## Pflicht-Regressionstests
 
-- **HTML-Drop-Autoplay**: Nach Änderungen an der HTML5-Variante `python3 -m http.server 8765` starten, `http://127.0.0.1:8765/savage-protracker-player.html?testDropAutoplay=1` im Browser laden, den Test-Button klicken und prüfen, dass der simulierte Ordner-Drop `PLAYING` meldet.
+- **HTML-Drop-Autoplay**: Nach Änderungen an der HTML5-Variante `python3 -m http.server 8765` starten, `http://127.0.0.1:8765/savage-mod-player.html?testDropAutoplay=1` im Browser laden, den Test-Button klicken und prüfen, dass der simulierte Ordner-Drop `PLAYING` meldet.
 - **Swift-Audio-Crash**: Nach Swift-Fixes immer `swift test --filter testRealtimePlaybackSurvivesFiveSeconds` ausführen. Der Test lädt ein zufälliges echtes MOD aus `audio/`, startet Wiedergabe und muss 5 Sekunden ohne Crash laufen.
 - **Swift-RType-Langsample**: Nach DSP-Änderungen `swift test --filter ModParserTests/testRTypeFourthChannelSampleSurvivesPastRow16` ausführen. Der Test lädt `audio/Rtype.mod`; Pattern 0 Row 16 Kanal 4 muss auch viele Rows später noch hörbar rendern.
 - **DSP-Timing & Amplitude**: `swift test --filter DSPChannelTimingTests` — Porta/Vibrato/Tremolo nur auf Tick > 0, ProTracker-Sinustabelle-Amplitude (depth*255/128 bzw. /64), Arpeggio-Zyklus, 9xx-Offset-Memory. Hardware-frei.
@@ -165,7 +165,7 @@ GUI-Umbau derselben Runde (visuell per fenstergezieltem Screenshot verifiziert, 
 - **Notarisierung ist pro-Mac (verifiziert 2026-07-03)**: Das notarytool-Keychain-Profil wird nicht über iCloud gesynct. Der in `build_dmg.sh` hartkodierte Default-Profilname existiert nicht zwangsläufig auf dem gerade genutzten Mac — dann bricht `--notarize` mit „Notary-Keychain-Profil nicht gefunden" ab. Lösung: ein vorhandenes Profil per `NOTARY_PROFILE=<profil> bash build_dmg.sh --notarize` übergeben (oder das bereits gebaute, signierte DMG direkt mit `xcrun notarytool submit … --keychain-profile <profil> --wait` + `xcrun stapler staple`). Die konkreten Profilnamen pro Mac stehen in der privaten Setup-Notiz, nicht hier (Public-Repo).
 - **Release-Notes ohne eigene H1**: `publish_github.sh` setzt den Release-Titel via `--title` UND nutzt `RELEASE_NOTES.md` als Text. Beginnt die Notes-Datei mit einer `#`-Überschrift, erscheint der Titel auf GitHub doppelt. Notes-Dateien deshalb direkt mit dem ersten Absatz starten.
 
-- **Quick Look + VLC (verifiziert 2026-07-02)**: Ist eine App installiert, die `.mod` als Medien-UTI EXPORTIERT (VLC → `org.videolan.mod`, konform zu `public.audio`), nimmt Quick Look für `.mod` seinen System-Medien-Fast-Path und fragt Dritt-Preview-Extensions GAR NICHT an (bekannte QL-Einschränkung, gleiches Prinzip wie bei mp3). `.s3m` ist davon nicht betroffen — dort spawnt unsere Extension nachweislich (`pgrep -lf SavageProtrackerQuickLook` während `qlmanage -p file.s3m`). Ohne VLC greift die importierte `public.data`-UTI der App und auch `.mod` läuft über unsere Extension. Nicht dagegen ankämpfen (eigener UTI-Export wäre ein unzuverlässiger Koinflip gegen VLC).
-- **Appex-Registrierung nach Rebuild**: `build_app.sh` löscht/erzeugt das .app neu — danach kennt PluginKit den Appex u. U. nicht mehr. Für lokale Tests: `pluginkit -a "<app>/Contents/PlugIns/SavageProtrackerQuickLook.appex"`; Kontrolle mit `pluginkit -m -p com.apple.quicklook.preview`. Bei Installation nach `/Applications` passiert das automatisch.
+- **Quick Look + VLC (verifiziert 2026-07-02)**: Ist eine App installiert, die `.mod` als Medien-UTI EXPORTIERT (VLC → `org.videolan.mod`, konform zu `public.audio`), nimmt Quick Look für `.mod` seinen System-Medien-Fast-Path und fragt Dritt-Preview-Extensions GAR NICHT an (bekannte QL-Einschränkung, gleiches Prinzip wie bei mp3). `.s3m` ist davon nicht betroffen — dort spawnt unsere Extension nachweislich (`pgrep -lf SavageModPlayerQuickLook` während `qlmanage -p file.s3m`). Ohne VLC greift die importierte `public.data`-UTI der App und auch `.mod` läuft über unsere Extension. Nicht dagegen ankämpfen (eigener UTI-Export wäre ein unzuverlässiger Koinflip gegen VLC).
+- **Appex-Registrierung nach Rebuild**: `build_app.sh` löscht/erzeugt das .app neu — danach kennt PluginKit den Appex u. U. nicht mehr. Für lokale Tests: `pluginkit -a "<app>/Contents/PlugIns/SavageModPlayerQuickLook.appex"`; Kontrolle mit `pluginkit -m -p com.apple.quicklook.preview`. Bei Installation nach `/Applications` passiert das automatisch.
 - **`qlmanage -p -o dir` (headless) nutzt moderne Preview-Extensions NICHT** — nur den Legacy-Pfad. Ein leeres Ergebnis dort heißt nicht, dass die Extension kaputt ist; Prozess-Spawn-Check (siehe oben) ist der verlässliche Headless-Beweis.
 - **QL-Audio-Preview braucht `QLPreviewReply(fileURL:)` (verifiziert 2026-07-02)**: Eine Daten-Reply (`dataOfContentType: .wav`) zeigt für Audio nur die generische Info-Karte (Titel erscheint, aber kein Player). Erst die Datei-URL-Variante (laut `QLPreviewReply.h` explizit inkl. `UTTypeAudio`) liefert das native Player-UI. Deshalb schreibt der Provider die gerenderte WAV in den Temp-Bereich des Extension-Containers und liefert die URL.

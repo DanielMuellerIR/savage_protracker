@@ -2,30 +2,30 @@
 import PackageDescription
 
 let package = Package(
-    name: "SavageProtrackerPlayerApp",
+    name: "SavageModPlayerApp",
     platforms: [
         .macOS(.v13),
         .iOS(.v16)
     ],
     products: [
-        .executable(name: "SavageProtrackerPlayerApp", targets: ["SavageProtrackerPlayerApp"]),
-        .library(name: "SavageProtrackerPlayerCore", targets: ["SavageProtrackerPlayerCore"])
+        .executable(name: "SavageModPlayerApp", targets: ["SavageModPlayerApp"]),
+        .library(name: "SavageModPlayerCore", targets: ["SavageModPlayerCore"])
     ],
     targets: [
         .target(
-            name: "SavageProtrackerPlayerCore",
+            name: "SavageModPlayerCore",
             dependencies: [],
-            path: "Sources/SavageProtrackerPlayerCore"
+            path: "Sources/SavageModPlayerCore"
         ),
         .executableTarget(
-            name: "SavageProtrackerPlayerApp",
-            dependencies: ["SavageProtrackerPlayerCore"],
-            path: "Sources/SavageProtrackerPlayerApp"
+            name: "SavageModPlayerApp",
+            dependencies: ["SavageModPlayerCore"],
+            path: "Sources/SavageModPlayerApp"
         ),
         .testTarget(
-            name: "SavageProtrackerPlayerTests",
-            dependencies: ["SavageProtrackerPlayerCore"],
-            path: "Tests/SavageProtrackerPlayerTests"
+            name: "SavageModPlayerTests",
+            dependencies: ["SavageModPlayerCore"],
+            path: "Tests/SavageModPlayerTests"
         )
     ]
 )

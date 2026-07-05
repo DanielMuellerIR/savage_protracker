@@ -1,0 +1,886 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Savage Mod Player</title><style>:root{--bg:#c0c0c0;--bg-dark:#808080;--shadow-dark:#404040;--title-bg:#0055aa;--col-bg:#0033aa;--tracker-bg:#000022}*{box-sizing:border-box}html,body{margin:0;padding:0;height:100%;background:#222;font-family:'Courier New',monospace}body{display:flex;align-items:center;justify-content:center;padding:16px}.player{width:100%;max-width:900px;height:560px;background:var(--bg);color:black;border:2px solid;border-color:white white var(--shadow-dark) var(--shadow-dark);padding:2px;display:flex;flex-direction:column;overflow:hidden;font-size:12px;user-select:none;position:relative}.drop-overlay{position:absolute;inset:0;background:rgba(0,85,170,0.85);color:white;display:none;align-items:center;justify-content:center;font-size:22px;font-weight:bold;letter-spacing:2px;z-index:100;border:4px dashed white;pointer-events:none}.player.drag-over .drop-overlay{display:flex}.titlebar{background:var(--title-bg);color:white;display:flex;align-items:center;justify-content:space-between;padding:1px 8px;font-weight:bold;font-size:10px;border-bottom:1px solid var(--shadow-dark)}.titlebar .left,.titlebar .right{display:flex;align-items:center;gap:4px}.pixbtn{width:14px;height:12px;background:var(--bg);border:1px solid;border-color:white white var(--shadow-dark) var(--shadow-dark);display:flex;align-items:center;justify-content:center;font-size:7px;color:black;font-weight:bold}.titlebar .name{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.controls{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--bg);border-bottom:1px solid var(--bg-dark);gap:8px}.controls .group{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:bold}button{font-family:'Courier New',monospace;font-size:10px;font-weight:bold;background:var(--bg);color:black;border:2px solid;border-color:white white #707070 #707070;padding:1px 8px;cursor:pointer}button:active{border-color:#707070 #707070 white white}button:disabled{opacity:0.5;cursor:not-allowed}input[type=file]{font-size:9px;max-width:200px;font-family:inherit}input[type=range]{width:90px}.file-btn{font-family:'Courier New',monospace;font-size:10px;font-weight:bold;background:var(--bg);color:black;border:2px solid;border-color:white white #707070 #707070;padding:1px 8px;cursor:pointer;display:inline-block}.file-btn:active{border-color:#707070 #707070 white white}.file-btn input{display:none}#mod-select{background:white;border:2px solid;border-color:#707070 #707070 white white;padding:1px 2px;font-family:inherit;font-size:10px;max-width:200px}#playlist-label{display:inline-flex;align-items:center;gap:3px;color:#000;user-select:none;cursor:pointer}#playlist-label input{margin:0;cursor:pointer}.timeline-container{display:flex;align-items:center;padding:4px 8px;background:var(--bg);border-bottom:1px solid var(--bg-dark);gap:8px}.timeline-container .scrub-lbl{font-size:10px;font-weight:bold;color:#333;white-space:nowrap}#position-scrubber{flex:1;-webkit-appearance:none;appearance:none;background:black;height:8px;border:1px solid;border-color:#707070 #707070 white white;outline:none}#position-scrubber:disabled{opacity:0.5;cursor:not-allowed}#position-scrubber::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:14px;background:var(--bg);border:2px solid;border-color:white white #707070 #707070;cursor:pointer}#position-scrubber::-webkit-slider-thumb:active{border-color:#707070 #707070 white white}#position-scrubber::-moz-range-thumb{width:16px;height:14px;background:var(--bg);border:2px solid;border-color:white white #707070 #707070;cursor:pointer;border-radius:0}#position-scrubber::-moz-range-thumb:active{border-color:#707070 #707070 white white}.main{display:flex;flex:1;overflow:hidden;background:var(--bg-dark);padding:4px;gap:4px;min-height:0}.vu-col{display:flex;flex-direction:column;justify-content:center;gap:8px;padding:4px;width:38px;background:var(--bg);border:2px solid;border-color:white white #707070 #707070}.vu{display:flex;flex-direction:column;align-items:center;gap:2px}.vu .lbl{color:#555;font-size:8px;font-weight:bold}.vu .meter{width:16px;height:60px;background:black;border:1px solid #555;position:relative;overflow:hidden}.vu .bar{position:absolute;bottom:0;left:0;right:0;height:2%;background-image:linear-gradient( to top,#00aa00 0%,#22cc22 35%,#ccdd22 55%,#ffcc22 65%,#ff8822 75%,#ff3322 88%,#ff0000 100% );background-size:100% 60px;background-position:left bottom;background-repeat:no-repeat}.tracker{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--tracker-bg);border:2px solid;border-color:#707070 #707070 white white;overflow:hidden}.tracker-head{display:flex;align-items:center;background:var(--col-bg);color:white;border-bottom:1px solid black;padding:1px 4px;font-size:11px;font-weight:bold}.tracker-head .col-row{color:#ccc;width:36px;flex-shrink:0}.tracker-head .col-ch{flex:1;text-align:center;min-width:0}.rows{flex:1;overflow-y:auto;scrollbar-width:none}.rows::-webkit-scrollbar{display:none}.mod-row{display:flex;align-items:center;padding:0 4px;font-size:11px;line-height:1.3;font-variant-numeric:tabular-nums;transition:background-color 0.05s ease;color:#00aa00}.mod-row[data-active="true"]{background:#0044bb;color:#ffffff}.mod-row-idx{color:#737373;width:36px;flex-shrink:0;font-weight:bold}.mod-row[data-active="true"] .mod-row-idx{color:white}.mod-note-block{flex:1;min-width:0;text-align:center;font-weight:bold;color:#005500}.mod-note-block.has-note{color:white}.mod-note-block.has-note .mod-note-name{color:#aaeebb}.mod-inst.has-inst{color:#ffcc00}.mod-fx.has-fx{color:#00ccff}.mod-row[data-active="true"] .mod-note-block,.mod-row[data-active="true"] .mod-note-name,.mod-row[data-active="true"] .mod-inst,.mod-row[data-active="true"] .mod-fx{color:white !important}.mod-row[data-active="true"] .mod-inst.has-inst{color:#ffff55 !important}.mod-row[data-active="true"] .mod-fx.has-fx{color:#55ffff !important}.loading,.error,.empty-rows{color:#00ccff;padding:24px;text-align:center;font-size:12px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}.error{color:#ff5555}.empty-rows{color:#888}.empty-rows .hint{color:#555;font-size:10px;max-width:320px}.samples{width:200px;flex-shrink:0;background:var(--bg);border:2px solid;border-color:white white #707070 #707070;display:flex;flex-direction:column;overflow:hidden}.samples h3{margin:0;padding:2px 4px;border-bottom:1px solid var(--bg-dark);font-size:10px;font-weight:bold;text-align:center;color:#333}.inst-scroll{flex:1;overflow-y:auto;padding:4px;background:white;border-bottom:1px solid var(--bg-dark);font-size:9px;line-height:1.3}.inst-row{display:flex;gap:4px}.inst-row .inst-num{color:var(--title-bg);font-weight:bold;flex-shrink:0}.inst-row .inst-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.inst-row.empty .inst-name{color:#888}.status{padding:4px;font-size:9px;display:flex;flex-direction:column;gap:2px;background:var(--bg)}.status .line{display:flex;justify-content:space-between;font-weight:bold;color:#444}.status .line span:last-child{color:black;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.footer{display:flex;justify-content:space-between;align-items:center;padding:1px 8px;background:var(--bg);border-top:1px solid #888;font-size:8px;font-weight:bold;color:#555}#theme-btn{padding:1px 5px;font-size:8px;line-height:1;border:1px solid;border-color:white white var(--shadow-dark) var(--shadow-dark);margin-right:4px;background:var(--bg);color:black;cursor:pointer;font-family:inherit;font-weight:bold;display:inline-flex;align-items:center;justify-content:center}#theme-btn:active{border-color:var(--shadow-dark) var(--shadow-dark) white white}.player.theme-dark{--bg:hsl(220,14%,18%);--bg-dark:hsl(220,16%,12%);--shadow-dark:hsl(220,20%,8%);--title-bg:hsl(255,65%,40%);--col-bg:hsl(255,45%,30%);--tracker-bg:hsl(220,20%,6%);color:hsl(220,15%,85%)}.player.theme-dark .controls,.player.theme-dark .controls span,.player.theme-dark #playlist-label,.player.theme-dark #pos-display{color:hsl(220,15%,85%) !important}.player.theme-dark .controls button,.player.theme-dark .controls .file-btn,.player.theme-dark .controls select,.player.theme-dark #theme-btn{background:var(--bg);color:white;border-color:hsl(220,10%,30%) hsl(220,10%,30%) var(--shadow-dark) var(--shadow-dark)}.player.theme-dark .controls button:active,.player.theme-dark .controls .file-btn:active,.player.theme-dark #theme-btn:active{border-color:var(--shadow-dark) var(--shadow-dark) hsl(220,10%,30%) hsl(220,10%,30%)}.player.theme-dark .vu-col,.player.theme-dark .samples,.player.theme-dark .status{background:var(--bg);border-color:hsl(220,10%,30%) hsl(220,10%,30%) var(--shadow-dark) var(--shadow-dark);color:hsl(220,15%,85%)}.player.theme-dark .vu .lbl{color:hsl(220,10%,60%)}.player.theme-dark .samples h3,.player.theme-dark .inst-scroll{border-bottom-color:var(--bg-dark)}.player.theme-dark .inst-scroll{background:var(--bg-dark);color:hsl(220,15%,90%)}.player.theme-dark .inst-row .inst-num{color:hsl(255,80%,75%)}.player.theme-dark .inst-row.empty .inst-name{color:hsl(220,10%,40%)}.player.theme-dark .status .line{color:hsl(220,10%,60%)}.player.theme-dark .status .line span:last-child{color:white}.player.theme-dark .footer{background:var(--bg);color:hsl(220,10%,60%) !important;border-top-color:var(--bg-dark)}.player.theme-dark #footer-state{color:hsl(255,80%,75%) !important}.player.theme-dark .mod-row{color:hsl(220,10%,60%)}.player.theme-wb13 .mod-row-idx{color:hsl(220,10%,35%)}.player.theme-dark .mod-note-block{color:hsl(220,10%,30%)}.player.theme-dark .mod-note-block.has-note{color:white}.player.theme-dark .mod-note-block.has-note .mod-note-name{color:hsl(190,80%,65%)}.player.theme-dark .mod-inst.has-inst{color:hsl(40,95%,60%)}.player.theme-dark .mod-fx.has-fx{color:hsl(325,85%,65%)}.player.theme-dark .mod-row[data-active="true"]{background:hsl(255,60%,45%)}@media (max-width:768px){body{padding:4px}.player{height:calc(100vh - 8px);max-height:none;border-width:1px}.controls{flex-direction:column;align-items:stretch;gap:6px;padding:6px}.controls .group{width:100%;justify-content:space-between;flex-wrap:wrap;gap:6px}.controls button,.controls .file-btn,#theme-btn{padding:4px 10px;font-size:11px}#mod-select{max-width:none;flex:1;height:24px}.timeline-container{padding:6px}#position-scrubber{height:12px}#position-scrubber::-webkit-slider-thumb{width:20px;height:18px}#position-scrubber::-moz-range-thumb{width:20px;height:18px}.main{display:grid;grid-template-columns:38px 1fr;grid-template-rows:1fr auto;grid-template-areas:"vu tracker" "samples samples";padding:2px;gap:4px;overflow:hidden}.vu-col{grid-area:vu;height:100%;width:38px;justify-content:space-around;flex-shrink:0}.tracker{grid-area:tracker;height:100%;min-height:200px}.samples{grid-area:samples;width:100%;height:auto;flex-shrink:0}.inst-scroll{height:90px;max-height:90px}.status{flex-direction:row;flex-wrap:wrap;gap:6px;padding:4px}.status .line{flex:1 1 45%;justify-content:space-between}}@media (max-width:480px){.tracker-head{font-size:9px;padding:1px 2px}.tracker-head .col-row{width:28px}.mod-row{font-size:9.5px;padding:0 2px}.mod-row-idx{width:28px}.mod-note-block{font-size:8.5px;letter-spacing:-0.5px;white-space:nowrap}.mod-note-block span{margin-right:1px}.controls .group{justify-content:center;gap:6px}}</style></head><body><div class="player" id="player"><div class="drop-overlay">DROP MOD FILE OR FOLDER HERE</div><div class="titlebar"><div class="left"><div class="pixbtn">✕</div><span>ProTracker v2.3d // Workbench 3.0 — Standalone</span></div><div class="name" id="title-name">NO FILE LOADED</div><div class="right"><button id="theme-btn">DARK</button><div class="pixbtn">▲</div><div class="pixbtn">▼</div></div></div><div class="controls"><div class="group"><span>LOAD:</span><label class="file-btn"><input id="file-input" type="file" accept=".mod,audio/*"> DATEI… </label><label class="file-btn"><input id="folder-input" type="file" webkitdirectory directory multiple> ORDNER… </label><select id="mod-select" style="display:none;"></select><label id="playlist-label" style="display:none; font-size:10px; font-weight:bold; margin-left:6px; cursor:pointer;"><input type="checkbox" id="playlist-mode" checked> AUTO-PLAY </label><span id="drag-hint" style="color:#666; margin-left:4px;">oder Drag&amp;Drop (Datei/Ordner)</span></div><div class="group"><span id="pos-display">POS: --/--</span><span>VOL:</span><input id="volume" type="range" min="0" max="1" step="0.01" value="1"><button id="play-btn" disabled>PLAY AUDIO</button></div></div><div class="timeline-container"><span class="scrub-lbl">TRACK POSITION:</span><input id="position-scrubber" type="range" min="0" max="0" value="0" step="1" disabled></div><div class="main"><div class="vu-col"><div class="vu"><span class="lbl">CH1</span><div class="meter"><div class="bar" id="vu-0"></div></div></div><div class="vu"><span class="lbl">CH2</span><div class="meter"><div class="bar" id="vu-1"></div></div></div><div class="vu"><span class="lbl">CH3</span><div class="meter"><div class="bar" id="vu-2"></div></div></div><div class="vu"><span class="lbl">CH4</span><div class="meter"><div class="bar" id="vu-3"></div></div></div></div><div class="tracker"><div class="tracker-head"><span class="col-row">ROW</span><span class="col-ch">CH1</span><span class="col-ch">CH2</span><span class="col-ch">CH3</span><span class="col-ch">CH4</span></div><div class="rows" id="rows"><div class="empty-rows"><div>♦ AMIGA PROTRACKER MOD PLAYER ♦</div><div class="hint"> MOD-Datei per File-Picker laden, ganze Ordner droppen oder den Ordner-Picker nutzen. Unterstützt alle ProTracker-Module mit 4 Kanälen (M.K., FLT4, 4CHN, …). </div></div></div></div><div class="samples"><h3>INSTRUMENTS</h3><div class="inst-scroll" id="instruments"></div><div class="status"><div class="line"><span>STATUS:</span><span id="status-state">STOPPED</span></div><div class="line"><span>ROW:</span><span id="status-row">--/--</span></div><div class="line"><span>BPM:</span><span id="status-bpm">---</span></div><div class="line"><span>SPEED:</span><span id="status-speed">---</span></div><div class="line"><span>NAME:</span><span id="status-name">---</span></div><div class="line"><span>FILE:</span><span id="status-file">---</span></div></div></div></div><div class="footer"><span>♦ AMIGA PROTRACKER RENDERER ♦ STANDALONE BUILD v1.3.1</span><span id="footer-state">■ IDLE</span></div></div><script>const WORKLET_SOURCE='const PAULA_FREQUENCY=3546894.6;\nconst PT_SINE_TABLE=[\n0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,\n255,253,250,244,235,224,212,197,180,161,141,120,97,74,49,24\n];\nconst ARPEGGIO=0x00;\nconst SLIDE_UP=0x01;\nconst SLIDE_DOWN=0x02;\nconst TONE_PORTAMENTO=0x03;\nconst VIBRATO=0x04;\nconst TONE_PORTAMENTO_WITH_VOLUME_SLIDE=0x05;\nconst VIBRATO_WITH_VOLUME_SLIDE=0x06;\nconst TREMOLO=0x07;\nconst PANNING=0x08;\nconst SAMPLE_OFFSET=0x09;\nconst POSITION_JUMP=0x0B;\nconst VOLUME_SLIDE=0x0A;\nconst SET_VOLUME=0x0C;\nconst PATTERN_BREAK=0x0D;\nconst EXTENDED=0x0e;\nconst SET_SPEED=0x0f;\nconst PORTA_UP_FINE=0xe1;\nconst PORTA_DOWN_FINE=0xe2;\nconst RETRIGGER_NOTE=0xe9;\nconst VOLUME_SLIDE_UP_FINE=0xea;\nconst VOLUME_SLIDE_DOWN_FINE=0xeb;\nconst DELAY_NOTE=0xed;\nconst unimplementedEffects=new Set();\nclass Channel{\nconstructor(worklet,index){\nthis.worklet=worklet;\nthis.channelIndex=index;\nthis.instrument=null;\nthis.playing=false;\nthis.period=0;\nthis.currentPeriod=0;\nthis.portamentoSpeed=0;\nthis.periodDelta=0;\nthis.vibratoDepth=0;\nthis.vibratoSpeed=0;\nthis.vibratoIndex=0;\nthis.arpeggio=false;\nthis.sampleSpeed=0.0;\nthis.sampleIndex=0;\nthis.sampleOffsetMemory=0;\nthis.volume=64;\nthis.currentVolume=64;\nthis.panning=(index===1||index===4)?0:255;\nthis.tremolo=false;\nthis.tremoloSpeed=0;\nthis.tremoloDepth=0;\nthis.tremoloIndex=0;\nthis.patternLoopStartRow=0;\nthis.patternLoopCount=-1;\nthis.cutNoteTick=-1;\n}\nnextOutput(){\nif(!this.instrument||!this.period||!this.instrument.bytes||this.instrument.bytes.length===0)return 0.0;\nconst idx=this.sampleIndex|0;\nconst end=this.instrument.isLooped\n?this.instrument.bytes.length\n:Math.min(this.instrument.length,this.instrument.bytes.length);\nif(idx<0||idx>=end){\nreturn 0.0;\n}\nconst sample=this.instrument.bytes[idx];\nthis.sampleIndex +=this.sampleSpeed;\nif(this.instrument.isLooped){\nconst byteCount=this.instrument.bytes.length;\nconst loopStart=Math.max(0,Math.min(this.instrument.repeatOffset,byteCount - 1));\nconst declaredEnd=this.instrument.repeatOffset + this.instrument.repeatLength;\nconst loopEnd=Math.max(loopStart + 1,Math.min(declaredEnd,byteCount));\nconst length=loopEnd - loopStart;\nif(length>0&&this.sampleIndex>=loopEnd){\nthis.sampleIndex=loopStart +((this.sampleIndex - loopStart)%length);\n}\n}\nif(typeof sample!==\'number\'||isNaN(sample)){\nreturn 0.0;\n}\nreturn sample/256.0*this.currentVolume/64;\n}\nperformTick(){\nif(this.volumeSlide&&this.worklet.tick>0){\nthis.currentVolume +=this.volumeSlide;\nif(this.currentVolume<0)this.currentVolume=0;\nif(this.currentVolume>64)this.currentVolume=64;\n}\nif(this.vibrato){\nif(this.worklet.tick>0){\nthis.vibratoIndex=(this.vibratoIndex + this.vibratoSpeed)%64;\nconst p=this.vibratoIndex&63;\nconst amp=PT_SINE_TABLE[p&31];\nconst delta=(p<32?amp:-amp)*this.vibratoDepth/128;\nthis.currentPeriod=this.period + delta;\n}\n}\nelse if(this.tremolo){\nif(this.worklet.tick>0){\nthis.tremoloIndex=(this.tremoloIndex + this.tremoloSpeed)%64;\nconst p=this.tremoloIndex&63;\nconst amp=PT_SINE_TABLE[p&31];\nconst volDelta=(p<32?amp:-amp)*this.tremoloDepth/64;\nthis.currentVolume=Math.max(0,Math.min(64,this.volume + volDelta));\n}\n}\nelse if(this.periodDelta){\nif(this.worklet.tick>0){\nif(this.portamento){\nif(this.currentPeriod!=this.period){\nconst sign=Math.sign(this.period - this.currentPeriod);\nconst distance=Math.abs(this.currentPeriod - this.period);\nconst diff=Math.min(distance,this.periodDelta);\nthis.currentPeriod +=sign*diff;\n}\n}\nelse{\nthis.currentPeriod +=this.periodDelta;\n}\n}\n}\nelse if(this.arpeggio){\nconst index=this.worklet.tick%this.arpeggio.length;\nconst halfNotes=this.arpeggio[index];\nthis.currentPeriod=this.period/Math.pow(2,halfNotes/12);\n}\nelse if(this.retrigger&&(this.worklet.tick%this.retrigger)==0){\nthis.sampleIndex=0;\n}\nelse if(this.delayNote===this.worklet.tick){\nthis.instrument=this.setInstrument;\nthis.volume=this.setVolume;\nthis.currentVolume=this.volume;\nthis.period=this.setPeriod;\nthis.currentPeriod=this.period;\nthis.sampleIndex=0;\n}\nif(this.currentPeriod<113)this.currentPeriod=113;\nif(this.currentPeriod>856)this.currentPeriod=856;\nconst sampleRate=PAULA_FREQUENCY/this.currentPeriod;\nthis.sampleSpeed=sampleRate/this.worklet.sampleRate;\nif(this.cutNoteTick===this.worklet.tick){\nthis.currentVolume=0;\n}\n}\nplay(note){\nlet publishNote=false;\nthis.setInstrument=false;\nthis.setVolume=false;\nthis.setPeriod=false;\nthis.delayNote=false;\nthis.cutNoteTick=-1;\nif(note.instrument){\nconst inst=this.worklet.mod.instruments[note.instrument];\nif(inst){\nthis.setInstrument=inst;\nthis.setVolume=inst.volume;\n}else{\nthis.setInstrument=null;\nthis.setVolume=0;\n}\n}\nthis.setSampleIndex=false;\nthis.setCurrentPeriod=false;\nif(note.period){\nconst instrument=this.setInstrument||this.instrument;\nconst finetune=instrument&&instrument.finetune||0;\nthis.setPeriod=note.period - finetune;\nthis.setCurrentPeriod=true;\nthis.setSampleIndex=0;\npublishNote=true;\n}\nthis.effect(note);\nif(this.delayNote)return;\nif(this.setInstrument){\nthis.instrument=this.setInstrument;\n}\nif(this.setVolume!==false){\nthis.volume=this.setVolume;\nthis.currentVolume=this.volume;\n}\nif(this.setPeriod){\nthis.period=this.setPeriod;\n}\nif(this.setCurrentPeriod){\nthis.currentPeriod=this.period;\n}\nif(this.setSampleIndex!==false){\nthis.sampleIndex=this.setSampleIndex;\n}\nif(this.worklet.publishNote&&publishNote){\nthis.worklet.port.postMessage({\ntype:\'note\',\nchannel:this.channelIndex,\nsample:this.instrument?.index,\nvolume:this.currentVolume,\nperiod:this.period\n});\n}\n}\neffect({hasEffect,effectId,effectData,effectHigh,effectLow}){\nthis.volumeSlide=0;\nthis.periodDelta=0;\nthis.portamento=false;\nthis.vibrato=false;\nthis.tremolo=false;\nthis.arpeggio=false;\nthis.retrigger=false;\nthis.delayNote=false;\nif(!hasEffect)return;\nswitch(effectId){\ncase ARPEGGIO:\nthis.arpeggio=[0,effectHigh,effectLow];\nbreak;\ncase SLIDE_UP:\nthis.periodDelta=-effectData;\nbreak;\ncase SLIDE_DOWN:\nthis.periodDelta=effectData;\nbreak;\ncase TONE_PORTAMENTO:\nthis.portamento=true;\nif(effectData)this.portamentoSpeed=effectData;\nthis.periodDelta=this.portamentoSpeed;\nthis.setCurrentPeriod=false;\nthis.setSampleIndex=false;\nbreak;\ncase PORTA_UP_FINE:\nthis.setPeriod=(this.setPeriod!==false?this.setPeriod:this.period)- effectData;\nbreak;\ncase PORTA_DOWN_FINE:\nthis.setPeriod=(this.setPeriod!==false?this.setPeriod:this.period)+ effectData;\nbreak;\ncase VIBRATO:\nif(effectHigh)this.vibratoSpeed=effectHigh;\nif(effectLow)this.vibratoDepth=effectLow;\nthis.vibrato=true;\nbreak;\ncase TONE_PORTAMENTO_WITH_VOLUME_SLIDE:\nthis.portamento=true;\nthis.setCurrentPeriod=false;\nthis.setSampleIndex=false;\nthis.periodDelta=this.portamentoSpeed;\nif(effectHigh)this.volumeSlide=effectHigh;\nelse if(effectLow)this.volumeSlide=-effectLow;\nbreak;\ncase VIBRATO_WITH_VOLUME_SLIDE:\nthis.vibrato=true;\nif(effectHigh)this.volumeSlide=effectHigh;\nelse if(effectLow)this.volumeSlide=-effectLow;\nbreak;\ncase VOLUME_SLIDE:\nif(effectHigh)this.volumeSlide=effectHigh;\nelse if(effectLow)this.volumeSlide=-effectLow;\nbreak;\ncase VOLUME_SLIDE_UP_FINE:\nthis.setVolume=Math.min(64,this.volume + effectData);\nbreak;\ncase VOLUME_SLIDE_DOWN_FINE:\nthis.setVolume=Math.max(0,this.volume - effectData);\nbreak;\ncase SAMPLE_OFFSET:\nif(effectData>0){\nthis.sampleOffsetMemory=effectData*256;\n}\nthis.setSampleIndex=this.sampleOffsetMemory;\nbreak;\ncase SET_VOLUME:\nthis.setVolume=effectData;\nbreak;\ncase PATTERN_BREAK:\nconst row=effectHigh*10 + effectLow;\nthis.worklet.setPatternBreak(row);\nbreak;\ncase SET_SPEED:\nif(effectData>=1&&effectData<=31){\nthis.worklet.setTicksPerRow(effectData);\n}\nelse if(effectData>=32){\nthis.worklet.setBpm(effectData);\n}\nbreak;\ncase RETRIGGER_NOTE:\nthis.retrigger=effectData;\nbreak;\ncase DELAY_NOTE:\nthis.delayNote=effectData;\nbreak;\ncase TREMOLO:\nif(effectHigh)this.tremoloSpeed=effectHigh;\nif(effectLow)this.tremoloDepth=effectLow;\nthis.tremolo=true;\nbreak;\ncase PANNING:\nthis.panning=effectData;\nbreak;\ncase POSITION_JUMP:\nthis.worklet.setPositionJump(effectData);\nbreak;\ncase 0xe0:\nbreak;\ncase 0xe6:\nif(effectLow===0){\nthis.patternLoopStartRow=this.worklet.rowIndex;\n}else{\nif(this.patternLoopCount<0){\nthis.patternLoopCount=effectLow;\n}\nif(this.patternLoopCount>0){\nthis.patternLoopCount--;\nthis.worklet.setPatternLoopRow(this.patternLoopStartRow);\n}else{\nthis.patternLoopCount=-1;\n}\n}\nbreak;\ncase 0xe8:\nthis.panning=effectLow*17;\nbreak;\ncase 0xec:\nthis.cutNoteTick=effectLow;\nbreak;\ncase 0xee:\nthis.worklet.setPatternDelay(effectLow);\nbreak;\ndefault:\nif(!unimplementedEffects.has(effectId)){\nunimplementedEffects.add(effectId);\nconsole.log(`Unimplemented effect ${effectId.toString(16)}`);\n}\nbreak;\n}\n}\n}\nclass ModPlayerWorklet extends AudioWorkletProcessor{\nconstructor(){\nsuper();\nthis.port.onmessage=this.onmessage.bind(this);\nthis.mod=null;\nthis.channels=[new Channel(this,1),new Channel(this,2),new Channel(this,3),new Channel(this,4)];\nthis.patternBreak=false;\nthis.positionJump=false;\nthis.patternLoopRow=false;\nthis.patternDelay=0;\nthis.patternDelayCounter=0;\nthis.publishRow=false;\nthis.publishStop=false;\nthis.publishNote=false;\nthis.publishLevels=false;\nthis.channelPeaks=[0,0,0,0];\nthis.blocksUntilLevelPost=0;\nthis.levelBlockInterval=8;\n}\nonmessage(e){\nswitch(e.data.type){\ncase \'play\':\nthis.play(e.data.mod,e.data.sampleRate);\nbreak;\ncase \'stop\':\nthis.stop();\nbreak;\ncase \'resume\':\nthis.resume();\nbreak;\ncase \'setRow\':\nthis.setRow(e.data.position,e.data.row);\nbreak;\ncase \'enableRowSubscription\':\nthis.publishRow=true;\nbreak;\ncase \'disableRowSubscription\':\nthis.publishRow=false;\nbreak;\ncase \'enableStopSubscription\':\nthis.publishStop=true;\nbreak;\ncase \'enableNoteSubscription\':\nthis.publishNote=true;\nbreak;\ncase \'enableLevelSubscription\':\nthis.publishLevels=true;\nbreak;\ncase \'disableLevelSubscription\':\nthis.publishLevels=false;\nbreak;\n}\n}\nplay(mod,sampleRate){\nthis.mod=mod;\nthis.sampleRate=sampleRate;\nthis.setBpm(125);\nthis.setTicksPerRow(6);\nthis.position=-1;\nthis.rowIndex=63;\nthis.tick=5;\nthis.ticksPerRow=6;\nthis.outputsUntilNextTick=0;\nthis.playing=true;\n}\nstop(){\nthis.playing=false;\n}\nresume(){\nthis.playing=true;\n}\nsetRow(position,row){\nthis.rowIndex=row - 1;\nif(this.rowIndex==-1){\nthis.rowIndex=63;\nthis.position=position - 1;\n}\nelse{\nthis.position=position;\n}\nthis.tick=this.ticksPerRow - 1;\nthis.outputsUntilNextTick=0;\nthis.patternBreak=false;\n}\nsetTicksPerRow(ticksPerRow){\nthis.ticksPerRow=ticksPerRow;\n}\nsetBpm(bpm){\nthis.bpm=bpm;\nthis.outputsPerTick=this.sampleRate*60/this.bpm/4/6;\nif((bpm===0)&&this.publishStop){\nthis.port.postMessage({type:\'stop\'});\n}\n}\nsetPatternBreak(row){\nthis.patternBreak=row;\n}\nsetPositionJump(pos){\nthis.positionJump=pos;\n}\nsetPatternLoopRow(row){\nthis.patternLoopRow=row;\n}\nsetPatternDelay(delay){\nif(this.patternDelayCounter===0){\nthis.patternDelay=delay;\n}\n}\nnextRow(){\nlet targetPosition=this.position;\nlet targetRow=this.rowIndex + 1;\nif(this.patternLoopRow!==false){\ntargetRow=this.patternLoopRow;\nthis.patternLoopRow=false;\n}else{\nif(this.positionJump!==false){\ntargetPosition=this.positionJump;\ntargetRow=0;\nthis.positionJump=false;\n}\nif(this.patternBreak!==false){\nif(targetPosition===this.position){\ntargetPosition=this.position + 1;\n}\ntargetRow=this.patternBreak;\nthis.patternBreak=false;\n}else if(targetRow===64){\ntargetRow=0;\ntargetPosition=this.position + 1;\n}\n}\nthis.position=targetPosition;\nthis.rowIndex=targetRow;\nif(this.position>=this.mod.length){\nthis.position=0;\n}\nconst patternIndex=this.mod.patternTable[this.position];\nconst pattern=this.mod.patterns[patternIndex];\nconst row=pattern.rows[this.rowIndex];\nif(!row)return;\nfor(let i=0;i<4;++i){\nthis.channels[i].play(row.notes[i]);\n}\nif(this.publishRow){\nthis.port.postMessage({\ntype:\'row\',\nposition:this.position,\nrowIndex:this.rowIndex,\nbpm:this.bpm,\nspeed:this.ticksPerRow\n});\n}\n}\nnextTick(){\n++this.tick;\nif(this.tick==this.ticksPerRow){\nif(this.patternDelayCounter>0){\nthis.patternDelayCounter--;\nthis.tick=0;\n}else if(this.patternDelay>0){\nthis.patternDelayCounter=this.patternDelay;\nthis.patternDelay=0;\nthis.tick=0;\n}else{\nthis.tick=0;\nthis.nextRow();\n}\n}\nfor(let i=0;i<4;++i){\nthis.channels[i].performTick();\n}\n}\nnextOutput(){\nif(!this.mod||!this.playing)return{left:0.0,right:0.0};\nif(this.outputsUntilNextTick<=0){\nthis.nextTick();\nthis.outputsUntilNextTick +=this.outputsPerTick;\n}\nthis.outputsUntilNextTick--;\nlet left=0.0;\nlet right=0.0;\nfor(let i=0;i<4;++i){\nconst chOut=this.channels[i].nextOutput();\nconst p=this.channels[i].panning/255.0;\nconst lGain=(1.0 - p)*0.9 + 0.1*p;\nconst rGain=p*0.9 + 0.1*(1.0 - p);\nleft +=chOut*lGain;\nright +=chOut*rGain;\nif(this.publishLevels){\nconst a=chOut<0?-chOut:chOut;\nif(a>this.channelPeaks[i])this.channelPeaks[i]=a;\n}\n}\nreturn{\nleft:Math.tanh(left),\nright:Math.tanh(right)\n};\n}\nprocess(inputs,outputs){\ntry{\nconst output=outputs[0];\nif(!output||output.length===0)return true;\nconst numChannels=output.length;\nconst frameCount=output[0].length;\nif(numChannels>=2){\nfor(let i=0;i<frameCount;++i){\nconst{left,right}=this.nextOutput();\noutput[0][i]=left;\noutput[1][i]=right;\n}\n}else{\nfor(let i=0;i<frameCount;++i){\nconst{left,right}=this.nextOutput();\nconst monoValue=(left + right)*0.5;\nfor(let c=0;c<numChannels;++c){\noutput[c][i]=monoValue;\n}\n}\n}\nif(this.publishLevels){\nthis.blocksUntilLevelPost++;\nif(this.blocksUntilLevelPost>=this.levelBlockInterval){\nthis.port.postMessage({\ntype:\'levels\',\npeaks:[\nthis.channelPeaks[0],\nthis.channelPeaks[1],\nthis.channelPeaks[2],\nthis.channelPeaks[3]\n]\n});\nthis.channelPeaks[0]=0;\nthis.channelPeaks[1]=0;\nthis.channelPeaks[2]=0;\nthis.channelPeaks[3]=0;\nthis.blocksUntilLevelPost=0;\n}\n}\n}catch(e){\nconsole.error("AudioWorklet error in process:",e);\n}\nreturn true;\n}\n}\nregisterProcessor(\'mod-player-worklet\',ModPlayerWorklet);';const WORKLET_BLOB_URL=URL.createObjectURL(new Blob([WORKLET_SOURCE],{type:'application/javascript'}));class Instrument{
+constructor(modfile,index,sampleStart){
+const data=new Uint8Array(modfile,20 + index*30,30);
+const nameBytes=data.slice(0,22).filter(a=>!!a);
+this.index=index;
+this.name=String.fromCodePoint(...Array.from(nameBytes)).trim();
+this.length=2*(data[22]*256 + data[23]);
+this.finetune=data[24];
+if(this.finetune>7)this.finetune -=16;
+this.volume=data[25];
+this.repeatOffset=2*(data[26]*256 + data[27]);
+this.repeatLength=2*(data[28]*256 + data[29]);
+const actualSampleStart=Math.min(sampleStart,modfile.byteLength);
+const actualLength=Math.min(this.length,modfile.byteLength - actualSampleStart);
+this.bytes=new Int8Array(modfile,actualSampleStart,actualLength);
+this.isLooped=this.repeatLength>2;
+}
+}
+class Note{
+constructor(noteData){
+this.instrument=(noteData[0]&0xf0)|(noteData[2]>>4);
+this.period=(noteData[0]&0x0f)*256 + noteData[1];
+let effectId=noteData[2]&0x0f;
+let effectData=noteData[3];
+if(effectId===0x0e){
+effectId=0xe0|(effectData>>4);
+effectData&=0x0f;
+}
+this.rawEffect=((noteData[2]&0x0f)<<8)|noteData[3];
+this.effectId=effectId;
+this.effectData=effectData;
+this.effectHigh=effectData>>4;
+this.effectLow=effectData&0x0f;
+this.hasEffect=effectId||effectData;
+}
+}
+class Row{
+constructor(rowData){
+this.notes=[];
+for(let i=0;i<16;i +=4){
+this.notes.push(new Note(rowData.slice(i,i + 4)));
+}
+}
+}
+class Pattern{
+constructor(modfile,index){
+const data=new Uint8Array(modfile,1084 + index*1024,1024);
+this.rows=[];
+for(let i=0;i<64;++i){
+this.rows.push(new Row(data.slice(i*16,i*16 + 16)));
+}
+}
+}
+class Mod{
+constructor(modfile){
+const nameArray=new Uint8Array(modfile,0,20);
+const nameBytes=nameArray.filter(a=>!!a);
+this.name=String.fromCodePoint(...Array.from(nameBytes)).trim();
+this.length=new Uint8Array(modfile,950,1)[0];
+this.patternTable=new Uint8Array(modfile,952,this.length);
+const maxPatternIndex=this.patternTable.length>0
+?Math.max(...Array.from(this.patternTable))
+:0;
+this.instruments=[null];
+let sampleStart=1084 +(maxPatternIndex + 1)*1024;
+for(let i=0;i<31;++i){
+const instr=new Instrument(modfile,i,sampleStart);
+this.instruments.push(instr);
+sampleStart +=instr.length;
+}
+this.patterns=[];
+for(let i=0;i<=maxPatternIndex;++i){
+this.patterns.push(new Pattern(modfile,i));
+}
+}
+}
+async function loadMod(url){
+const response=await fetch(url);
+if(!response.ok){
+throw new Error(`Fetch fehlgeschlagen:${response.status}${response.statusText}(${url})`);
+}
+const arrayBuffer=await response.arrayBuffer();
+return parseModBuffer(arrayBuffer,url);
+}
+function parseModBuffer(arrayBuffer,label='buffer'){
+if(arrayBuffer.byteLength<1084){
+throw new Error(`MOD zu klein(${arrayBuffer.byteLength}Bytes):${label}`);
+}
+const sig=new Uint8Array(arrayBuffer,1080,4);
+const sigStr=String.fromCharCode(sig[0],sig[1],sig[2],sig[3]);
+const validSigs=['M.K.','M!K!','FLT4','4CHN'];
+if(!validSigs.includes(sigStr)){
+throw new Error(`Ungültige MOD-Signatur "${sigStr}":${label}`);
+}
+return new Mod(arrayBuffer);
+}
+const notePerPeriod=new Array(65536);
+for(let p=0;p<65536;p++){
+notePerPeriod[p]=p>0?Math.round(12*Math.log2(856/p)):null;
+}
+class ModPlayer{
+constructor(){
+this.mod=null;
+this.playing=false;
+this.audio=null;
+this.gain=null;
+this.worklet=null;
+this.setupPromise=null;
+this.volume=0.3;
+this.workletUrl='mod-player-worklet.js';
+this.rowCallbacks=[];
+this.stopCallbacks=[];
+this.noteCallbacks=[];
+this.levelCallbacks=[];
+this.singleCallbacks={};
+}
+async load(url,workletUrl='mod-player-worklet.js'){
+this.unload();
+this.workletUrl=workletUrl;
+this.mod=await loadMod(url);
+}
+setMod(mod,workletUrl='mod-player-worklet.js'){
+this.stop();
+this.workletUrl=workletUrl;
+this.mod=mod;
+}
+async setupAudio(){
+if(this.worklet)return;
+if(this.setupPromise)return this.setupPromise;
+this.setupPromise=this.createAudioGraph();
+try{
+await this.setupPromise;
+}finally{
+this.setupPromise=null;
+}
+}
+prepareAudioForGesture(workletUrl='mod-player-worklet.js'){
+this.workletUrl=workletUrl;
+this.resumeContext();
+return this.setupAudio();
+}
+async createAudioGraph(){
+if(this.worklet)return;
+if(!this.audio){
+const AC=window.AudioContext||window.webkitAudioContext;
+this.audio=new AC();
+}
+const ctx=this.audio;
+await this.tryResumeContext(250);
+try{
+const buffer=ctx.createBuffer(1,1,22050);
+const source=ctx.createBufferSource();
+source.buffer=buffer;
+source.connect(ctx.destination);
+source.start(0);
+}catch(_){}
+this.gain=ctx.createGain();
+this.gain.gain.value=this.volume;
+const absoluteWorkletUrl=new URL(this.workletUrl,window.location.href).href;
+if(!ctx.__workletAdded){
+await ctx.audioWorklet.addModule(absoluteWorkletUrl);
+ctx.__workletAdded=true;
+}
+this.worklet=new AudioWorkletNode(ctx,'mod-player-worklet',{
+outputChannelCount:[2]
+});
+this.worklet.connect(this.gain).connect(ctx.destination);
+this.worklet.port.onmessage=this.onMessage.bind(this);
+if(this.rowCallbacks.length||Object.keys(this.singleCallbacks).length){
+this.worklet.port.postMessage({type:'enableRowSubscription'});
+}
+if(this.stopCallbacks.length){
+this.worklet.port.postMessage({type:'enableStopSubscription'});
+}
+if(this.noteCallbacks.length){
+this.worklet.port.postMessage({type:'enableNoteSubscription'});
+}
+if(this.levelCallbacks.length){
+this.worklet.port.postMessage({type:'enableLevelSubscription'});
+}
+}
+onMessage(event){
+const{data}=event;
+if(data.type==='row'){
+for(const cb of this.rowCallbacks)cb(data.position,data.rowIndex,data.bpm,data.speed);
+const key=data.position + ':' + data.rowIndex;
+if(key in this.singleCallbacks){
+for(const cb of this.singleCallbacks[key])cb();
+}
+}else if(data.type==='stop'){
+for(const cb of this.stopCallbacks)cb();
+}else if(data.type==='note'){
+for(const cb of this.noteCallbacks){
+cb({
+channel:data.channel,
+sample:data.sample,
+volume:data.volume,
+note:notePerPeriod[data.period]
+});
+}
+}else if(data.type==='levels'){
+for(const cb of this.levelCallbacks)cb(data.peaks);
+}
+}
+watchRows(cb){
+if(this.worklet)this.worklet.port.postMessage({type:'enableRowSubscription'});
+this.rowCallbacks.push(cb);
+}
+watchStop(cb){
+if(this.worklet)this.worklet.port.postMessage({type:'enableStopSubscription'});
+this.stopCallbacks.push(cb);
+}
+watchNotes(cb){
+if(this.worklet)this.worklet.port.postMessage({type:'enableNoteSubscription'});
+this.noteCallbacks.push(cb);
+}
+watchLevels(cb){
+if(this.worklet)this.worklet.port.postMessage({type:'enableLevelSubscription'});
+this.levelCallbacks.push(cb);
+}
+unload(){
+this.stop();
+if(this.worklet){
+try{this.worklet.disconnect();}catch(_){}
+}
+this.mod=null;
+this.worklet=null;
+this.setupPromise=null;
+this.playing=false;
+this.rowCallbacks=[];
+this.stopCallbacks=[];
+this.noteCallbacks=[];
+this.levelCallbacks=[];
+this.singleCallbacks={};
+}
+resumeContext(){
+if(!this.audio){
+const AC=window.AudioContext||window.webkitAudioContext;
+this.audio=new AC();
+}
+if(this.audio.state==='suspended'){
+this.audio.resume().catch(()=>{});
+}
+try{
+const buffer=this.audio.createBuffer(1,1,22050);
+const source=this.audio.createBufferSource();
+source.buffer=buffer;
+source.connect(this.audio.destination);
+source.start(0);
+}catch(_){}
+}
+async tryResumeContext(timeoutMs=1000){
+if(!this.audio||this.audio.state!=='suspended')return;
+try{
+await Promise.race([
+this.audio.resume(),
+new Promise(resolve=>setTimeout(resolve,timeoutMs))
+]);
+}catch(_){}
+}
+async play(){
+if(this.playing)return;
+await this.setupAudio();
+if(!this.worklet)return;
+this.resumeContext();
+await this.tryResumeContext(500);
+this.worklet.port.postMessage({
+type:'play',
+mod:this.mod,
+sampleRate:this.audio.sampleRate
+});
+this.playing=true;
+}
+stop(){
+if(this.worklet){
+this.worklet.port.postMessage({type:'stop'});
+}
+this.playing=false;
+}
+setVolume(v){
+this.volume=v;
+if(this.gain)this.gain.gain.value=v*v;
+}
+setPosition(position,row=0){
+if(this.worklet){
+this.worklet.port.postMessage({type:'setRow',position,row});
+}
+}
+}
+const PERIODS=[
+856,808,762,720,678,640,604,570,538,508,480,453,
+428,404,381,360,339,320,302,285,269,254,240,226,
+214,202,190,180,170,160,151,143,135,127,120,113,
+107,101,95,90,85,80,75,71,67,63,60,56
+];
+const NOTE_NAMES=[
+'C-1','C#1','D-1','D#1','E-1','F-1','F#1','G-1','G#1','A-1','A#1','B-1',
+'C-2','C#2','D-2','D#2','E-2','F-2','F#2','G-2','G#2','A-2','A#2','B-2',
+'C-3','C#3','D-3','D#3','E-3','F-3','F#3','G-3','G#3','A-3','A#3','B-3',
+'C-4','C#4','D-4','D#4','E-4','F-4','F#4','G-4','G#4','A-4','A#4','B-4'
+];
+function getNoteName(period){
+if(period<=0)return '---';
+let bestIdx=-1,bestDiff=999999;
+for(let i=0;i<PERIODS.length;i++){
+const diff=Math.abs(PERIODS[i]- period);
+if(diff<bestDiff){bestDiff=diff;bestIdx=i;}
+}
+return(bestIdx!==-1&&bestDiff<30)?NOTE_NAMES[bestIdx]:'---';
+}
+const fmtHex=(n,w)=>n.toString(16).toUpperCase().padStart(w,'0');
+const fmtInst=(note)=>note.instrument===0?'--':fmtHex(note.instrument,2);
+const fmtFx=(note)=>note.rawEffect===0?'000':fmtHex(note.rawEffect,3);
+const $=(id)=>document.getElementById(id);
+const playerEl=$('player');
+const playBtn=$('play-btn');
+const fileInput=$('file-input');
+const folderInput=$('folder-input');
+const modSelect=$('mod-select');
+const volumeSlider=$('volume');
+const titleEl=$('title-name');
+const rowsContainer=$('rows');
+const instList=$('instruments');
+const posDisplay=$('pos-display');
+const statusRow=$('status-row');
+const statusState=$('status-state');
+const statusBpm=$('status-bpm');
+const statusSpeed=$('status-speed');
+const statusName=$('status-name');
+const statusFile=$('status-file');
+const footerState=$('footer-state');
+const vuBars=[0,1,2,3].map(i=>$(`vu-${i}`));
+const positionScrubber=$('position-scrubber');
+const playlistLabel=$('playlist-label');
+const playlistMode=$('playlist-mode');
+const dragHint=$('drag-hint');
+const themeBtn=$('theme-btn');
+const player=new ModPlayer();
+window.__savageDebug={
+getState(){
+return{
+currentMod:!!currentMod,
+playerPlaying:player.playing,
+audioState:player.audio?.state||null,
+hasWorklet:!!player.worklet,
+setupPending:!!player.setupPromise,
+callbacksConfigured:playerCallbacksConfigured
+};
+}
+};
+let currentMod=null;
+let currentFilename='';
+let currentPosition=0;
+let lastPosition=0;
+let previousVolume=1.0;
+let currentRow=0;
+let activeRowEl=null;
+let rowHeight=15;
+let containerHeight=200;
+const vuLevels=[0,0,0,0];
+const vuTargets=[0,0,0,0];
+let targetScrollTop=0;
+let playerCallbacksConfigured=false;
+player.setVolume(Number(volumeSlider.value));
+fileInput.addEventListener('change',(e)=>{
+player.prepareAudioForGesture(WORKLET_BLOB_URL).catch((err)=>{
+console.warn('Audio-Vorbereitung fehlgeschlagen:',err);
+});
+const file=e.target.files[0];
+if(file){
+addMods([file]);
+loadFile(file,{autoplay:true});
+}
+});
+folderInput.addEventListener('change',(e)=>{
+player.prepareAudioForGesture(WORKLET_BLOB_URL).catch((err)=>{
+console.warn('Audio-Vorbereitung fehlgeschlagen:',err);
+});
+const all=Array.from(e.target.files||[]);
+const mods=all.filter(f=>isModName(f.name));
+if(!mods.length){
+showError('Keine .mod-Dateien im Ordner gefunden.');
+return;
+}
+addMods(mods);
+loadFile(mods[0],{autoplay:true});
+});
+volumeSlider.addEventListener('input',(e)=>{
+player.setVolume(Number(e.target.value));
+});
+playBtn.addEventListener('click',async()=>{
+if(!currentMod)return;
+if(player.playing){
+player.stop();
+setPlayingUI(false);
+}else{
+try{
+player.resumeContext();
+const startPos=currentPosition;
+lastPosition=startPos;
+await player.play();
+player.setPosition(startPos,0);
+setPlayingUI(true);
+}catch(err){
+console.error('play()fehlgeschlagen:',err);
+showError('Wiedergabe fehlgeschlagen:' + err.message);
+}
+}
+});
+positionScrubber.addEventListener('input',(e)=>{
+if(!currentMod)return;
+const pos=Number(e.target.value);
+player.setPosition(pos,0);
+currentPosition=pos;
+lastPosition=pos;
+currentRow=0;
+renderPattern();
+posDisplay.textContent=`POS:${String(pos + 1).padStart(2,'0')}/${String(currentMod.length).padStart(2,'0')}`;
+statusRow.textContent=`00/63`;
+});
+const modList=[];
+function isModName(name){
+const n=name.toLowerCase();
+return n.endsWith('.mod')||n.startsWith('mod.');
+}
+function addMods(files){
+let added=0;
+for(const f of files){
+if(!isModName(f.name))continue;
+if(modList.some(m=>m.name===f.name&&m.file.size===f.size))continue;
+modList.push({name:f.name,file:f});
+added++;
+}
+if(added)refreshModSelect();
+}
+function refreshModSelect(){
+modList.sort((a,b)=>a.name.localeCompare(b.name));
+modSelect.innerHTML='';
+const placeholder=document.createElement('option');
+placeholder.value='';
+placeholder.textContent=`— ${modList.length}MOD${modList.length===1?'':'s'}—`;
+modSelect.appendChild(placeholder);
+modList.forEach((m,i)=>{
+const o=document.createElement('option');
+o.value=String(i);
+o.textContent=m.name;
+modSelect.appendChild(o);
+});
+const hasMods=modList.length>0;
+modSelect.style.display=hasMods?'':'none';
+playlistLabel.style.display=hasMods?'':'none';
+dragHint.style.display=hasMods?'none':'';
+}
+modSelect.addEventListener('change',(e)=>{
+player.resumeContext();
+const v=e.target.value;
+if(v==='')return;
+const idx=Number(v);
+const entry=modList[idx];
+if(entry)loadFile(entry.file,{autoplay:true});
+});
+function syncModSelectSelection(file){
+const idx=modList.findIndex(m=>m.name===file.name&&m.file.size===file.size);
+if(idx>=0)modSelect.value=String(idx);
+}
+window.addEventListener('keydown',(e)=>{
+if(document.activeElement&&(
+document.activeElement.tagName==='INPUT'&&document.activeElement.type!=='range'&&document.activeElement.type!=='checkbox'||
+document.activeElement.tagName==='SELECT')){
+return;
+}
+const key=e.key.toLowerCase();
+if(e.key===' '||e.key==='Spacebar'){
+e.preventDefault();
+if(playBtn&&!playBtn.disabled)playBtn.click();
+}
+if(key==='m'){
+e.preventDefault();
+const curVol=Number(volumeSlider.value);
+if(curVol>0){
+previousVolume=curVol;
+volumeSlider.value=0;
+player.setVolume(0);
+}else{
+volumeSlider.value=previousVolume;
+player.setVolume(previousVolume);
+}
+}
+if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+e.preventDefault();
+if(!currentMod)return;
+const dir=e.key==='ArrowLeft'?-1:1;
+const newPos=Math.max(0,Math.min(currentMod.length - 1,currentPosition + dir));
+if(newPos!==currentPosition){
+player.setPosition(newPos,0);
+currentPosition=newPos;
+lastPosition=newPos;
+currentRow=0;
+positionScrubber.value=String(newPos);
+renderPattern();
+posDisplay.textContent=`POS:${String(newPos + 1).padStart(2,'0')}/${String(currentMod.length).padStart(2,'0')}`;
+statusRow.textContent=`00/63`;
+}
+}
+if(e.key==='ArrowUp'||e.key==='ArrowDown'){
+e.preventDefault();
+if(modList.length<=1)return;
+player.resumeContext();
+const currentIdx=modList.findIndex(m=>m.name===currentFilename);
+if(currentIdx>=0){
+const dir=e.key==='ArrowUp'?-1:1;
+const nextIdx=(currentIdx + dir + modList.length)%modList.length;
+loadFile(modList[nextIdx].file);
+}
+}
+});
+let dragDepth=0;
+window.addEventListener('dragenter',(e)=>{
+e.preventDefault();
+dragDepth++;
+playerEl.classList.add('drag-over');
+});
+window.addEventListener('dragover',(e)=>{
+e.preventDefault();
+e.dataTransfer.dropEffect='copy';
+});
+window.addEventListener('dragleave',(e)=>{
+e.preventDefault();
+dragDepth--;
+if(dragDepth<=0){
+dragDepth=0;
+playerEl.classList.remove('drag-over');
+}
+});
+window.addEventListener('drop',async(e)=>{
+e.preventDefault();
+const audioReady=player.prepareAudioForGesture(WORKLET_BLOB_URL);
+dragDepth=0;
+playerEl.classList.remove('drag-over');
+try{
+const files=await collectDroppedFiles(e.dataTransfer);
+const mods=files.filter(f=>isModName(f.name));
+if(!mods.length){
+if(files.length)showError('Keine .mod-Dateien im Drop gefunden.');
+return;
+}
+addMods(mods);
+await loadFile(mods[0],{autoplay:true,audioReady});
+}catch(err){
+console.error('Drop-Verarbeitung fehlgeschlagen:',err);
+const file=e.dataTransfer.files&&e.dataTransfer.files[0];
+if(file){
+addMods([file]);
+await loadFile(file,{autoplay:true,audioReady});
+}
+}
+});
+async function collectDroppedFiles(dt){
+const out=[];
+const items=dt.items;
+if(items&&items.length&&typeof items[0].webkitGetAsEntry==='function'){
+const entries=[];
+for(const item of items){
+const entry=item.webkitGetAsEntry();
+if(entry)entries.push(entry);
+}
+for(const entry of entries)await walkEntry(entry,out);
+return out;
+}
+for(const f of dt.files)out.push(f);
+return out;
+}
+async function walkEntry(entry,out){
+if(entry.isFile){
+const file=await new Promise((res,rej)=>entry.file(res,rej));
+out.push(file);
+return;
+}
+if(entry.isDirectory){
+const reader=entry.createReader();
+while(true){
+const batch=await new Promise((res,rej)=>reader.readEntries(res,rej));
+if(!batch.length)break;
+for(const child of batch)await walkEntry(child,out);
+}
+}
+}
+async function loadFile(file,options={}){
+const autoplay=options.autoplay!==false;
+const audioReady=options.audioReady||null;
+try{
+const buf=await file.arrayBuffer();
+const mod=parseModBuffer(buf,file.name);
+player.stop();
+player.setMod(mod,WORKLET_BLOB_URL);
+setUpPlayerCallbacks();
+currentMod=mod;
+currentFilename=file.name;
+currentPosition=0;
+lastPosition=0;
+currentRow=0;
+titleEl.textContent=file.name;
+statusName.textContent=mod.name||'(unbenannt)';
+statusFile.title=file.name;
+statusFile.textContent=file.name;
+playBtn.disabled=false;
+syncModSelectSelection(file);
+renderInstruments();
+renderPattern();
+positionScrubber.max=mod.length - 1;
+positionScrubber.value=0;
+positionScrubber.disabled=false;
+if(autoplay){
+if(audioReady)await audioReady;
+else await player.prepareAudioForGesture(WORKLET_BLOB_URL);
+await player.play();
+setPlayingUI(true);
+}else{
+setPlayingUI(false);
+}
+}catch(err){
+console.error('loadFile fehlgeschlagen:',err);
+showError('Fehler beim Laden:' + err.message);
+}
+}
+function escapeHtml(s){
+return String(s)
+.replaceAll('&','&amp;')
+.replaceAll('<','&lt;')
+.replaceAll('>','&gt;')
+.replaceAll('"','&quot;')
+.replaceAll("'",'&#39;');
+}
+function showError(msg){
+rowsContainer.innerHTML=`<div class="error">${escapeHtml(msg)}</div>`;
+}
+function setPlayingUI(isPlaying){
+playBtn.textContent=isPlaying?'STOP':'PLAY AUDIO';
+statusState.textContent=isPlaying?'PLAYING':'STOPPED';
+statusState.style.color=isPlaying?'#008800':'#888';
+footerState.textContent=isPlaying?'▶ ACTIVE':'■ IDLE';
+footerState.style.color=isPlaying?'#008800':'#888';
+if(!isPlaying){
+statusBpm.textContent='---';
+statusSpeed.textContent='---';
+}
+}
+function setUpPlayerCallbacks(){
+if(playerCallbacksConfigured)return;
+playerCallbacksConfigured=true;
+player.watchRows((pos,row,bpm,speed)=>{
+const totalPatterns=currentMod?.length||1;
+if(pos<lastPosition||(totalPatterns===1&&row===0&&currentRow===63)){
+player.stop();
+setPlayingUI(false);
+if(playlistMode&&playlistMode.checked&&modList.length>1){
+let nextIdx=0;
+const currentIdx=modList.findIndex(m=>m.name===currentFilename);
+if(currentIdx>=0){
+nextIdx=(currentIdx + 1)%modList.length;
+}
+const entry=modList[nextIdx];
+if(entry){
+loadFile(entry.file,{autoplay:true});
+return;
+}
+}
+currentPosition=0;
+lastPosition=0;
+currentRow=0;
+positionScrubber.value="0";
+renderPattern();
+return;
+}
+lastPosition=pos;
+currentRow=row;
+if(currentPosition!==pos){
+currentPosition=pos;
+renderPattern();
+positionScrubber.value=String(pos);
+}else{
+updateActiveRow(row);
+}
+statusRow.textContent=`${row.toString().padStart(2,'0')}/63`;
+posDisplay.textContent=`POS:${String(pos + 1).padStart(2,'0')}/${String(currentMod.length).padStart(2,'0')}`;
+statusBpm.textContent=bpm?String(bpm):'---';
+statusSpeed.textContent=speed?String(speed):'---';
+});
+player.watchLevels((peaks)=>{
+for(let i=0;i<4;i++){
+vuTargets[i]=Math.min(1,peaks[i]*2);
+}
+});
+player.watchStop(()=>setPlayingUI(false));
+}
+function renderInstruments(){
+instList.innerHTML='';
+if(!currentMod)return;
+currentMod.instruments.slice(1).forEach((inst,idx)=>{
+const num=(idx + 1).toString(16).toUpperCase().padStart(2,'0');
+const name=inst?inst.name:'';
+const safeName=escapeHtml(name);
+const div=document.createElement('div');
+div.className='inst-row';
+if(!name)div.classList.add('empty');
+div.innerHTML=`<span class="inst-num">${num}</span><span class="inst-name" title="${safeName}">${safeName||'---'}</span>`;
+instList.appendChild(div);
+});
+}
+function renderPattern(){
+if(!currentMod)return;
+const patternIdx=currentPosition<currentMod.patternTable.length?currentMod.patternTable[currentPosition]:0;
+const pattern=patternIdx<currentMod.patterns.length?currentMod.patterns[patternIdx]:null;
+if(!pattern){
+rowsContainer.innerHTML='<div class="empty-rows">NO SEQUENCE DATA</div>';
+return;
+}
+const parts=[];
+pattern.rows.forEach((row,absoluteRow)=>{
+const isActive=absoluteRow===currentRow;
+parts.push(`<div class="mod-row" data-row-idx="${absoluteRow}" data-active="${isActive}"><span class="mod-row-idx">${fmtHex(absoluteRow,2)}</span>`);
+row.notes.forEach((note)=>{
+const noteName=getNoteName(note.period);
+const inst=fmtInst(note);
+const fx=fmtFx(note);
+const hasNote=noteName!=='---';
+const hasInst=inst!=='--';
+const hasFx=fx!=='000';
+parts.push(`<span class="mod-note-block${hasNote?' has-note':''}"><span class="mod-note-name">${noteName}</span><span class="mod-inst${hasInst?' has-inst':''}">${inst}</span><span class="mod-fx${hasFx?' has-fx':''}">${fx}</span></span>`);
+});
+parts.push('</div>');
+});
+rowsContainer.innerHTML=parts.join('');
+const firstRow=rowsContainer.querySelector('.mod-row');
+if(firstRow){
+rowHeight=firstRow.clientHeight||15;
+containerHeight=rowsContainer.clientHeight||200;
+}
+activeRowEl=rowsContainer.querySelector('[data-active="true"]');
+scrollToActiveRow();
+}
+function updateActiveRow(row){
+if(activeRowEl)activeRowEl.setAttribute('data-active','false');
+const next=rowsContainer.querySelector(`[data-row-idx="${row}"]`);
+if(next){
+next.setAttribute('data-active','true');
+activeRowEl=next;
+scrollToActiveRow();
+}
+}
+function scrollToActiveRow(){
+if(!activeRowEl)return;
+const containerH=rowsContainer.clientHeight;
+if(!containerH)return;
+const rowTop=activeRowEl.offsetTop;
+const rowH=activeRowEl.offsetHeight||rowHeight;
+targetScrollTop=Math.max(0,rowTop - containerH/2 + rowH/2);
+}
+const VU_ATTACK=0.35;
+const VU_RELEASE=0.08;
+const SCROLL_LERP=0.25;
+function tickVU(){
+for(let i=0;i<4;i++){
+const target=vuTargets[i];
+const cur=vuLevels[i];
+const a=target>cur?VU_ATTACK:VU_RELEASE;
+vuLevels[i]=cur +(target - cur)*a;
+const pct=Math.max(2,Math.round(vuLevels[i]*100));
+const bar=vuBars[i];
+if(bar){
+const h=`${pct}%`;
+if(bar.style.height!==h)bar.style.height=h;
+}
+}
+const scrollDist=targetScrollTop - rowsContainer.scrollTop;
+if(Math.abs(scrollDist)>=0.5){
+rowsContainer.scrollTop +=scrollDist*SCROLL_LERP;
+}else if(scrollDist!==0){
+rowsContainer.scrollTop=targetScrollTop;
+}
+requestAnimationFrame(tickVU);
+}
+requestAnimationFrame(tickVU);
+if(themeBtn){
+themeBtn.addEventListener('click',()=>{
+const isDark=playerEl.classList.toggle('theme-dark');
+themeBtn.textContent=isDark?'LIGHT':'DARK';
+localStorage.setItem('modplayer-theme',isDark?'dark':'light');
+});
+const savedTheme=localStorage.getItem('modplayer-theme');
+if(savedTheme==='dark'){
+playerEl.classList.add('theme-dark');
+themeBtn.textContent='LIGHT';
+}
+}
+if(new URLSearchParams(window.location.search).has('testDropAutoplay')){
+const testButton=document.createElement('button');
+testButton.id='run-drop-autoplay-test';
+testButton.textContent='RUN DROP AUTOPLAY TEST';
+testButton.disabled=true;
+testButton.style.position='fixed';
+testButton.style.zIndex='1000';
+testButton.style.top='8px';
+testButton.style.left='8px';
+const testResult=document.createElement('pre');
+testResult.id='drop-autoplay-test-result';
+testResult.style.position='fixed';
+testResult.style.zIndex='1000';
+testResult.style.top='40px';
+testResult.style.left='8px';
+testResult.style.maxWidth='520px';
+testResult.style.padding='8px';
+testResult.style.background='white';
+testResult.style.color='black';
+testResult.textContent='idle';
+document.body.appendChild(testButton);
+document.body.appendChild(testResult);
+let testModBlob=null;
+fetch('/audio/TURRICAN.MOD').then(response=>{
+if(!response.ok)throw new Error(`MOD fetch failed:${response.status}`);
+return response.blob();
+}).then(blob=>{
+testModBlob=blob;
+testButton.disabled=false;
+}).catch(error=>{
+testResult.textContent=`FAILED:${error.message}`;
+});
+testButton.addEventListener('click',async()=>{
+try{
+if(!testModBlob)throw new Error('Test-MOD noch nicht geladen');
+testResult.textContent='running';
+const file=new File([testModBlob],'TURRICAN.MOD',{type:'audio/mod'});
+const fileEntry={
+isFile:true,
+isDirectory:false,
+file(success){setTimeout(()=>success(file),0);}
+};
+const directoryEntry={
+isFile:false,
+isDirectory:true,
+createReader(){
+let sent=false;
+return{
+readEntries(success){
+setTimeout(()=>{
+if(sent)success([]);
+else{
+sent=true;
+success([fileEntry]);
+}
+},0);
+}
+};
+}
+};
+const event=new Event('drop',{bubbles:true,cancelable:true});
+Object.defineProperty(event,'dataTransfer',{
+value:{
+items:[{webkitGetAsEntry:()=>directoryEntry}],
+files:[],
+dropEffect:'copy'
+}
+});
+window.dispatchEvent(event);
+await new Promise(resolve=>setTimeout(resolve,2500));
+const state={
+status:statusState.textContent,
+playText:playBtn.textContent,
+footer:footerState.textContent,
+file:statusFile.textContent,
+row:statusRow.textContent,
+debug:window.__savageDebug.getState(),
+vu:vuBars.map(el=>el?.style.height||'')
+};
+const ok=state.status==='PLAYING'&&
+state.playText==='STOP'&&
+state.file==='TURRICAN.MOD'&&
+state.debug.playerPlaying&&
+state.debug.hasWorklet;
+testResult.textContent=JSON.stringify({ok,state},null,2);
+}catch(error){
+testResult.textContent=`FAILED:${error.message}`;
+console.error(error);
+}
+});
+}</script></body></html>

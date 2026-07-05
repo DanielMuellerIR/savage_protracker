@@ -1,5 +1,5 @@
 import XCTest
-@testable import SavageProtrackerPlayerCore
+@testable import SavageModPlayerCore
 
 /// Prüft die ProTracker-Tick-Timing-Regel in `DSPChannel.performTick`:
 /// Porta-Slides (1xx/2xx/3xx) und der Vibrato-/Tremolo-Sinusindex dürfen NUR

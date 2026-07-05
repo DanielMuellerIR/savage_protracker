@@ -1,5 +1,5 @@
 import XCTest
-@testable import SavageProtrackerPlayerCore
+@testable import SavageModPlayerCore
 
 final class ModParserTests: XCTestCase {
     

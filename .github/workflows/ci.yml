@@ -39,7 +39,7 @@ jobs:
       - name: Single-File-HTML ist aktuell (build.py)
         run: |
           python3 build.py
-          if ! git diff --exit-code savage-protracker-player.html; then
-            echo "::error::savage-protracker-player.html ist veraltet. 'python3 build.py' ausfuehren und committen."
+          if ! git diff --exit-code savage-mod-player.html; then
+            echo "::error::savage-mod-player.html ist veraltet. 'python3 build.py' ausfuehren und committen."
             exit 1
           fi

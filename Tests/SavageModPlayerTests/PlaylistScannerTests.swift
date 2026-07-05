@@ -1,5 +1,5 @@
 import XCTest
-@testable import SavageProtrackerPlayerCore
+@testable import SavageModPlayerCore
 
 // Tests fuer den Playlist-Scanner: Hierarchie-Erfassung beim Einsammeln,
 // Baum-Aufbau/Sortierung, flache Abspiel-Reihenfolge und das unsichtbare
