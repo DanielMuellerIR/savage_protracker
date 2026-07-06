@@ -4,6 +4,19 @@ Diese Datei ist die zentrale Projektdokumentation. Sie beschreibt die Architektu
 
 ---
 
+## Datei-Verzeichnis
+
+| Datei | Wozu |
+|---|---|
+| [README.md](README.md) | Englische Projektübersicht: Features, Bedienung, Build-Hinweise für HTML5- und Swift-Variante. |
+| [README.de.md](README.de.md) | Deutsche Übersetzung der Projektübersicht. |
+| [AGENTS.md](AGENTS.md) | Zentrale Doku für AI-Agenten: Architektur, Konventionen, Todos, Fallen. |
+| [RELEASE_NOTES.md](RELEASE_NOTES.md) | Englische Versionsnotizen (Umbenennung Savage Protracker Player → Savage Mod Player). |
+| [RELEASE_NOTES.de.md](RELEASE_NOTES.de.md) | Deutsche Übersetzung der Versionsnotizen. |
+| [tasks/2026-07-05-linux-port/plan.md](tasks/2026-07-05-linux-port/plan.md) | Plan für den Linux-Port: CLI-Player auf Basis von `SavageModPlayerCore`. |
+
+---
+
 ## Projektüberblick
 
 Der **Savage Mod Player** ist ein plattformübergreifender Amiga-/Tracker-Modul-Player. Er ist als direktes Gegenstück zum **Vicious SID Player** konzipiert und besteht aus zwei Implementierungen:
