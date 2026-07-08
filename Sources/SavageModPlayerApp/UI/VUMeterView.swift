@@ -36,9 +36,9 @@ struct VUMeterView: View {
             return .orange
         } else if threshold > 0.4 {
             // Light: kraeftiger Blau-Akzent; Dark: helles Glow-Cyan
-            return theme == .workbench ? .amigaOrange : .spaceAccentGlow
+            return theme == .workbench ? .lightAccent : .spaceAccentGlow
         } else {
-            return theme == .workbench ? Color.amigaOrange.opacity(0.65) : .spaceAccent
+            return theme == .workbench ? Color.lightAccent.opacity(0.65) : .spaceAccent
         }
     }
 }

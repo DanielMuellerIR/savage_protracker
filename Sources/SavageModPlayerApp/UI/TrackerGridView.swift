@@ -17,7 +17,7 @@ struct TrackerRowView: View {
     // Nur noch die Kanal-Zellen — die Zeilennummer sitzt in einer eigenen, beim
     // horizontalen Scrollen FESTSTEHENDEN Spalte (siehe TrackerGridView).
     var body: some View {
-        let rowBg: Color = isCurrent ? (theme == .workbench ? Color.amigaOrange.opacity(0.35) : Color.spaceAccent.opacity(0.18)) : Color.clear
+        let rowBg: Color = isCurrent ? (theme == .workbench ? Color.lightAccent.opacity(0.35) : Color.spaceAccent.opacity(0.18)) : Color.clear
 
         HStack(spacing: 0) {
             ForEach(0..<notes.count, id: \.self) { c in
@@ -43,7 +43,7 @@ struct TrackerRowView: View {
     // sichtbarer).
     private var separator: some View {
         Rectangle()
-            .fill(theme == .workbench ? Color.amigaWhite.opacity(0.55) : Color.spaceAccent.opacity(0.45))
+            .fill(theme == .workbench ? Color.lightTextPrimary.opacity(0.55) : Color.spaceAccent.opacity(0.45))
             .frame(width: 1)
             .frame(maxHeight: .infinity)
     }
@@ -69,14 +69,14 @@ struct TrackerRowView: View {
             }
         }
 
-        let noteColor: Color = hasNote ? (theme == .workbench ? .amigaWhite : .codeNote) : (theme == .workbench ? .amigaWhite.opacity(0.3) : .codeDim)
-        let instColor: Color = hasInst ? (theme == .workbench ? .amigaGrey : .codeInstrument) : (theme == .workbench ? .amigaWhite.opacity(0.3) : .codeDim)
-        let effColor: Color = hasEff ? (theme == .workbench ? .amigaOrange : .codeEffect) : (theme == .workbench ? .amigaWhite.opacity(0.3) : .codeDim)
+        let noteColor: Color = hasNote ? (theme == .workbench ? .lightTextPrimary : .codeNote) : (theme == .workbench ? .lightTextPrimary.opacity(0.3) : .codeDim)
+        let instColor: Color = hasInst ? (theme == .workbench ? .lightTextSecondary : .codeInstrument) : (theme == .workbench ? .lightTextPrimary.opacity(0.3) : .codeDim)
+        let effColor: Color = hasEff ? (theme == .workbench ? .lightAccent : .codeEffect) : (theme == .workbench ? .lightTextPrimary.opacity(0.3) : .codeDim)
 
         // Volume-Column (nur S3M): "v40" bzw. gedimmtes "..." ohne Angabe.
         let hasVol = note.volume >= 0
         let volStr = hasVol ? String(format: "v%02d", note.volume) : "..."
-        let volColor: Color = hasVol ? (theme == .workbench ? .amigaGrey : .codeInstrument) : (theme == .workbench ? .amigaWhite.opacity(0.3) : .codeDim)
+        let volColor: Color = hasVol ? (theme == .workbench ? .lightTextSecondary : .codeInstrument) : (theme == .workbench ? .lightTextPrimary.opacity(0.3) : .codeDim)
 
         return HStack(spacing: 4) {
             Text(noteStr).foregroundColor(noteColor)
@@ -191,8 +191,8 @@ struct TrackerGridView: View {
     // Feststehende Zeilennummer (scrollt NICHT horizontal mit den Kanaelen).
     @ViewBuilder
     private func rowIndexCell(_ rIdx: Int, isCurrent: Bool, fontSize: CGFloat) -> some View {
-        let color: Color = isCurrent ? .amigaOrange : (theme == .workbench ? .amigaOrange : .spaceAccentGlow)
-        let bg: Color = isCurrent ? (theme == .workbench ? Color.amigaOrange.opacity(0.35) : Color.spaceAccent.opacity(0.18)) : Color.clear
+        let color: Color = isCurrent ? .lightAccent : (theme == .workbench ? .lightAccent : .spaceAccentGlow)
+        let bg: Color = isCurrent ? (theme == .workbench ? Color.lightAccent.opacity(0.35) : Color.spaceAccent.opacity(0.18)) : Color.clear
         Text(String(format: "%02d", rIdx))
             .font(.system(size: fontSize - 1, weight: .semibold, design: .monospaced))
             .foregroundColor(color)
@@ -280,8 +280,8 @@ struct TrackerGridView: View {
                     .padding(.leading, rowIndexWidth)
             }
         }
-        .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceSurface)
-        .border(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.15), width: theme == .workbench ? 2 : 1)
+        .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceSurface)
+        .border(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.15), width: theme == .workbench ? 2 : 1)
         .cornerRadius(theme == .workbench ? 0 : 8)
     }
 }

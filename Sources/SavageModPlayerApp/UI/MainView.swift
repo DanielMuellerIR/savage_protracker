@@ -176,10 +176,10 @@ struct MainView: View {
                     .padding(.horizontal)
                     .padding(.top, 12)
                     .padding(.bottom, 8)
-                    .background(theme == .workbench ? Color.amigaBlue : Color.clear)
+                    .background(theme == .workbench ? Color.lightSurface : Color.clear)
                     
                     Divider()
-                        .background(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.2))
+                        .background(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.2))
                     
                     if selectedSidebarTab == 0 {
                         playlistSidebar
@@ -189,40 +189,40 @@ struct MainView: View {
                 }
                 .frame(width: 260)
                 .background(
-                    theme == .workbench ? Color.amigaBlue : Color.spaceSurface
+                    theme == .workbench ? Color.lightSurface : Color.spaceSurface
                 )
                 
                 Divider()
-                    .background(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.3))
+                    .background(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.3))
                 
                 // Main Panel
                 VStack(spacing: 0) {
                     // Header (Track Title and Metadata)
                     headerView
                         .padding()
-                        .background(theme == .workbench ? Color.amigaBlue : Color.spaceSurface.opacity(0.4))
+                        .background(theme == .workbench ? Color.lightSurface : Color.spaceSurface.opacity(0.4))
                     
                     Divider()
-                        .background(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.2))
+                        .background(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.2))
                     
                     // Pattern Position Marker Map list
                     if let mod = coordinator.activeMod {
                         patternMarkerMap(mod: mod)
                             .padding(.horizontal)
                             .padding(.vertical, 4)
-                            .background(theme == .workbench ? Color.amigaBlue.opacity(0.3) : Color.spaceBackground.opacity(0.4))
+                            .background(theme == .workbench ? Color.lightSurface.opacity(0.3) : Color.spaceBackground.opacity(0.4))
                         Divider()
-                            .background(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.1))
+                            .background(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.1))
                     }
                     
                     // VU Visualizers & Synthesis Options Panel
                     vuVisualizersView
                         .padding(.horizontal)
                         .padding(.vertical, 12)
-                        .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground.opacity(0.2))
+                        .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceBackground.opacity(0.2))
                     
                     Divider()
-                        .background(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.1))
+                        .background(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.1))
                     
                     // Scrolling Tracker Grid or Empty State Drop Zone
                     VStack(spacing: 0) {
@@ -248,29 +248,29 @@ struct MainView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(theme == .workbench ? Color.amigaDarkBlue : Color.clear)
+                    .background(theme == .workbench ? Color.lightSurfaceAlt : Color.clear)
                     
                     Divider()
-                        .background(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.2))
+                        .background(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.2))
                     
                     // Master Oscilloscope & Separation Sliders
                     masterOscilloscopeView
                         .padding(.horizontal)
                         .padding(.vertical, 8)
-                        .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground.opacity(0.3))
+                        .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceBackground.opacity(0.3))
                     
                     Divider()
-                        .background(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.3))
+                        .background(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.3))
                     
                     // Toolbar Control Panel
                     controlPanelView
                         .padding()
-                        .background(theme == .workbench ? Color.amigaBlue : Color.spaceSurface.opacity(0.4))
+                        .background(theme == .workbench ? Color.lightSurface : Color.spaceSurface.opacity(0.4))
                 }
-                .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground)
+                .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceBackground)
             }
             .frame(minWidth: 1080, minHeight: 720)
-            .foregroundColor(theme == .workbench ? Color.amigaWhite : Color.spaceTextPrimary)
+            .foregroundColor(theme == .workbench ? Color.lightTextPrimary : Color.spaceTextPrimary)
             .font(theme == .workbench ? .system(.body, design: .monospaced) : .body)
             .fileImporter(
                 isPresented: $showFileImporter,
@@ -709,7 +709,7 @@ struct MainView: View {
                             path.addLine(to: CGPoint(x: CGFloat(idx) * step, y: geo.size.height * CGFloat(0.5 - history[idx] * 0.5)))
                         }
                     }
-                    .stroke(theme == .workbench ? Color.amigaOrange : Color.spaceAccent, lineWidth: 1.2)
+                    .stroke(Color.accent(theme), lineWidth: 1.2)
                 }
                 // Breite flexibel: die adaptive Kanal-Leiste gibt jedem Streifen
                 // per .frame(width:) seine Breite vor, das Oszi fuellt sie aus.
@@ -720,7 +720,7 @@ struct MainView: View {
                 .cornerRadius(3)
                 .overlay(
                     RoundedRectangle(cornerRadius: 3)
-                        .stroke(theme == .workbench ? Color.amigaGrey.opacity(0.35) : Color.clear, lineWidth: 1)
+                        .stroke(theme == .workbench ? Color.lightTextSecondary.opacity(0.35) : Color.clear, lineWidth: 1)
                 )
             }
 
@@ -729,7 +729,7 @@ struct MainView: View {
                 // bei vielen schmalen Streifen passt.
                 Text("\(i + 1)")
                     .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundColor(theme == .workbench ? .amigaWhite.opacity(0.7) : .spaceTextSecondary)
+                    .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.7) : .spaceTextSecondary)
                     .lineLimit(1)
 
                 // MUTE / SOLO buttons
@@ -973,7 +973,7 @@ struct MainView: View {
                         .frame(width: 10)
                     Image(systemName: expanded ? "folder.fill" : "folder")
                         .font(.system(size: 11))
-                        .foregroundColor(theme == .workbench ? .amigaOrange : .spaceAccent)
+                        .foregroundColor(Color.accent(theme))
                     Text(name)
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .lineLimit(1)
@@ -984,7 +984,7 @@ struct MainView: View {
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
                 .contentShape(Rectangle())
-                .foregroundColor(theme == .workbench ? .amigaWhite : .spaceTextSecondary)
+                .foregroundColor(theme == .workbench ? .lightTextPrimary : .spaceTextSecondary)
             }
             .buttonStyle(PremiumHoverButtonStyle(theme: theme))
 
@@ -996,7 +996,7 @@ struct MainView: View {
                 HStack(spacing: 8) {
                     Image(systemName: isPlayingSong ? "speaker.wave.2.fill" : "music.note")
                         .font(.system(size: 11))
-                        .foregroundColor(isPlayingSong ? (theme == .workbench ? .amigaOrange : .spaceAccent) : .spaceTextSecondary)
+                        .foregroundColor(isPlayingSong ? (Color.accent(theme)) : .spaceTextSecondary)
 
                     Text(cleanFilename(fileURL))
                         .font(.system(size: 11, weight: isPlayingSong ? .bold : .medium, design: .monospaced))
@@ -1012,11 +1012,11 @@ struct MainView: View {
                     RoundedRectangle(cornerRadius: theme == .workbench ? 0 : 6)
                         .fill(
                             isPlayingSong
-                            ? (theme == .workbench ? Color.amigaOrange.opacity(0.2) : Color.spaceAccent.opacity(0.15))
+                            ? (theme == .workbench ? Color.lightAccent.opacity(0.2) : Color.spaceAccent.opacity(0.15))
                             : Color.clear
                         )
                 )
-                .foregroundColor(isPlayingSong ? (theme == .workbench ? .amigaOrange : .white) : (theme == .workbench ? .amigaWhite : .spaceTextSecondary))
+                .foregroundColor(isPlayingSong ? (theme == .workbench ? .lightAccent : .white) : (theme == .workbench ? .lightTextPrimary : .spaceTextSecondary))
             }
             .buttonStyle(PremiumHoverButtonStyle(theme: theme))
         }
@@ -1044,7 +1044,7 @@ struct MainView: View {
                 }
             }
             .padding(6)
-            .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground)
+            .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceBackground)
             .cornerRadius(theme == .workbench ? 0 : 6)
             .padding([.horizontal, .top], 8)
             
@@ -1053,7 +1053,7 @@ struct MainView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "tray.and.arrow.down")
                         .font(.system(size: 36))
-                        .foregroundColor(theme == .workbench ? .amigaWhite.opacity(0.3) : .spaceAccent.opacity(0.4))
+                        .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.3) : .spaceAccent.opacity(0.4))
                     
                     Text("Playlist leer")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
@@ -1070,7 +1070,7 @@ struct MainView: View {
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(theme == .workbench ? Color.amigaOrange : Color.spaceAccent)
+                    .background(Color.accent(theme))
                     .foregroundColor(.white)
                     .cornerRadius(theme == .workbench ? 0 : 6)
                 }
@@ -1080,7 +1080,7 @@ struct MainView: View {
                 HStack {
                     Text("TITEL (\(filteredPlaylist.count))")
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundColor(theme == .workbench ? .amigaOrange : .spaceAccentGlow)
+                        .foregroundColor(theme == .workbench ? .lightAccent : .spaceAccentGlow)
                     Spacer()
                     Button("Leeren") {
                         coordinator.stop()
@@ -1091,12 +1091,12 @@ struct MainView: View {
                         currentPlaylistIndex = -1
                     }
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(theme == .workbench ? .amigaOrange : .spaceTextSecondary)
+                    .foregroundColor(theme == .workbench ? .lightAccent : .spaceTextSecondary)
                     .buttonStyle(PremiumHoverButtonStyle(theme: theme))
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
-                .background(theme == .workbench ? Color.amigaBlue.opacity(0.5) : Color.spaceBackground.opacity(0.5))
+                .background(theme == .workbench ? Color.lightSurface.opacity(0.5) : Color.spaceBackground.opacity(0.5))
                 
                 // ScrollViewReader: erlaubt programmatisches Scrollen zum aktuell
                 // laufenden Titel. Noetig, weil ein Titelwechsel auch ohne Klick in
@@ -1180,7 +1180,7 @@ struct MainView: View {
                                 Button(action: { coordinator.previewInstrument(index: i) }) {
                                     HStack(spacing: 8) {
                                         Text(String(format: "%02d", i))
-                                            .foregroundColor(theme == .workbench ? .amigaOrange : .codeInstrument)
+                                            .foregroundColor(theme == .workbench ? .lightAccent : .codeInstrument)
                                             .font(.system(size: 11, weight: .bold, design: .monospaced))
                                             .frame(width: 18)
                                         
@@ -1207,9 +1207,9 @@ struct MainView: View {
                                                 let lengthRatio = min(1.0, Double(inst.length) / 65536.0)
                                                 ZStack(alignment: .leading) {
                                                     Rectangle()
-                                                        .fill(theme == .workbench ? Color.amigaWhite.opacity(0.1) : Color.white.opacity(0.03))
+                                                        .fill(theme == .workbench ? Color.lightTextPrimary.opacity(0.1) : Color.white.opacity(0.03))
                                                     Rectangle()
-                                                        .fill(theme == .workbench ? Color.amigaOrange : Color.spaceAccent)
+                                                        .fill(Color.accent(theme))
                                                         .frame(width: geo.size.width * CGFloat(lengthRatio))
                                                 }
                                             }
@@ -1218,7 +1218,7 @@ struct MainView: View {
                                             
                                             Text(String(format: "Len: %d B | Fine: %d | Vol: %d", inst.length, inst.finetune, inst.volume))
                                                 .font(.system(size: 8.5, design: .monospaced))
-                                                .foregroundColor(theme == .workbench ? .amigaWhite.opacity(0.6) : .spaceTextSecondary)
+                                                .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.6) : .spaceTextSecondary)
                                         }
                                     }
                                     // Padding + contentShape INS Label ziehen, damit
@@ -1243,7 +1243,7 @@ struct MainView: View {
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
-                                        .stroke(theme == .workbench ? Color.amigaGrey.opacity(0.35) : Color.clear, lineWidth: 1)
+                                        .stroke(theme == .workbench ? Color.lightTextSecondary.opacity(0.35) : Color.clear, lineWidth: 1)
                                 )
                                 .onHover { hovering in
                                     hoveredInstrumentIndex = hovering ? i : nil
@@ -1257,7 +1257,7 @@ struct MainView: View {
                 Spacer()
                 Text("Kein Song geladen")
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(theme == .workbench ? .amigaWhite.opacity(0.4) : .spaceTextSecondary)
+                    .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.4) : .spaceTextSecondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                 Spacer()
             }
@@ -1280,7 +1280,7 @@ struct MainView: View {
                 HStack(spacing: 8) {
                     let titleFont: Font = theme == .workbench
                         ? .system(size: 20, weight: .bold, design: .monospaced) : .title2
-                    let titleColor: Color = theme == .workbench ? .amigaOrange : .white
+                    let titleColor: Color = theme == .workbench ? .lightAccent : .white
 
                     // Format-Badge LINKS vor dem Titel (feste Groesse). Bewusst vor
                     // dem Titel, damit der (bei Ueberlaenge scrollende) Titel den
@@ -1356,7 +1356,7 @@ struct MainView: View {
                     }
                 }
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundColor(theme == .workbench ? .amigaWhite.opacity(0.8) : .spaceTextSecondary)
+                .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.8) : .spaceTextSecondary)
             }
             // Der Titelblock ist das EINE flexible Element in der Kopfzeile und
             // fuellt den Platz bis zu den rechten Bedienelementen (ersetzt den
@@ -1375,10 +1375,10 @@ struct MainView: View {
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
-                .background(coordinator.palClock ? (theme == .workbench ? Color.amigaOrange : Color.spaceAccent) : Color.clear)
+                .background(coordinator.palClock ? (Color.accent(theme)) : Color.clear)
                 // Inaktive Beschriftung theme-abhängig: das Dark-Grau war im
                 // Light-Mode auf dem hellen Kasten unlesbar.
-                .foregroundColor(coordinator.palClock ? .white : (theme == .workbench ? .amigaGrey : .spaceTextSecondary))
+                .foregroundColor(coordinator.palClock ? .white : (theme == .workbench ? .lightTextSecondary : .spaceTextSecondary))
                 .cornerRadius(4)
                 .buttonStyle(PlainButtonStyle())
                 .help("PAL-Paula-Takt (3,546 MHz) wie bei europäischen Amigas — die Referenz-Tonhöhe und -Geschwindigkeit der meisten Module.")
@@ -1389,14 +1389,14 @@ struct MainView: View {
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
-                .background(!coordinator.palClock ? (theme == .workbench ? Color.amigaOrange : Color.spaceAccent) : Color.clear)
-                .foregroundColor(!coordinator.palClock ? .white : (theme == .workbench ? .amigaGrey : .spaceTextSecondary))
+                .background(!coordinator.palClock ? (Color.accent(theme)) : Color.clear)
+                .foregroundColor(!coordinator.palClock ? .white : (theme == .workbench ? .lightTextSecondary : .spaceTextSecondary))
                 .cornerRadius(4)
                 .buttonStyle(PlainButtonStyle())
                 .help("NTSC-Paula-Takt (3,580 MHz) wie bei US-Amigas — Module klingen minimal höher und laufen etwas schneller als mit PAL.")
             }
             .padding(2)
-            .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground.opacity(0.4))
+            .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceBackground.opacity(0.4))
             .cornerRadius(6)
             
             // Theme Selector
@@ -1409,17 +1409,17 @@ struct MainView: View {
                             .padding(.vertical, 5)
                             .background(
                                 theme == t
-                                ? (t == .workbench ? Color.amigaOrange : Color.spaceAccent)
-                                : (theme == .workbench ? Color.amigaDarkBlue : Color.spaceSurface.opacity(0.5))
+                                ? (Color.accent(t))
+                                : (theme == .workbench ? Color.lightSurfaceAlt : Color.spaceSurface.opacity(0.5))
                             )
-                            .foregroundColor(theme == t ? Color.white : (theme == .workbench ? Color.amigaWhite : Color.spaceTextSecondary))
+                            .foregroundColor(theme == t ? Color.white : (theme == .workbench ? Color.lightTextPrimary : Color.spaceTextSecondary))
                             .cornerRadius(theme == .workbench ? 0 : 4)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
             }
             .padding(3)
-            .background(theme == .workbench ? Color.amigaBlue : Color.spaceBackground.opacity(0.6))
+            .background(theme == .workbench ? Color.lightSurface : Color.spaceBackground.opacity(0.6))
             .cornerRadius(theme == .workbench ? 0 : 6)
             
             // File Open Button
@@ -1430,7 +1430,7 @@ struct MainView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(theme == .workbench ? Color.amigaOrange : Color.spaceAccent)
+                .background(Color.accent(theme))
                 .foregroundColor(.white)
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
             }
@@ -1485,7 +1485,7 @@ struct MainView: View {
 
                 HStack(spacing: 6) {
                     Text("LOOP:")
-                        .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+                        .foregroundColor(theme == .workbench ? .lightTextSecondary : .spaceTextSecondary)
 
                     Picker("", selection: $loopMode) {
                         ForEach(LoopMode.allCases) { m in
@@ -1507,7 +1507,7 @@ struct MainView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(theme == .workbench ? Color.amigaBlue.opacity(0.3) : Color.spaceSurface.opacity(0.5))
+        .background(theme == .workbench ? Color.lightSurface.opacity(0.3) : Color.spaceSurface.opacity(0.5))
         .cornerRadius(theme == .workbench ? 0 : 8)
     }
     
@@ -1529,8 +1529,8 @@ struct MainView: View {
                         .frame(width: 24, height: 26)
                         .background(
                             isCurrent
-                            ? (theme == .workbench ? Color.amigaOrange : Color.spaceAccent)
-                            : (theme == .workbench ? Color.amigaDarkBlue : Color.spaceSurface)
+                            ? (Color.accent(theme))
+                            : (theme == .workbench ? Color.lightSurfaceAlt : Color.spaceSurface)
                         )
                         .foregroundColor(isCurrent ? .white : .spaceTextSecondary)
                         .cornerRadius(3)
@@ -1558,7 +1558,7 @@ struct MainView: View {
                     
                     Image(systemName: dragOver ? "arrow.down.doc.fill" : "opticaldisc.fill")
                         .font(.system(size: 48))
-                        .foregroundColor(theme == .workbench ? .amigaOrange : .spaceAccent)
+                        .foregroundColor(Color.accent(theme))
                         .rotationEffect(.degrees(dragOver ? 180 : (isDiskAnimating ? 360 : 0)))
                         .scaleEffect(dragOver ? 1.2 : 1.0)
                         .shadow(color: theme == .workbench ? Color.clear : Color.spaceAccent.opacity(0.5), radius: 8)
@@ -1567,12 +1567,12 @@ struct MainView: View {
                 VStack(spacing: 8) {
                     Text("PROTRACKER MOD PLAYER")
                         .font(theme == .workbench ? .system(size: 16, weight: .bold, design: .monospaced) : .system(size: 18, weight: .bold, design: .default))
-                        .foregroundColor(theme == .workbench ? .amigaOrange : .white)
+                        .foregroundColor(theme == .workbench ? .lightAccent : .white)
                         .tracking(theme == .cyber ? 2.0 : 0)
                     
                     Text("Ziehe .mod Dateien oder Ordner direkt in dieses Fenster")
                         .font(theme == .workbench ? .system(size: 12, design: .monospaced) : .system(size: 13, weight: .medium))
-                        .foregroundColor(theme == .workbench ? .amigaWhite.opacity(0.8) : .spaceTextSecondary)
+                        .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.8) : .spaceTextSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 30)
                 }
@@ -1586,7 +1586,7 @@ struct MainView: View {
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(theme == .workbench ? Color.amigaOrange : Color.spaceAccent)
+                        .background(Color.accent(theme))
                         .foregroundColor(.white)
                         .cornerRadius(theme == .workbench ? 0 : 8)
                     }
@@ -1627,8 +1627,8 @@ struct MainView: View {
                             )
                     } else {
                         Rectangle()
-                            .fill(Color.amigaBlue.opacity(0.2))
-                            .border(dragOver ? Color.amigaOrange : Color.amigaWhite, width: 2)
+                            .fill(Color.lightSurface.opacity(0.2))
+                            .border(dragOver ? Color.lightAccent : Color.lightTextPrimary, width: 2)
                     }
                 }
             )
@@ -1647,7 +1647,7 @@ struct MainView: View {
             
             Spacer()
         }
-        .background(theme == .workbench ? Color.amigaDarkBlue : Color.clear)
+        .background(theme == .workbench ? Color.lightSurfaceAlt : Color.clear)
     }
     
     // Master Oscilloscope visualizer showing master L/R mix output
@@ -1655,7 +1655,7 @@ struct MainView: View {
         HStack(spacing: 16) {
             Text("MASTER OSCILLOSCOPE")
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+                .foregroundColor(theme == .workbench ? .lightTextSecondary : .spaceTextSecondary)
                 .frame(width: 140, alignment: .leading)
             
             GeometryReader { geo in
@@ -1672,7 +1672,7 @@ struct MainView: View {
                         path.addLine(to: CGPoint(x: x, y: y))
                     }
                 }
-                .stroke(theme == .workbench ? Color.amigaOrange : Color.spaceAccent, lineWidth: 1.5)
+                .stroke(Color.accent(theme), lineWidth: 1.5)
             }
             .frame(height: 32)
             // Light-Mode: weisser Hintergrund statt des dunklen Streifens.
@@ -1680,17 +1680,17 @@ struct MainView: View {
             .cornerRadius(4)
             .overlay(
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(theme == .workbench ? Color.amigaGrey.opacity(0.35) : Color.spaceAccent.opacity(0.15), lineWidth: 1)
+                    .stroke(theme == .workbench ? Color.lightTextSecondary.opacity(0.35) : Color.spaceAccent.opacity(0.15), lineWidth: 1)
             )
             
             // Stereo Separation bleed adjustment slider
             HStack(spacing: 8) {
                 Image(systemName: "arrow.left.and.right")
                     .font(.system(size: 11))
-                    .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+                    .foregroundColor(theme == .workbench ? .lightTextSecondary : .spaceTextSecondary)
 
                 Slider(value: $coordinator.stereoSeparation, in: 0.0...1.0)
-                    .accentColor(theme == .workbench ? .amigaOrange : .spaceAccent)
+                    .accentColor(Color.accent(theme))
                     .frame(width: 80)
                     // Tooltip auch direkt am Slider: ein Slider verschluckt die
                     // Hover-Events, sodass das .help() der umgebenden HStack beim
@@ -1699,7 +1699,7 @@ struct MainView: View {
 
                 Text(String(format: "%d%%", Int(coordinator.stereoSeparation * 100)))
                     .font(.system(size: 9, design: .monospaced))
-                    .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+                    .foregroundColor(theme == .workbench ? .lightTextSecondary : .spaceTextSecondary)
                     .frame(width: 32, alignment: .trailing)
             }
             .help("Stereo-Separation: 100 % = hartes Amiga-Panning (Kanäle ganz links/rechts), 0 % = Mono. Dazwischen wird Übersprechen beigemischt, das Kopfhörer-Ermüdung vermeidet. Am deutlichsten mit Kopfhörern hörbar; über Laptop-Lautsprecher kaum.")
@@ -1718,7 +1718,7 @@ struct MainView: View {
                 // Volle Akzentfarbe wie der Play-Button — das abgeschwaechte
                 // Orange sah im Light-Mode wie "deaktiviert" aus.
                 Rectangle()
-                    .fill(Color.amigaOrange)
+                    .fill(Color.lightAccent)
             }
             Image(systemName: systemName)
                 .font(.system(size: 11))
@@ -1737,15 +1737,15 @@ struct MainView: View {
                 Button(action: { togglePlayback() }) {
                     ZStack {
                         Circle()
-                            .fill(theme == .workbench ? Color.amigaWhite.opacity(0.12) : Color.spaceSurface)
+                            .fill(theme == .workbench ? Color.lightTextPrimary.opacity(0.12) : Color.spaceSurface)
                             .frame(width: 40, height: 40)
                             .shadow(color: theme == .workbench ? Color.clear : Color.spaceAccent.opacity(0.3), radius: 5)
                         Image(systemName: "opticaldisc.fill")
                             .font(.system(size: 30))
-                            .foregroundColor(theme == .workbench ? .amigaOrange : .spaceAccent)
+                            .foregroundColor(Color.accent(theme))
                             .rotationEffect(.degrees(diskRotation))
                         Circle()
-                            .fill(theme == .workbench ? Color.amigaDarkBlue : Color.spaceBackground)
+                            .fill(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceBackground)
                             .frame(width: 6, height: 6)
                         Image(systemName: coordinator.isPlaying && !coordinator.isPaused ? "pause.fill" : "play.fill")
                             .font(.system(size: 11, weight: .bold))
@@ -1810,11 +1810,11 @@ struct MainView: View {
                                 .overlay(Circle().stroke(Color.spaceAccent.opacity(0.3), lineWidth: 1))
                         } else {
                             Rectangle()
-                                .fill(shuffleEnabled ? Color.amigaOrange : Color.amigaDarkBlue)
+                                .fill(shuffleEnabled ? Color.lightAccent : Color.lightSurfaceAlt)
                         }
                         Image(systemName: "shuffle")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(shuffleEnabled ? (theme == .cyber ? .black : .white) : (theme == .workbench ? .amigaGrey : .spaceTextSecondary))
+                            .foregroundColor(shuffleEnabled ? (theme == .cyber ? .black : .white) : (theme == .workbench ? .lightTextSecondary : .spaceTextSecondary))
                     }
                     .frame(width: 30, height: 30)
                 }
@@ -1837,7 +1837,7 @@ struct MainView: View {
                     Button(action: { coordinator.seek(bySeconds: -15) }) {
                         Image(systemName: "gobackward.15")
                             .font(.system(size: 14))
-                            .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+                            .foregroundColor(theme == .workbench ? .lightTextSecondary : .spaceTextSecondary)
                     }
                     .buttonStyle(PlainButtonStyle())
                     .disabled(!coordinator.isPlaying)
@@ -1854,14 +1854,14 @@ struct MainView: View {
                         in: 0...Double(max(0, mod.length - 1)),
                         step: 1.0
                     )
-                    .accentColor(theme == .workbench ? .amigaOrange : .spaceAccent)
+                    .accentColor(Color.accent(theme))
                     .help("Song-Position wählen — funktioniert auch bei gestoppter Wiedergabe: Play startet dann ab dieser Stelle.")
 
                     // Zeitsprung vor.
                     Button(action: { coordinator.seek(bySeconds: 30) }) {
                         Image(systemName: "goforward.30")
                             .font(.system(size: 14))
-                            .foregroundColor(theme == .workbench ? .amigaGrey : .spaceTextSecondary)
+                            .foregroundColor(theme == .workbench ? .lightTextSecondary : .spaceTextSecondary)
                     }
                     .buttonStyle(PlainButtonStyle())
                     .disabled(!coordinator.isPlaying)
@@ -1876,7 +1876,7 @@ struct MainView: View {
                 Spacer()
                 Text("Kein Song geladen")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundColor(theme == .workbench ? .amigaWhite.opacity(0.4) : .spaceTextSecondary)
+                    .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.4) : .spaceTextSecondary)
                 Spacer()
             }
             
@@ -1909,13 +1909,13 @@ struct MainView: View {
                 HStack(spacing: 6) {
                     Image(systemName: volume == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(theme == .workbench ? .amigaWhite : .spaceTextSecondary)
+                        .foregroundColor(theme == .workbench ? .lightTextPrimary : .spaceTextSecondary)
                     
                     Slider(value: Binding(
                         get: { volume },
                         set: { volume = $0; coordinator.setVolume(Float($0)) }
                     ), in: 0...1.0)
-                    .accentColor(theme == .workbench ? .amigaOrange : .spaceAccent)
+                    .accentColor(Color.accent(theme))
                     .frame(width: 90)
                     .shadow(color: theme == .cyber ? Color.spaceAccent.opacity(volume * 0.8) : Color.clear, radius: 4)
                 }
@@ -1981,7 +1981,7 @@ struct MainView: View {
                 .foregroundColor(.black)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 8)
-                .background(Color.amigaOrange)
+                .background(Color.lightAccent)
                 .buttonStyle(PlainButtonStyle())
             }
             .padding(32)
@@ -2000,7 +2000,7 @@ struct MainView: View {
             VStack(spacing: 20) {
                 Text("TASTATUR-KURZBEFEHLE")
                     .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(theme == .workbench ? .amigaOrange : .spaceAccent)
+                    .foregroundColor(Color.accent(theme))
                 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -2044,13 +2044,13 @@ struct MainView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
-                .background(theme == .workbench ? Color.amigaOrange : Color.spaceAccent)
+                .background(Color.accent(theme))
                 .cornerRadius(theme == .workbench ? 0 : 6)
                 .buttonStyle(PlainButtonStyle())
             }
             .padding(24)
-            .background(theme == .workbench ? Color.amigaDarkBlue : Color.spaceSurface)
-            .border(theme == .workbench ? Color.amigaWhite : Color.spaceAccent.opacity(0.3), width: theme == .workbench ? 2 : 1)
+            .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceSurface)
+            .border(theme == .workbench ? Color.lightTextPrimary : Color.spaceAccent.opacity(0.3), width: theme == .workbench ? 2 : 1)
             .cornerRadius(theme == .workbench ? 0 : 12)
             .frame(width: 380)
         }
@@ -2065,7 +2065,7 @@ struct MainView: View {
             VStack(spacing: 16) {
                 Text("OFFLINE-WAV-EXPORT")
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundColor(theme == .workbench ? .amigaOrange : .spaceAccent)
+                    .foregroundColor(Color.accent(theme))
                 
                 Text("Exportiert den gesamten Track offline in eine WAV Datei.")
                     .font(.system(size: 10, design: .monospaced))
@@ -2143,14 +2143,14 @@ struct TabButton: View {
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(
                         isSelected
-                        ? (theme == .workbench ? Color.amigaOrange : Color.white)
-                        : (theme == .workbench ? Color.amigaWhite.opacity(0.5) : Color.spaceTextSecondary.opacity(0.7))
+                        ? (theme == .workbench ? Color.lightAccent : Color.white)
+                        : (theme == .workbench ? Color.lightTextPrimary.opacity(0.5) : Color.spaceTextSecondary.opacity(0.7))
                     )
                 
                 Rectangle()
                     .fill(
                         isSelected
-                        ? (theme == .workbench ? Color.amigaOrange : Color.spaceAccent)
+                        ? (Color.accent(theme))
                         : Color.clear
                     )
                     .frame(height: 2)
@@ -2173,7 +2173,7 @@ struct CheckboxToggleStyle: ToggleStyle {
         Button(action: { configuration.isOn.toggle() }) {
             HStack(spacing: 6) {
                 Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
-                    .foregroundColor(configuration.isOn ? (theme == .workbench ? .amigaOrange : .spaceAccent) : .spaceTextSecondary)
+                    .foregroundColor(configuration.isOn ? (Color.accent(theme)) : .spaceTextSecondary)
                 configuration.label
             }
         }

@@ -8,12 +8,14 @@ public enum PlayerTheme: String, CaseIterable, Identifiable {
 }
 
 public extension Color {
-    // Light Theme: macOS-nah, ruhig, hoher Textkontrast.
-    static let amigaBlue = Color(red: 0.965, green: 0.970, blue: 0.980)       // #F6F7FA
-    static let amigaWhite = Color(red: 0.075, green: 0.090, blue: 0.115)      // #13171D
-    static let amigaOrange = Color(red: 0.000, green: 0.333, blue: 0.710)     // #0055B5
-    static let amigaDarkBlue = Color(red: 0.930, green: 0.940, blue: 0.955)   // #EDF0F4
-    static let amigaGrey = Color(red: 0.340, green: 0.380, blue: 0.440)       // #576170
+    // Light Theme: macOS-nah, ruhig, hoher Textkontrast. Namen sind semantisch
+    // (Fläche/Text/Akzent), nicht nach Farbton — der Akzent ist z. B. bewusst
+    // blau (#0055B5), hieß früher aber irreführend "amigaOrange".
+    static let lightSurface = Color(red: 0.965, green: 0.970, blue: 0.980)       // #F6F7FA
+    static let lightTextPrimary = Color(red: 0.075, green: 0.090, blue: 0.115)      // #13171D
+    static let lightAccent = Color(red: 0.000, green: 0.333, blue: 0.710)     // #0055B5
+    static let lightSurfaceAlt = Color(red: 0.930, green: 0.940, blue: 0.955)   // #EDF0F4
+    static let lightTextSecondary = Color(red: 0.340, green: 0.380, blue: 0.440)       // #576170
     
     // Dark Theme: Schwarz/Graphit mit gedämpften Akzenten, keine Neonfarben.
     static let spaceBackground = Color(red: 0.020, green: 0.024, blue: 0.030)   // #050608
@@ -29,6 +31,14 @@ public extension Color {
     
     static let spaceTextPrimary = Color(red: 0.925, green: 0.930, blue: 0.940) // #ECEEF0
     static let spaceTextSecondary = Color(red: 0.620, green: 0.660, blue: 0.690) // #9EA8B0
+
+    /// Zentraler Theme-Akzent. Ersetzt die früher über die ganze UI verstreuten
+    /// `theme == .workbench ? .lightAccent : .spaceAccent`-Ternäre (Code-Review #12).
+    /// Nur für den vollen (deckenden) Akzent; Stellen mit abweichender Opazität
+    /// bleiben bewusst als eigener Ausdruck.
+    static func accent(_ theme: PlayerTheme) -> Color {
+        theme == .workbench ? .lightAccent : .spaceAccent
+    }
 }
 
 public struct PremiumHoverButtonStyle: ButtonStyle {
