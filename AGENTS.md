@@ -173,6 +173,21 @@ GUI-Umbau derselben Runde (visuell per fenstergezieltem Screenshot verifiziert, 
 - **Pattern-Ansicht gestrafft**: Zeilenhöhe = Schrift + 6 (statt fix 24); Kanäle mit nur 1-pt-Trennlinie (heller) und eng an den Inhalt gelegten Zellen; bei drohender H-Scrollbar wird die Schrift um 1 verkleinert; **feststehende Zeilennummern-Spalte** (scrollt nicht mit); **eigene, dezent-graue H-Scrollbar** (native ist schwarz/nicht einfärbbar), am unteren sichtbaren Rand gepinnt.
 - **Zuletzt gespielter Titel** wird bei ausgeschaltetem Shuffle nach Neustart wieder aufgenommen (`@AppStorage("savage.lastPlayed")`, stabiler Dateiname). Headless verifiziert.
 
+## Code-Review-Runde 2026-07-08 (v1.4.2–1.4.4)
+
+Report `2026-07-05` (MiniMax-Audit, gegen aktuellen Code verifiziert): von 11 realen Funden 9 erledigt, je mit Test/Verifikation:
+- **#1** `modplayer.js` Pattern-Konstruktor mit Bounds-Check gegen abgeschnittene MODs (vorher unhandled `RangeError` im Drop-Handler). Regressionstest `Tests/js/pattern-bounds.mjs` durch echten `parseModBuffer`-Pfad; live gegen eine auf 1184 B gekürzte echte MOD gegengeprüft.
+- **#2** Arpeggio im JS-Worklet von pro-Effekt allokiertem Array auf Skalare (`arpActive/arpX/arpY`) — wie `DSPChannel.swift`. Neuer Arpeggio-Parität-Test.
+- **#14** Mute entmutet auf die letzte hörbare Lautstärke statt hartkodiert 1.0 (Browser-verifiziert).
+- **#6** totes `spaceSurfaceHover` entfernt, **#7** `try? removeItem`→`do/catch`, **#13** `@inline(__always)` auf `renderChannelSample`.
+- **#9/#10/#12** Light-Theme-Farben semantisch umbenannt (`amigaOrange`=blau→`lightAccent` usw.) + zentraler `Color.accent(theme)`-Helper.
+
+**Noch offen (bewusst aufgeschoben):**
+- **#3** `exportActiveModToWav` bricht per naiver Bedingung ab statt via `state.endReached` — kann bei Bxx-Position-Jump auf der letzten Position zu früh stoppen. Mit der XM-Arbeit prüfen (Verhaltensänderung am WAV-Export).
+- **#11** Live-Render-Block und `advanceRowForProbe` sind ~80 Zeilen duplizierte Sequencer-Logik (Pattern-Break/Position-Jump/Loop/Delay), subtil auseinandergelaufen — Zusammenführen ist audio-korrektheits-riskant, eigener Task mit Tests.
+
+Hinfällig im Report: #4 (bereits gefixt), #5 (Fehlalarm), #8 (Playlist-UI umgebaut).
+
 ## Fallen / Agent-Hinweise
 
 - **Notarisierung ist pro-Mac (verifiziert 2026-07-03)**: Das notarytool-Keychain-Profil wird nicht über iCloud gesynct. Der in `build_dmg.sh` hartkodierte Default-Profilname existiert nicht zwangsläufig auf dem gerade genutzten Mac — dann bricht `--notarize` mit „Notary-Keychain-Profil nicht gefunden" ab. Lösung: ein vorhandenes Profil per `NOTARY_PROFILE=<profil> bash build_dmg.sh --notarize` übergeben (oder das bereits gebaute, signierte DMG direkt mit `xcrun notarytool submit … --keychain-profile <profil> --wait` + `xcrun stapler staple`). Die konkreten Profilnamen pro Mac stehen in der privaten Setup-Notiz, nicht hier (Public-Repo).
