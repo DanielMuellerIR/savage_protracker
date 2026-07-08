@@ -46,7 +46,13 @@ class Channel {
         this.vibratoDepth = 0;
         this.vibratoSpeed = 0;
         this.vibratoIndex = 0;
-        this.arpeggio = false;
+        // Arpeggio als drei Skalare statt eines pro Effekt allokierten Arrays
+        // [0, x, y] — spiegelt DSPChannel.swift (arpActive/arpX/arpY) und vermeidet
+        // GC-Druck im Audio-Thread. arpActive schaltet den Effekt, arpX/arpY sind
+        // die Halbton-Offsets der Zyklusschritte 1 und 2 (Schritt 0 ist immer 0).
+        this.arpActive = false;
+        this.arpX = 0;
+        this.arpY = 0;
         this.sampleSpeed = 0.0;
         this.sampleIndex = 0;
         // 9xx-Sample-Offset-Memory: 900 (ohne Parameter) wiederholt den letzten
@@ -152,10 +158,15 @@ class Channel {
                 }
             }
         }
-        else if (this.arpeggio) {
-            const index = this.worklet.tick % this.arpeggio.length;
-            const halfNotes = this.arpeggio[index];
-            this.currentPeriod = this.period / Math.pow(2, halfNotes / 12);
+        else if (this.arpActive) {
+            // Zyklus [0, x, y] über tick % 3 — ohne Array-Allokation (wie Swift).
+            let semis;
+            switch (this.worklet.tick % 3) {
+                case 0: semis = 0; break;
+                case 1: semis = this.arpX; break;
+                default: semis = this.arpY;
+            }
+            this.currentPeriod = this.period / Math.pow(2, semis / 12);
         }
         else if (this.retrigger && (this.worklet.tick % this.retrigger) == 0) {
             this.sampleIndex = 0;
@@ -256,7 +267,7 @@ class Channel {
         this.portamento = false;
         this.vibrato = false;
         this.tremolo = false; // Tremolo-Flag zurücksetzen
-        this.arpeggio = false;
+        this.arpActive = false;
         this.retrigger = false;
         this.delayNote = false;
 
@@ -264,7 +275,9 @@ class Channel {
 
         switch (effectId) {
             case ARPEGGIO:
-                this.arpeggio = [0, effectHigh, effectLow];
+                this.arpActive = true;
+                this.arpX = effectHigh;
+                this.arpY = effectLow;
                 break;
             case SLIDE_UP:
                 this.periodDelta = -effectData;

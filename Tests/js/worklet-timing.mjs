@@ -175,6 +175,27 @@ function check(name, actual, expected, eps = 1e-4) {
     check('fine-porta E1x auf anstehende Period', ch.setPeriod, 195);
 }
 
+// Arpeggio (0xy): currentPeriod zykliert period/2^(semis/12) mit semis = [0, x, y]
+// über tick % 3 — identisch zu DSPChannel.swift (arpActive/arpX/arpY, tick%3).
+// Deckt Code-Review-Fund #2 ab und schützt die Umstellung des JS-Worklets von
+// einem pro-Effekt allokierten Array auf Skalare (kein Verhaltensunterschied).
+// Nutzt den echten effect()-Parser, ist daher unabhängig von der internen
+// Repräsentation und bleibt vor wie nach dem Refactor identisch.
+{
+    const ch = makeChannel();
+    ch.period = 428;
+    ch.currentPeriod = 428;
+    const x = 3, y = 7;
+    ch.effect({ hasEffect: true, effectId: 0x00, effectData: (x << 4) | y, effectHigh: x, effectLow: y });
+    const semisFor = (tick) => [0, x, y][tick % 3];
+    for (let tick = 0; tick < 6; ++tick) {
+        worklet.tick = tick;
+        ch.performTick();
+        const expected = 428 / Math.pow(2, semisFor(tick) / 12);
+        check(`arpeggio tick ${tick} (semis ${semisFor(tick)})`, ch.currentPeriod, expected);
+    }
+}
+
 if (failures > 0) {
     console.error(`\n${failures} Fehler — Worklet-Timing weicht ab.`);
     process.exit(1);
