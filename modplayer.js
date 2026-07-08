@@ -77,7 +77,17 @@ export class Row {
 // Ein Pattern = 64 Zeilen á 16 Byte = 1024 Bytes.
 export class Pattern {
   constructor(modfile, index) {
-    const data = new Uint8Array(modfile, 1084 + index * 1024, 1024);
+    // Bounds-Check: Kaputte/abgeschnittene MOD-Dateien deklarieren manchmal mehr
+    // Patterns als tatsächlich Bytes vorhanden sind. Ohne Prüfung würde der
+    // Uint8Array-Konstruktor eine RangeError werfen, die im async Drop-Handler
+    // unbehandelt bleibt (nur console.error). Der Swift-Parser (ModParser) ist
+    // hier defensiv und liefert leere Rows — die JS-Variante zieht nach:
+    // passt das komplette 1024-Byte-Pattern nicht mehr in die Datei, werden
+    // 64 leere (Null-)Rows erzeugt statt zu crashen.
+    const offset = 1084 + index * 1024;
+    const data = (offset + 1024 <= modfile.byteLength)
+      ? new Uint8Array(modfile, offset, 1024)
+      : new Uint8Array(1024); // eigenständiger, nullgefüllter Puffer = 64 leere Rows
     this.rows = [];
     for (let i = 0; i < 64; ++i) {
       this.rows.push(new Row(data.slice(i * 16, i * 16 + 16)));

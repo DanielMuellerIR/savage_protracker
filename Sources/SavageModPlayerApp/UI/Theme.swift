@@ -18,7 +18,6 @@ public extension Color {
     // Dark Theme: Schwarz/Graphit mit gedämpften Akzenten, keine Neonfarben.
     static let spaceBackground = Color(red: 0.020, green: 0.024, blue: 0.030)   // #050608
     static let spaceSurface = Color(red: 0.075, green: 0.082, blue: 0.095)      // #131518
-    static let spaceSurfaceHover = Color(red: 0.125, green: 0.137, blue: 0.155) // #202328
     static let spaceAccent = Color(red: 0.360, green: 0.700, blue: 0.760)       // #5CB3C2
     static let spaceAccentGlow = Color(red: 0.620, green: 0.700, blue: 0.760)   // #9EB3C2
     

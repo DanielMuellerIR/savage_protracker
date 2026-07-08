@@ -1004,7 +1004,17 @@ public final class ModPlayerCoordinator: ObservableObject {
             throw NSError(domain: "ModPlayer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Konnte Audio-Format nicht erstellen"])
         }
         
-        try? FileManager.default.removeItem(at: destinationURL)
+        // Ziel-Datei ggf. entfernen, damit AVAudioFile sauber neu schreiben kann.
+        // "Datei nicht vorhanden" ist der Normalfall (frischer Save-Panel-Pfad) und
+        // wird ignoriert; andere Fehler (z.B. Sandbox-Permissions) werden geloggt,
+        // statt sie wie zuvor per try? stillschweigend zu verschlucken.
+        do {
+            try FileManager.default.removeItem(at: destinationURL)
+        } catch CocoaError.fileNoSuchFile {
+            // erwartet — Zielpfad war frei
+        } catch {
+            print("WAV-Export: konnte bestehende Datei nicht entfernen: \(error.localizedDescription)")
+        }
         let audioFile = try AVAudioFile(forWriting: destinationURL, settings: stereoFormat.settings)
 
         let renderChannels = Self.makeRenderChannels(for: mod)
@@ -1222,6 +1232,7 @@ public final class ModPlayerCoordinator: ObservableObject {
         }
     }
 
+    @inline(__always)
     nonisolated private static func renderChannelSample(channel ch: DSPChannel, useInterpolation: Bool) -> Float {
         guard let inst = ch.instrument, inst.bytes.count > 0, ch.currentPeriod > 0 else { return 0.0 }
         guard ch.sampleIndex.isFinite, !ch.sampleIndex.isNaN else { return 0.0 }
@@ -1280,7 +1291,17 @@ public final class ModPlayerCoordinator: ObservableObject {
             throw NSError(domain: "ModPlayer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Konnte Mono-Format nicht erstellen"])
         }
         
-        try? FileManager.default.removeItem(at: destinationURL)
+        // Ziel-Datei ggf. entfernen, damit AVAudioFile sauber neu schreiben kann.
+        // "Datei nicht vorhanden" ist der Normalfall (frischer Save-Panel-Pfad) und
+        // wird ignoriert; andere Fehler (z.B. Sandbox-Permissions) werden geloggt,
+        // statt sie wie zuvor per try? stillschweigend zu verschlucken.
+        do {
+            try FileManager.default.removeItem(at: destinationURL)
+        } catch CocoaError.fileNoSuchFile {
+            // erwartet — Zielpfad war frei
+        } catch {
+            print("WAV-Export: konnte bestehende Datei nicht entfernen: \(error.localizedDescription)")
+        }
         let audioFile = try AVAudioFile(forWriting: destinationURL, settings: monoFormat.settings)
         
         guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: monoFormat, frameCapacity: UInt32(inst.bytes.count)) else {
