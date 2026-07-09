@@ -142,6 +142,10 @@ public final class DSPChannel: Sendable {
     }
     // Skaliert Vibrato-Deltas: S3M-Perioden sind 4x feiner als Amiga-Perioden.
     nonisolated(unsafe) public var periodScale: Float = 1
+    // Skaliert den Portamento-Slide-Schritt (1xx/2xx/3xx). Amiga (MOD) = 1;
+    // S3M und XM haben 4x feinere Perioden (64 Einheiten/Halbton) -> ×4.
+    // Getrennt von periodScale gehalten (Vibrato-Skalierung ist separat/ungeklärt).
+    private var portaScale: Float { (s3mMode || xmLinearMode) ? 4.0 : 1.0 }
     // Perioden-Klemmgrenzen (Amiga: 113..856, S3M: 64..32767).
     nonisolated(unsafe) public var periodMin: Float = 113
     nonisolated(unsafe) public var periodMax: Float = 856
@@ -534,14 +538,17 @@ public final class DSPChannel: Sendable {
                 self.arpY = effectLow
             }
         case 0x01: // SLIDE_UP
-            self.periodDelta = -Float(effectData)
+            self.periodDelta = -Float(effectData) * portaScale
         case 0x02: // SLIDE_DOWN
-            self.periodDelta = Float(effectData)
+            self.periodDelta = Float(effectData) * portaScale
         case 0x03: // TONE_PORTAMENTO
             self.portamento = true
             if effectData > 0 {
-                // S3M-Perioden sind 4x feiner -> Gxx slidet mit 4-fachem Schritt.
-                self.portamentoSpeed = Float(effectData) * (s3mMode ? 4.0 : 1.0)
+                // S3M- UND XM-Perioden sind 4x feiner als Amiga-Perioden (64
+                // Einheiten = 1 Halbton) -> der Slide-Schritt muss ×4, sonst
+                // erreicht die Note ihr Porta-Ziel nie (klingt dissonant). Für
+                // XM ist param*4 die libopenmpt-Semantik.
+                self.portamentoSpeed = Float(effectData) * portaScale
             }
             self.periodDelta = self.portamentoSpeed
             self.setCurrentPeriod = false
