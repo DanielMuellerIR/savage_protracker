@@ -717,7 +717,7 @@ public final class ModPlayerCoordinator: ObservableObject {
                                     }
                                     targetRow = state.patternBreak
                                     state.patternBreak = -1
-                                } else if targetRow >= 64 {
+                                } else if targetRow >= Self.patternRowCount(mod, at: state.position) {
                                     targetRow = 0
                                     targetPosition = state.position + 1
                                 }
@@ -1095,7 +1095,12 @@ public final class ModPlayerCoordinator: ObservableObject {
             try audioFile.write(from: pcmBuffer)
             renderedFrames += UInt64(blockFrames)
             
-            if state.position >= mod.length - 1 && state.rowIndex >= 63 && state.tick >= state.ticksPerRow - 1 {
+            // Songende: der Render-Block setzt endReached beim Wrap über
+            // mod.length (unabhängig von der Pattern-Reihenzahl — die ist bei XM
+            // variabel, ein fixes rowIndex>=63 hätte bei kurzen End-Patterns nie
+            // ausgelöst). Für den einmaligen Offline-Render (Quick Look / A/B)
+            // ist das das saubere Abbruchsignal.
+            if state.endReached {
                 break
             }
         }
@@ -1159,6 +1164,19 @@ public final class ModPlayerCoordinator: ObservableObject {
         return samples
     }
 
+    // Reihenzahl des Patterns an der gegebenen Song-Position. XM-Patterns haben
+    // variable Länge (1..256 Reihen); MOD/S3M sind immer 64. Wird beim Row-Wrap
+    // gebraucht, damit ein kurzes Pattern nach seiner letzten echten Reihe
+    // umbricht — nicht erst bei fixen 64 (sonst 34 leere Reihen bei 30-Reihen-
+    // Patterns → Timing-Drift + weiterlaufende Volume-Slides). Allokationsfrei
+    // (nur Array-Index-Zugriffe), damit im Echtzeit-Render-Block nutzbar.
+    nonisolated static func patternRowCount(_ mod: Mod, at position: Int) -> Int {
+        let posIndex = max(0, min(mod.patternTable.count - 1, position))
+        let patternIndex = mod.patternTable[posIndex]
+        guard patternIndex >= 0 && patternIndex < mod.patterns.count else { return 64 }
+        return mod.patterns[patternIndex].rows.count
+    }
+
     nonisolated private static func advanceRowForProbe(
         state: RealtimePlaybackState,
         channels: [DSPChannel],
@@ -1183,7 +1201,7 @@ public final class ModPlayerCoordinator: ObservableObject {
                 }
                 targetRow = state.patternBreak
                 state.patternBreak = -1
-            } else if targetRow >= 64 {
+            } else if targetRow >= Self.patternRowCount(mod, at: state.position) {
                 targetRow = 0
                 targetPosition = state.position + 1
             }
