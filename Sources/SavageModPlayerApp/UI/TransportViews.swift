@@ -104,9 +104,9 @@ struct PatternMarkerMap: View {
                     Button(action: { onSeek(idx) }) {
                         VStack(spacing: 2) {
                             Text(String(format: "%02d", idx))
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .font(.system(size: 8, weight: .bold))
                             Text("P\(patNum)")
-                                .font(.system(size: 7, design: .monospaced))
+                                .font(.system(size: 7))
                         }
                         .frame(width: 24, height: 26)
                         .background(

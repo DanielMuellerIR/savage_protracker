@@ -17,7 +17,7 @@ struct SettingsView: View {
                 LabeledContent("Autoplay-Ordner:") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(autoplayFolderPath.isEmpty ? "Nicht gesetzt" : autoplayFolderPath)
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: 11))
                             .foregroundColor(autoplayFolderPath.isEmpty ? .secondary : .primary)
                             .textSelection(.enabled)
                             .lineLimit(2)

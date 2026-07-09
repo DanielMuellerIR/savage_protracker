@@ -134,7 +134,7 @@ struct ChannelFootersRow: View {
             ForEach(0..<count, id: \.self) { i in
                 HStack(spacing: 4) {
                     Text("\(i + 1)")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .font(.system(size: 8, weight: .bold))
                         .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.7) : .spaceTextSecondary)
                         .lineLimit(1)
                     tag("M", on: coordinator.isMuted(channelIndex: i), color: .red)
@@ -149,7 +149,7 @@ struct ChannelFootersRow: View {
 
     private func tag(_ label: String, on: Bool, color: Color) -> some View {
         Text(label)
-            .font(.system(size: 8, weight: .bold, design: .monospaced))
+            .font(.system(size: 8, weight: .bold))
             .padding(.horizontal, 3)
             .background(on ? color : Color.clear)
             .foregroundColor(on ? .white : color)
@@ -193,7 +193,8 @@ struct ElapsedTimeText: View {
     @ObservedObject var visualizer: VisualizerState
     var body: some View {
         Text(formatPlaybackTime(visualizer.elapsedTime))
-            .font(.system(size: 11, design: .monospaced))
+            .font(.system(size: 11))
+            .monospacedDigit() // proportionale Schrift, aber feste Ziffernbreite (kein Zittern)
             .foregroundColor(.spaceTextSecondary)
     }
 }
@@ -203,7 +204,8 @@ struct TotalTimeText: View {
     @ObservedObject var visualizer: VisualizerState
     var body: some View {
         Text(formatPlaybackTime(visualizer.totalDuration))
-            .font(.system(size: 11, design: .monospaced))
+            .font(.system(size: 11))
+            .monospacedDigit()
             .foregroundColor(.spaceTextSecondary)
     }
 }
