@@ -303,6 +303,43 @@ Nebenbei: XM-Key-Off wird im Grid jetzt als `===` gezeigt (vorher „C#21", Key 
 spielt sofort (MainView.onAppear liest `CommandLine.arguments`); Finder-„Öffnen mit"
 via `.onOpenURL`. Ermöglicht headless CPU-/GUI-Tests OHNE Klicken.
 
+## GUI-/DSP-Fix-Runde 2026-07-09 (Abend) — Release BLOCKIERT
+
+Große Bug-Fix-Runde aus Daniels GUI-Review (alle committet, 87 Tests grün, NICHTS
+auf GitHub). Erledigt:
+- **Datei-Drop öffnete nichts** (`fe9eda9`): `URL(fileURLWithPath:)` auf einen
+  `file://`-String → kaputter Pfad. Fix: `NSItemProvider.loadObject(ofClass: URL.self)`.
+- **Single-Window** (`fa18060`): `WindowGroup`→`Window`; „Öffnen mit"/Dock-Drop nutzt
+  das bestehende Fenster, spielt das richtige Lied (onAppear/onOpenURL-Race via Flag).
+- **numRows-Timing** (`fa47a84`): Sequencer nahm fix 64 Reihen/Pattern an; XM ist
+  variabel. Starfish-Dauer 212,6s→178,8s (=openmpt 178,9s). `patternRowCount`.
+- **Zeit-/Positionsanzeige** (`b8ca754`): `cumulativeRows`/`positionAndRow` statt `*64`.
+- **Porta ×4** (`9e25bc1`): XM 1xx/2xx/3xx slidet param*4 (libopenmpt). `portaScale`.
+- **Ping-Pong ohne Endpunkt-Dopplung** (`9eb9365`): `end-over` statt `end-1-over`.
+  Starfish frame-cosine 0.829→0.880, Höhen im Ausklang korrekt. Ohrbestätigt (Pattern 2+).
+- **Playlist-Font** proportional statt monospaced (nur Tracker-Grid bleibt mono).
+- **Splitter**: ziehbarer vertikaler (Playlist-Breite) + „zuletzt gespielt"-Höhe (`ResizableDivider`).
+- **±10s-Buttons + Zeilen-Klick-Seek** (`23e55e2`): Klick auf Zeilennummer → Sprung;
+  `seek(toPosition:row:)` rekonstruiert Speed/Tempo/GlobalVolume (`reconstructGlobalParams`).
+- **Seek stummschaltung** (`2b27a57`): `applySeek` setzt `ch.playing=false` gegen hängende Kanäle.
+
+**RELEASE-BLOCKER (verifiziert per Daniels Ohr, NICHT lösbar bisher):**
+Die **letzten ~2 Sekunden von Pattern 1** (_Starfish – Life Support_, Order-Pos 0 =
+Pattern 26, Speed 8, letzte Reihen ~22–29) klingen im Original wie ein **rapider
+Speedup / „Schallplatte ganz schnell drehen"** (schnell ansteigende Tonhöhe). Dieser
+Effekt **fehlt bei uns komplett** und macht den Song hörbar kaputt. **Rätsel:** Pattern
+26 hat in den Reihen 15–29 NACHWEISLICH KEINE Effekte (nur inst-01-Melodienoten) —
+woher kommt der Speedup in der korrekten Wiedergabe? Kandidaten fürs Weiterforschen:
+(a) ein Effekt, den wir falsch/gar nicht parsen (Volume-Column? E-Serie?); (b) inst 01
+hat eine Ping-Pong-Loop [14..2350] + Zerfalls-Hüllkurve — evtl. entsteht der „Speedup"
+aus dem Sample-Playback bei den dichten hohen Noten; (c) Auto-Vibrato/Pitch-Envelope.
+Methodik: MP3-Referenz liegt in `~/Downloads/BotB 9805 Starfish - Life Support.xm.mp3`
+(= openmpt, bestätigt korrekt); `savage-cli --pattern 26` + openmpt123-A/B + venv/compare.py
+im Scratchpad der Vorsession. **Erst lösen, DANN Release** (Daniels Ansage 2026-07-09).
+
+Bekannter Rest im Seek-Feature: Per-Kanal-Slide-/Sustain-Zustände werden beim Sprung
+NICHT rekonstruiert → gehaltene Noten von vor dem Sprung fehlen (bewusster Kompromiss).
+
 ## Offene Punkte / Nächste Schritte (Stand 2026-07-09)
 
 XM-Kern (M0–M5) steht, committet, getestet; im echten App-GUI verifiziert (spielt
