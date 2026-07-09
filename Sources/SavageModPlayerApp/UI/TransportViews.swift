@@ -134,17 +134,19 @@ struct PositionSlider: View {
 
     var body: some View {
         // WICHTIG: Range nie leer (mod.length == 1 -> 0...0 crasht SwiftUIs Slider).
-        let lastPosition = max(0, mod.length - 1)
+        // Die Arithmetik liegt in `SongPositionScale` (Core), damit die
+        // Crash-verhindernde Invariante headless testbar ist.
+        let bounds = SongPositionScale.bounds(positionCount: mod.length, current: transport.currentPosition)
         Slider(
             value: Binding(
-                get: { Double(min(max(0, transport.currentPosition), lastPosition)) },
+                get: { bounds.value },
                 set: { onSeek(Int($0)) }
             ),
-            in: 0...Double(max(1, lastPosition)),
+            in: bounds.range,
             step: 1.0
         )
         .accentColor(Color.accent(theme))
-        .disabled(mod.length <= 1)
+        .disabled(!bounds.isEnabled)
         .help("Song-Position wählen — funktioniert auch bei gestoppter Wiedergabe: Play startet dann ab dieser Stelle.")
     }
 }
