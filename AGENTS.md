@@ -73,7 +73,8 @@ p_savage_modplayer/
 ├── Package.swift                  ← Swift Package Manager Manifest
 ├── Sources/                       ← Native Swift App & Core (SwiftUI)
 │   ├── SavageModPlayerApp/ ← SwiftUI Main View & UI-Komponenten
-│   └── SavageModPlayerCore/← AVAudioEngine, Parser & DSP-Engine
+│   ├── SavageModPlayerCore/← AVAudioEngine, Parser & DSP-Engine
+│   └── SavageCLI/                 ← headless Render-CLI (Produkt `savage-cli`, Tests/Linux-Port)
 ├── Tests/                         ← XCTest Unittests
 ├── build.py                       ← Bündelt & minifiziert savage-mod-player.html
 ├── build_app.sh                   ← Kompiliert die native macOS App
@@ -214,13 +215,59 @@ Swift-Variante um das XM-Format erweitert — eine eigene Instrument-Engine (Ent
 
 **Test-Korpus:** 8 echte XM von Battle of the Bits liegen (gitignored) in `audio/` — der Realwelt-Test `XMParserTests/testRealXMFilesParseAndRender` parst + rendert sie (8–32 Kanäle, alle liefern hörbares Signal).
 
+## XM-Korrektheit-Fix + headless Render-CLI (2026-07-09)
+
+**Kernfehler gefunden & behoben (das „klingt kaputt" bei _Starfish - Life Support_):**
+Der XM-Parser las die zweite Instrument-Header-Hälfte (Keymap +33, Envelopes +129,
+Envelope-Metadaten +225.., Vibrato +235.., Fadeout +239) IMMER an ihren festen
+Offsets. Manche Konverter schreiben aber einen verkürzten „sample-only"-Header
+(`instrumentSize` 38 statt 263) OHNE zweite Hälfte — dann trafen die festen Offsets
+Sample-Header-/PCM-Bytes: absurde Auto-Vibrati (depth 229), Envelope-Punkte wie
+(8202, 64054) → Lautstärke ×1000 → Clipping, Müll-Fadeout/-Keymap. `Starfish` hatte
+9 von 12 solcher Minimal-Header-Instrumente (die anderen 7 Test-XM: 0 — daher war nur
+diese Datei grob kaputt). Fix in `XMParser`: zweite Hälfte nur bei
+`instrumentSize >= 241` parsen, sonst keine Envelopes/Vibrato/Fadeout + leere Keymap
+(→ immer Sample 0). Regressionstests: `testMinimalHeaderInstrumentHasNoGarbage`
+(synthetisch, CI-tauglich) + Invariante im Realwelt-Test (keine Envelope-Value > 64 /
+Frame > 1024 / Vibrato-Typ > 3 / Depth > 15).
+
+**Neues Werkzeug — headless Render-CLI (`Sources/SavageCLI/`, Produkt `savage-cli`):**
+Lädt ein Modul und rendert es mit DERSELBEN DSP-Engine (`ModuleRenderer`) zu WAV —
+ohne GUI. `savage-cli <datei> [--out x.wav] [--seconds N] [--rate R] [--normalize]
+[--no-interp] [--info] [--pattern N] [--quiet]`. `--info` gibt die geparste Struktur
+aus (Instrumente/Samples/Envelopes/Auto-Vibrato), `--pattern N` dumpt ein Pattern als
+Text. `--normalize` = Peak-Anhebung wie Quick Look; ohne = rohe Engine-Ausgabe für
+A/B-Vergleiche. Auch das Fundament des geplanten Linux-CLI-Ports. `ModuleRenderer.renderWavData`
+hat dafür einen `normalize`-Parameter bekommen (Default true, unverändert für Quick Look).
+
+**Verifikationsmethode (headless, statt Computer-use):** `brew install libopenmpt` →
+`openmpt123 --render --output-type wav --samplerate 44100 --channels 2 --no-float
+--force -q <datei>` erzeugt eine Referenz-WAV. Beide (unsere `savage-cli`-Ausgabe +
+Referenz) mono-mischen, auf Unit-RMS normieren, dann Kurzzeit-RMS-Hüllkurven-Korrelation
++ STFT-Cosine je Sekunde vergleichen (numpy/scipy). Nach dem Fix: alle 8 Test-XM
+global-Spektrum-Cosine 0.94–1.0 (Timbre korrekt). Kontrolle openmpt-vs-openmpt = 0.999
+(Metrik ist strikt/aussagekräftig).
+
+**Bekannter Rest (kein „kaputt", aufgeschoben):** Die zwei DICHTESTEN 32-Kanal-XM
+(_Galgox – Razer City_, _Xemogasa – sapphire eyes_) haben env-Korrelation ~0.64–0.68
+(Frame-Cosine ~0.78) — ein diffuser, breitbandiger (±1–2,6 dB), zeitlich konstanter
+Rest (kein Timing-Drift, kein Interpolations-/Limiter-/Detune-Effekt nachweisbar; per
+Ausschluss geprüft). Vermutlich die Summe vieler kleiner FT2-Envelope-/Volume-Column-
+Mikroquirks, die erst bei 32 Kanälen sichtbar werden. Kandidaten für später: Instrument-
+ohne-Note-Envelope-Reset (FT2 startet Vol-Envelope neu, wir nicht), XM-Perioden-Slide-
+Skalierung (1xx/2xx/3xx ×4? — Experiment war ergebnislos, unverifiziert), Volume-Column-
+Fine-Slide-Basis (currentVolume vs. volume).
+
 ## Offene Punkte / Nächste Schritte (Stand 2026-07-09)
 
 XM-Kern (M0–M5) steht, committet, getestet; im echten App-GUI verifiziert (spielt
 32-Kanal-XM). Aus dem GUI-Test offen (Reihenfolge = Priorität):
 
 1. **Pattern-Grid zeichnet evtl. nicht alle Reihen** (Daniel im Screenshot bemerkt, 2026-07-09). Zuerst prüfen, ob es eine Regression des `TrackerGridView`-`Equatable`-Fixes (`89d0072`, CPU-WIP) ist — notfalls `.equatable()`/Equatable-Conformance zurücknehmen — oder ein vorbestehendes Clipping der 64-Zeilen-VStack im fix-hohen Scroll-Container. **Zuerst reproduzieren (fensterspezifischer Screenshot), dann fixen.**
-2. **XM-Song-Korrektheit prüfen** — bisher nur „liefert hörbares Signal" (Render-Probe) + Formel-Tests. Nächste Session: einen bekannten XM gegen eine Referenz (MilkyTracker/libxmp-Render oder Gehör) gegenprüfen — stimmen Tonhöhe, Hüllkurven, Effekte, Timing wirklich? Verdächtige Stellen zuerst: Volume-Column-Vibrato-Skalierung (nutzt MOD-Vibrato), Auto-Vibrato-Waveform-Labels (Referenz markierte Ramp-Vorzeichen als unsicher).
+2. **XM-Song-Korrektheit** — ✅ WEITGEHEND ERLEDIGT (2026-07-09, siehe Abschnitt oben):
+   Kern-Fehler (Minimal-Header-Instrument-Garbage) gefunden + gefixt + gegen openmpt123
+   verifiziert (alle 8 XM Timbre-korrekt). Rest: nur noch subtile Envelope-/Volume-
+   Column-Feinheiten bei den 2 dichtesten 32-Kanal-Songs (dokumentiert oben, kein „kaputt").
 3. **CPU-Optimierung (Kern)** — `MainView.body` rendert bei jedem 30-Hz-Scope-Update das ganze Fenster neu (Profil: SwiftUI-Layout dominiert, ~80–100 % bei 32-Kanal-XM). Echter Fix: die hochfrequenten Visualizer-`@Published` (vuLevels, channelWaveforms, masterSamples, elapsedTime) in ein eigenes `VisualizerState: ObservableObject` auslagern und die Scope-/VU-/Zeit-Subviews DORT beobachten lassen, damit MainView nur noch im Row-Takt rendert. Leaf-Canvas + 30 Hz + Equatable-Grid sind schon drin (`89d0072`), reichen aber nicht.
 4. **Deferred aus den Meilensteinen:** Amiga-Frequenz-XMs (echte Periodentabelle statt linearer Näherung); XM-Effekte **Hxy** (globales Vol-Slide, braucht Per-Tick-Hook im Coordinator) + **Rxy** (Multi-Retrig); XM-Effekt-Memory für 1xx/2xx/Axy (nutzt MOD-Semantik).
 5. **Länge-1-Modul: Headless-Test** ergänzen (der Crash war nur GUI-reproduzierbar). Repro-Datei liegt (gitignored) als `audio/_ZZ_len1_crashtest.xm` — kann weg, sobald ein Unit-Test das abdeckt.

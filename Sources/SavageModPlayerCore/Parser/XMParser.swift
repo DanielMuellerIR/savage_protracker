@@ -179,8 +179,21 @@ public class XMParser {
             }
 
             // Teil 2 (nur wenn numSamples > 0), Offsets relativ zum Instrument-Start.
-            let sampleHeaderSize = dword(instrStart + 29)
-            let keymap = (0..<96).map { UInt8(truncatingIfNeeded: byte(instrStart + 33 + $0)) }
+            // sampleHeaderSize liegt bei +29 (im minimalen wie im vollen Header).
+            let sampleHeaderSize = instrumentSize >= 33 ? dword(instrStart + 29) : 40
+
+            // WICHTIG: Die "zweite Hälfte" des Instrument-Headers (Keymap ab +33,
+            // Envelopes ab +129, Envelope-Metadaten +225.., Vibrato +235.., Fadeout
+            // +239) ist NUR vorhanden, wenn der Header groß genug ist. FastTracker II
+            // schreibt hier 263 Bytes; manche Konverter/Tracker schreiben aber einen
+            // "sample-only"-Header von nur 38 Bytes (instrumentSize < 241). Läse man
+            // die Felder dann an ihren festen Offsets, träfe man Sample-Header-/PCM-
+            // Bytes → absurde Auto-Vibrati (depth 229), Envelope-Punkte wie (8202,
+            // 64054) (Lautstärke ×1000 → Clipping), Müll-Fadeout, Out-of-range-Keymap.
+            // Solche Instrumente haben KEINE zweite Hälfte: Keymap = alles Sample 0,
+            // keine Hüllkurven, kein Auto-Vibrato, kein Fadeout. (Feld-Ende Fadeout =
+            // Offset 241 → das ist die Schwelle.)
+            let hasExtendedHeader = instrumentSize >= 241
 
             // Volume-/Panning-Envelope-Punkte: je 12 (x,y)-Word-Paare.
             func envelopePoints(_ off: Int, _ count: Int) -> [EnvelopePoint] {
@@ -188,42 +201,53 @@ public class XMParser {
                     EnvelopePoint(frame: word(off + j * 4), value: word(off + j * 4 + 2))
                 }
             }
-            let numVolPoints = byte(instrStart + 225)
-            let numPanPoints = byte(instrStart + 226)
-            let volSustainPoint = byte(instrStart + 227)
-            let volLoopStart = byte(instrStart + 228)
-            let volLoopEnd = byte(instrStart + 229)
-            let panSustainPoint = byte(instrStart + 230)
-            let panLoopStart = byte(instrStart + 231)
-            let panLoopEnd = byte(instrStart + 232)
-            let volType = byte(instrStart + 233)
-            let panType = byte(instrStart + 234)
-            let vibType = byte(instrStart + 235)
-            let vibSweep = byte(instrStart + 236)
-            let vibDepth = byte(instrStart + 237)
-            let vibRate = byte(instrStart + 238)
-            let fadeout = word(instrStart + 239)
 
-            // Envelope nur bauen, wenn das jeweilige Type-Bit0 (on) gesetzt ist.
+            let keymap: [UInt8]
             var volumeEnvelope: Envelope?
-            if volType & 0x01 != 0 {
-                volumeEnvelope = Envelope(
-                    points: envelopePoints(instrStart + 129, numVolPoints),
-                    sustainPoint: volSustainPoint, loopStart: volLoopStart, loopEnd: volLoopEnd,
-                    sustainEnabled: volType & 0x02 != 0, loopEnabled: volType & 0x04 != 0)
-            }
             var panningEnvelope: Envelope?
-            if panType & 0x01 != 0 {
-                panningEnvelope = Envelope(
-                    points: envelopePoints(instrStart + 177, numPanPoints),
-                    sustainPoint: panSustainPoint, loopStart: panLoopStart, loopEnd: panLoopEnd,
-                    sustainEnabled: panType & 0x02 != 0, loopEnabled: panType & 0x04 != 0)
-            }
+            var autoVibrato: AutoVibrato?
+            var fadeout = 0
 
-            // Auto-Vibrato nur, wenn depth > 0 (sonst ohne Wirkung).
-            let autoVibrato = vibDepth > 0
-                ? AutoVibrato(type: vibType, sweep: vibSweep, depth: vibDepth, rate: vibRate)
-                : nil
+            if hasExtendedHeader {
+                keymap = (0..<96).map { UInt8(truncatingIfNeeded: byte(instrStart + 33 + $0)) }
+
+                let numVolPoints = byte(instrStart + 225)
+                let numPanPoints = byte(instrStart + 226)
+                let volSustainPoint = byte(instrStart + 227)
+                let volLoopStart = byte(instrStart + 228)
+                let volLoopEnd = byte(instrStart + 229)
+                let panSustainPoint = byte(instrStart + 230)
+                let panLoopStart = byte(instrStart + 231)
+                let panLoopEnd = byte(instrStart + 232)
+                let volType = byte(instrStart + 233)
+                let panType = byte(instrStart + 234)
+                let vibType = byte(instrStart + 235)
+                let vibSweep = byte(instrStart + 236)
+                let vibDepth = byte(instrStart + 237)
+                let vibRate = byte(instrStart + 238)
+                fadeout = word(instrStart + 239)
+
+                // Envelope nur bauen, wenn das jeweilige Type-Bit0 (on) gesetzt ist.
+                if volType & 0x01 != 0 {
+                    volumeEnvelope = Envelope(
+                        points: envelopePoints(instrStart + 129, numVolPoints),
+                        sustainPoint: volSustainPoint, loopStart: volLoopStart, loopEnd: volLoopEnd,
+                        sustainEnabled: volType & 0x02 != 0, loopEnabled: volType & 0x04 != 0)
+                }
+                if panType & 0x01 != 0 {
+                    panningEnvelope = Envelope(
+                        points: envelopePoints(instrStart + 177, numPanPoints),
+                        sustainPoint: panSustainPoint, loopStart: panLoopStart, loopEnd: panLoopEnd,
+                        sustainEnabled: panType & 0x02 != 0, loopEnabled: panType & 0x04 != 0)
+                }
+
+                // Auto-Vibrato nur, wenn depth > 0 (sonst ohne Wirkung).
+                autoVibrato = vibDepth > 0
+                    ? AutoVibrato(type: vibType, sweep: vibSweep, depth: vibDepth, rate: vibRate)
+                    : nil
+            } else {
+                keymap = []   // leer => sample(forNote:) liefert immer Sample 0
+            }
 
             // Erst ALLE Sample-Header lesen, dann ALLE Sample-Daten (§4).
             let shStart = instrStart + max(instrumentSize, 29)

@@ -382,6 +382,54 @@ final class XMParserTests: XCTestCase {
         XCTAssertThrowsError(try XMParser.parse(data: Data(repeating: 0xEE, count: 500)))
     }
 
+    // Baut ein Instrument mit VERKÜRZTEM Header (instrumentSize 38, "sample-only").
+    // Solche Instrumente (von manchen Konvertern erzeugt — 9 von 12 in "BotB 9805
+    // Starfish - Life Support.xm") haben keine zweite Header-Hälfte: keine Keymap,
+    // Envelopes, Auto-Vibrato oder Fadeout. Läse der Parser die Felder trotzdem an
+    // ihren festen Offsets (129/225/235/239), träfe er Sample-Header-/PCM-Bytes.
+    private func buildMinimalInstrument(name: String, sampleHeader: [UInt8], sampleData: [UInt8]) -> [UInt8] {
+        // part1 (25 B) + 9 B von part2 (sampleHeaderSize + 5 Füllbytes) = 34 B Body.
+        let part1 = padName(name, 22) + u8(0) + u16(1)     // type=0, numSamples=1
+        var part2 = u32(40)                                 // sampleHeaderSize (+29..+32)
+        part2 += [UInt8](repeating: 0xFF, count: 5)         // Füllbytes bis Offset 38 (bewusst ≠0)
+        let body = part1 + part2                             // 34 B -> instrumentSize 38
+        return u32(4 + body.count) + body + sampleHeader + sampleData
+    }
+
+    // Regression 2026-07-09: Minimal-Header-Instrument darf keine (aus Sample-Bytes
+    // fehlgelesene) Müll-Hüllkurve/-Auto-Vibrato tragen, aber sein Sample muss
+    // trotzdem korrekt geparst werden (Parser darf nicht desynchronisieren).
+    func testMinimalHeaderInstrumentHasNoGarbage() throws {
+        var h = Array("Extended Module: ".utf8)
+        h += padName("MIN HDR TEST", 20) + u8(0x1A) + padName("SAVAGE", 20) + u16(0x0104)
+        var tail = [UInt8]()
+        tail += u16(1) + u16(0) + u16(1) + u16(1) + u16(2)  // songLen, restart, ch, patterns, instruments
+        tail += u16(0x0001) + u16(6) + u16(125)             // flags(linear), speed, bpm
+        tail += [UInt8](repeating: 0, count: 256)           // Order-Table
+        var bytes = h + u32(4 + tail.count) + tail
+        bytes += u32(9) + u8(0) + u16(64) + u16(0)          // 1 leeres Pattern
+        bytes += buildInstrument1()                          // #1: voller Header (mit Envelope)
+        let pcm = sine8(50)
+        let sh = buildSampleHeader(sampleLength: 50, loopStart: 0, loopLength: 0, volume: 48,
+                                   finetune: 5, type: 0, panning: 128, relativeNote: 3, name: "min")
+        bytes += buildMinimalInstrument(name: "Minimal", sampleHeader: sh, sampleData: deltaEncode8(pcm))
+
+        let mod = try XMParser.parse(data: Data(bytes))
+        // Voll-Header-Instrument behält seine Hüllkurve (keine Regression).
+        XCTAssertNotNil(mod.instruments[1]?.volumeEnvelope)
+        // Minimal-Header: keine zweite Hälfte — aber Sample sauber geparst.
+        let minimal = try XCTUnwrap(mod.instruments[2])
+        XCTAssertNil(minimal.volumeEnvelope, "Minimal-Header darf keine Müll-Hüllkurve haben")
+        XCTAssertNil(minimal.panningEnvelope)
+        XCTAssertNil(minimal.autoVibrato, "Minimal-Header darf kein Müll-Auto-Vibrato haben")
+        XCTAssertEqual(minimal.fadeout, 0)
+        XCTAssertTrue(minimal.keymap.isEmpty, "Minimal-Header -> Keymap leer (immer Sample 0)")
+        let s = try XCTUnwrap(minimal.primarySample)
+        XCTAssertEqual(s.pcm.count, 50, "Sample-Daten trotz Minimal-Header korrekt geparst")
+        XCTAssertEqual(s.volume, 48)
+        XCTAssertEqual(s.relativeNote, 3)
+    }
+
     // Optionaler Realwelt-Test: parst alle .xm aus audio/ (gitignoriert, lokal)
     // und prüft grundlegende Plausibilität + dass beim Rendern hörbares Signal
     // entsteht. Überspringt still, wenn keine .xm vorhanden sind.
@@ -404,6 +452,23 @@ final class XMParserTests: XCTestCase {
             // Mindestens ein Instrument mit Sample-Daten.
             let withSamples = mod.instruments.compactMap { $0 }.filter { ($0.primarySample?.pcm.count ?? 0) > 0 }
             XCTAssertFalse(withSamples.isEmpty, "\(fileName): kein Instrument mit Sample-Daten")
+
+            // Invariante gegen den Minimal-Header-Regressionsfehler (2026-07-09):
+            // Wurden Envelope/Auto-Vibrato aus Sample-Bytes fehlgelesen, tauchen
+            // unmögliche Werte auf (Envelope-Value > 64, Frame > 1024, Vibrato-Typ
+            // > 3, Depth > 15). Reale XM-Werte liegen immer darunter.
+            for inst in mod.instruments.compactMap({ $0 }) {
+                for env in [inst.volumeEnvelope, inst.panningEnvelope].compactMap({ $0 }) {
+                    for p in env.points {
+                        XCTAssertLessThanOrEqual(p.value, 64, "\(fileName)/#\(inst.index): Envelope-Value > 64 (Müll)")
+                        XCTAssertLessThanOrEqual(p.frame, 1024, "\(fileName)/#\(inst.index): Envelope-Frame > 1024 (Müll)")
+                    }
+                }
+                if let av = inst.autoVibrato {
+                    XCTAssertLessThanOrEqual(av.type, 3, "\(fileName)/#\(inst.index): Auto-Vibrato-Typ > 3 (Müll)")
+                    XCTAssertLessThanOrEqual(av.depth, 15, "\(fileName)/#\(inst.index): Auto-Vibrato-Depth > 15 (Müll)")
+                }
+            }
 
             let coordinator = ModPlayerCoordinator()
             let probes = coordinator.renderProbe(mod: mod, durationSeconds: 3.0)

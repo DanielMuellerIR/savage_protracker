@@ -8,10 +8,14 @@ import AVFoundation
 public enum ModuleRenderer {
     // Rendert bis zum Songende (endReached-Signal des Sequencers) oder
     // maximal maxDurationSeconds (Schutz gegen endlos geloopte Module).
+    // normalize: Peak-Anhebung fürs Quick-Look (Standard). Für A/B-Vergleiche mit
+    // Referenz-Renderern (openmpt123) auf false stellen — dann ist die Ausgabe die
+    // rohe Engine-Ausgabe (identisch zum Live-Pfad, nur ohne Mixer-Volume).
     public static func renderWavData(
         mod: Mod,
         sampleRate: Double = 44100.0,
-        maxDurationSeconds: Double = 300.0
+        maxDurationSeconds: Double = 300.0,
+        normalize: Bool = true
     ) throws -> Data {
         guard let stereoFormat = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2) else {
             throw NSError(domain: "ModuleRenderer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Konnte Audio-Format nicht erstellen"])
@@ -87,7 +91,7 @@ public enum ModuleRenderer {
             }
         }
 
-        normalizePeak(&pcmData)
+        if normalize { normalizePeak(&pcmData) }
         return makeWavFile(pcmData: pcmData, sampleRate: Int(sampleRate))
     }
 
