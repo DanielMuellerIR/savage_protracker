@@ -250,7 +250,12 @@ struct MainView: View {
                            !mod.patternTable.isEmpty {
                             // Grid + Zeilenmarkierung beobachten transport (row-rate),
                             // damit die Zeilenwechsel MainView nicht neu evaluieren.
-                            TrackerGridContainer(transport: coordinator.transport, mod: mod, theme: theme)
+                            TrackerGridContainer(transport: coordinator.transport, mod: mod, theme: theme,
+                                                 onSeekRow: { row in
+                                                     // Zu (aktuelle Position, geklickte Zeile) springen;
+                                                     // Tempo wird rekonstruiert. Play/Weiter spielt ab hier.
+                                                     coordinator.seek(toPosition: coordinator.currentPosition, row: row)
+                                                 })
                                 .padding()
                         } else {
                             dropZonePrompt
@@ -1650,6 +1655,25 @@ struct MainView: View {
                 .cornerRadius(theme == .workbench ? 0 : 15)
                 .disabled(!coordinator.isPlaying)
                 .help("Stopp: Wiedergabe beenden — der nächste Start beginnt wieder am Songanfang.")
+
+                // −10s / +10s: schneller Sprung innerhalb des Songs (springt
+                // zeilengenau über die aktuelle Zeilendauer). Praktisch, um ohne
+                // langes Durchhören an eine Stelle zu gelangen.
+                Button(action: { coordinator.seek(bySeconds: -10) }) {
+                    transportButtonLabel(systemName: "gobackward.10")
+                }
+                .buttonStyle(PremiumHoverButtonStyle(theme: theme))
+                .cornerRadius(theme == .workbench ? 0 : 15)
+                .disabled(!coordinator.isPlaying)
+                .help("10 Sekunden zurückspringen.")
+
+                Button(action: { coordinator.seek(bySeconds: 10) }) {
+                    transportButtonLabel(systemName: "goforward.10")
+                }
+                .buttonStyle(PremiumHoverButtonStyle(theme: theme))
+                .cornerRadius(theme == .workbench ? 0 : 15)
+                .disabled(!coordinator.isPlaying)
+                .help("10 Sekunden vorspringen.")
 
                 Divider()
                     .frame(height: 20)

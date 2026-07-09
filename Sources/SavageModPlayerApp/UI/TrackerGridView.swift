@@ -8,12 +8,17 @@ struct RowIndexCell: View {
     let rIdx: Int
     let theme: PlayerTheme
     let fontSize: CGFloat
+    // Klick auf die Zeilennummer springt zu dieser Zeile (Play danach ab hier).
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
         Text(String(format: "%02d", rIdx))
             .font(.system(size: fontSize - 1, weight: .semibold, design: .monospaced))
             .foregroundColor(theme == .workbench ? .lightAccent : .spaceAccentGlow)
             .frame(width: 38, height: fontSize + 6, alignment: .center)
+            .contentShape(Rectangle())
+            .onTapGesture { onTap?() }
+            .help("Zu dieser Zeile springen — Play/Weiter spielt ab hier (Tempo wird rekonstruiert; laufende Slide-/Vibrato-Effekte näherungsweise).")
     }
 }
 
@@ -144,6 +149,8 @@ struct GridCellsBlock: View, Equatable {
     // aktuellen Offset hierhin. NICHT im == — Scroll-Updates laufen über die
     // ScrollView-Geometrie, nicht über einen Block-Rerender.
     @Binding var hScrollOffset: CGFloat
+    // Klick auf eine Zeilennummer -> zu dieser Zeile springen. NICHT im == (Closure).
+    var onSeekRow: (Int) -> Void
 
     nonisolated static func == (lhs: GridCellsBlock, rhs: GridCellsBlock) -> Bool {
         lhs.patternIndex == rhs.patternIndex
@@ -184,7 +191,8 @@ struct GridCellsBlock: View, Equatable {
             // Views mit .id für scrollTo.
             VStack(spacing: 0) {
                 ForEach(0..<rowCount, id: \.self) { rIdx in
-                    RowIndexCell(rIdx: rIdx, theme: theme, fontSize: fontSize).id(rIdx)
+                    RowIndexCell(rIdx: rIdx, theme: theme, fontSize: fontSize,
+                                 onTap: { onSeekRow(rIdx) }).id(rIdx)
                 }
             }
             // Horizontal scrollbare Kanalspalten — ALLE Zellen in EINEM Canvas.
@@ -205,6 +213,7 @@ struct TrackerGridView: View {
     let patternIndex: Int
     let currentRow: Int
     let theme: PlayerTheme
+    var onSeekRow: (Int) -> Void = { _ in }
 
     @State private var hScrollOffset: CGFloat = 0
 
@@ -275,7 +284,8 @@ struct TrackerGridView: View {
                                 fontSize: fontSize,
                                 rowCount: rowCount,
                                 channelCount: channelCount,
-                                hScrollOffset: $hScrollOffset
+                                hScrollOffset: $hScrollOffset,
+                                onSeekRow: onSeekRow
                             )
                             .equatable()
                         }

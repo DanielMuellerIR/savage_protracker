@@ -243,8 +243,10 @@ public final class ModPlayerCoordinator: ObservableObject {
 
         self.currentPosition = 0
         self.currentRow = 0
-        // Eine fuer den alten Song vorgemerkte Startposition gilt nicht mehr.
+        // Eine fuer den alten Song vorgemerkte Startposition/-zeile gilt nicht mehr.
         self.pendingStartPosition = nil
+        self.pendingStartRow = nil
+        self.pendingGlobalVolume = nil
         // codereview-ok: by-design — neuer Song startet auf seinem Header-Tempo
         // (MOD: ProTracker-Default 125/6, S3M: Initial Speed/Tempo) und setzt
         // sein Tempo per Effekt selbst; mit dem didSet-Fix benigne, kein
@@ -338,11 +340,25 @@ public final class ModPlayerCoordinator: ObservableObject {
         // Wurde im gestoppten Zustand per Slider eine Startposition gewaehlt,
         // dort beginnen: eine Position davor auf der letzten Zeile stehen —
         // der erste Tick-Boundary laedt dann (startPos, Zeile 0) frisch.
-        if let startPos = pendingStartPosition, startPos > 0, startPos < mod.length {
-            state.position = startPos - 1
-            state.elapsedFrames = UInt64(Double(Self.cumulativeRows(mod, upTo: startPos) * mod.initialSpeed) * state.outputsPerTick)
+        if let startPos = pendingStartPosition, startPos >= 0, startPos < mod.length {
+            if let startRow = pendingStartRow, startRow > 0 {
+                // Zeilen-genauer Start (Grid-Klick): direkt auf (startPos, startRow)
+                // setzen — eine Zeile davor auf dem letzten Tick, damit der erste
+                // Tick-Boundary die Zielzeile frisch laedt und triggert.
+                state.position = startPos
+                state.rowIndex = startRow - 1
+                state.tick = state.ticksPerRow - 1
+                state.elapsedFrames = UInt64(Double(Self.cumulativeRows(mod, upTo: startPos, row: startRow) * state.ticksPerRow) * state.outputsPerTick)
+            } else if startPos > 0 {
+                state.position = startPos - 1
+                state.elapsedFrames = UInt64(Double(Self.cumulativeRows(mod, upTo: startPos) * mod.initialSpeed) * state.outputsPerTick)
+            }
         }
+        // Rekonstruiertes Global-Volume (Zeilen-Sprung) uebernehmen.
+        if let gv = pendingGlobalVolume { state.globalVolume = Float(gv) }
         pendingStartPosition = nil
+        pendingStartRow = nil
+        pendingGlobalVolume = nil
 
         self.playbackState = state
         
@@ -462,6 +478,75 @@ public final class ModPlayerCoordinator: ObservableObject {
     // Merkt die per Slider gewaehlte Startposition, wenn gerade nichts spielt.
     // Der naechste play()-Aufruf startet dann dort statt am Songanfang.
     private var pendingStartPosition: Int?
+    // Zusaetzlich zur Position eine Zeile (Zeilen-genauer Sprung per Grid-Klick im
+    // gestoppten Zustand) und das rekonstruierte Start-Global-Volume.
+    private var pendingStartRow: Int?
+    private var pendingGlobalVolume: Int?
+
+    // Ermittelt Speed/Tempo/Global-Volume an einem Sprungziel (position,row): wendet
+    // alle Set-Speed/Tempo/Global-Volume-Befehle vom Songanfang bis dorthin der
+    // Reihe nach an. Damit klingt ein Sprung mitten in den Song im RICHTIGEN Tempo
+    // (z.B. Starfish: Speed 8 wird in Pattern-Pos 0, Zeile 0 gesetzt). Folgt bewusst
+    // KEINEN Pattern-Spruengen (Bxx/Dxx) und rekonstruiert KEINE Per-Kanal-Slides —
+    // fuer den linearen Normalfall und Test-Spruenge gedacht.
+    nonisolated static func reconstructGlobalParams(_ mod: Mod, toPosition: Int, row: Int)
+        -> (speed: Int, bpm: Int, globalVolume: Int) {
+        var speed = mod.initialSpeed
+        var bpm = mod.initialTempo
+        var gvol = mod.initialGlobalVolume
+        func scan(_ r: Row) {
+            for n in r.notes where n.hasEffect {
+                if n.effectId == 0x0F {
+                    if n.effectData >= 1 && n.effectData <= 31 { speed = n.effectData }
+                    else if n.effectData >= 32 { bpm = n.effectData }
+                } else if n.effectId == ModuleEffect.setSpeed {
+                    if n.effectData > 0 { speed = n.effectData }
+                } else if n.effectId == ModuleEffect.setTempo {
+                    if n.effectData >= 32 { bpm = n.effectData }
+                } else if n.effectId == ModuleEffect.globalVolume {
+                    gvol = min(64, max(0, n.effectData))
+                }
+            }
+        }
+        let lastPos = max(0, min(mod.length - 1, toPosition))
+        for p in 0...lastPos {
+            let posIndex = max(0, min(mod.patternTable.count - 1, p))
+            let patternIndex = mod.patternTable[posIndex]
+            guard patternIndex >= 0 && patternIndex < mod.patterns.count else { continue }
+            let rows = mod.patterns[patternIndex].rows
+            let maxRow = (p == lastPos) ? min(row, rows.count - 1) : rows.count - 1
+            guard maxRow >= 0 else { continue }
+            for r in 0...maxRow { scan(rows[r]) }
+        }
+        return (speed, bpm, gvol)
+    }
+
+    // Zeilen-genauer Sprung: Grid-Klick auf eine Zeile. Rekonstruiert Speed/Tempo/
+    // Global-Volume, damit die Wiedergabe ab dort im richtigen Tempo laeuft.
+    public func seek(toPosition pos: Int, row: Int) {
+        guard let mod = activeMod else { return }
+        let p = max(0, min(mod.length - 1, pos))
+        let r = max(0, min(Self.patternRowCount(mod, at: p) - 1, row))
+        let params = Self.reconstructGlobalParams(mod, toPosition: p, row: r)
+        // Coordinator-Tempo spiegeln (play() liest self.speed/self.bpm beim Kaltstart).
+        self.speed = params.speed
+        self.bpm = params.bpm
+        guard let state = playbackState else {
+            // Gestoppt: Ziel vormerken; play() startet dort mit dem rekonstruierten Tempo.
+            pendingStartPosition = p
+            pendingStartRow = r
+            pendingGlobalVolume = params.globalVolume
+            currentPosition = p
+            currentRow = r
+            return
+        }
+        let sampleRate = self.audioEngine?.mainMixerNode.outputFormat(forBus: 0).sampleRate ?? 44100.0
+        state.ticksPerRow = params.speed
+        state.bpm = params.bpm
+        state.outputsPerTick = sampleRate * 60.0 / (Double(params.bpm) * 24.0)
+        state.globalVolume = Float(params.globalVolume)
+        applySeek(state: state, mod: mod, position: p, row: r)
+    }
 
     public func seek(toPosition: Int) {
         guard let mod = activeMod else { return }

@@ -64,6 +64,8 @@ struct TrackerGridContainer: View {
     @ObservedObject var transport: TransportState
     let mod: Mod
     let theme: PlayerTheme
+    // Klick auf eine Zeile -> zu (aktuelle Position, Zeile) springen.
+    var onSeekRow: (Int) -> Void = { _ in }
 
     var body: some View {
         // Defensiv wie zuvor: length/patternTable/patternIndex vor dem Zugriff klemmen.
@@ -71,7 +73,8 @@ struct TrackerGridContainer: View {
         let patternIndex = mod.patternTable[max(0, min(mod.patternTable.count - 1, tableIdx))]
         if patternIndex >= 0, patternIndex < mod.patterns.count {
             TrackerGridView(pattern: mod.patterns[patternIndex], patternIndex: patternIndex,
-                            currentRow: transport.currentRow, theme: theme)
+                            currentRow: transport.currentRow, theme: theme,
+                            onSeekRow: onSeekRow)
         } else {
             Color.clear
         }
