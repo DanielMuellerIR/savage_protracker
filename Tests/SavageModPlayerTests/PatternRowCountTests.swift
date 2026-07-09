@@ -70,6 +70,28 @@ final class PatternRowCountTests: XCTestCase {
         XCTAssertEqual(ModPlayerCoordinator.patternRowCount(mod, at: 99), 8)
     }
 
+    /// Globaler Zeilen-Index und Umkehrung müssen die echten Pattern-Längen
+    /// nutzen (Pattern 0 = 30 Reihen, Pattern 1 = 8) — nicht 64. Davon hängt die
+    /// korrekte Elapsed-/Gesamtzeit und die Positionsanzeige beim Seek ab (#9).
+    func testCumulativeRowsUsesRealLengths() {
+        let mod = makeMod(firstPatternRows: 30)
+        XCTAssertEqual(ModPlayerCoordinator.cumulativeRows(mod, upTo: 0), 0)
+        XCTAssertEqual(ModPlayerCoordinator.cumulativeRows(mod, upTo: 1), 30, "nicht 64")
+        XCTAssertEqual(ModPlayerCoordinator.cumulativeRows(mod, upTo: 1, row: 3), 33)
+        XCTAssertEqual(ModPlayerCoordinator.cumulativeRows(mod, upTo: 2), 38, "Gesamtreihen 30+8")
+
+        // Round-Trip: globaler Index -> (Position, Zeile) -> derselbe Index.
+        for (gr, pos, row) in [(0, 0, 0), (29, 0, 29), (30, 1, 0), (33, 1, 3)] {
+            let t = ModPlayerCoordinator.positionAndRow(mod, forGlobalRow: gr)
+            XCTAssertEqual(t.position, pos, "globalRow \(gr)")
+            XCTAssertEqual(t.row, row, "globalRow \(gr)")
+        }
+        // Über das Songende hinaus wird auf die letzte Zeile geklemmt.
+        let end = ModPlayerCoordinator.positionAndRow(mod, forGlobalRow: 999)
+        XCTAssertEqual(end.position, 1)
+        XCTAssertEqual(end.row, 7)
+    }
+
     /// Kernregression: Bei einem kurzen ersten Pattern (8 Reihen) muss die Note
     /// aus Pattern 1 nach ~8 Reihen einsetzen — NICHT erst nach 64 Reihen. Bei
     /// Speed 6 / 125 BPM dauert eine Reihe 0,12 s, also ~0,96 s (8 Reihen) vs.

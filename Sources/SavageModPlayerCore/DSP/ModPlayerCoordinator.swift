@@ -340,7 +340,7 @@ public final class ModPlayerCoordinator: ObservableObject {
         // der erste Tick-Boundary laedt dann (startPos, Zeile 0) frisch.
         if let startPos = pendingStartPosition, startPos > 0, startPos < mod.length {
             state.position = startPos - 1
-            state.elapsedFrames = UInt64(Double(startPos * 64 * mod.initialSpeed) * state.outputsPerTick)
+            state.elapsedFrames = UInt64(Double(Self.cumulativeRows(mod, upTo: startPos) * mod.initialSpeed) * state.outputsPerTick)
         }
         pendingStartPosition = nil
 
@@ -474,7 +474,7 @@ public final class ModPlayerCoordinator: ObservableObject {
             currentRow = 0
             return
         }
-        applySeek(state: state, position: pos, row: 0)
+        applySeek(state: state, mod: mod, position: pos, row: 0)
     }
 
     // Relativer Zeitsprung (z.B. +30s/-15s). Rechnet die gewuenschten Sekunden
@@ -486,13 +486,15 @@ public final class ModPlayerCoordinator: ObservableObject {
         let rowDuration = Double(max(1, state.ticksPerRow)) * 60.0 / (bpm * 24.0)
         guard rowDuration > 0 else { return }
 
-        let currentRows = max(0, state.position) * 64 + max(0, min(63, state.rowIndex))
+        let currentRows = Self.cumulativeRows(mod, upTo: state.position, row: max(0, state.rowIndex))
         var targetRows = currentRows + Int((delta / rowDuration).rounded())
-        targetRows = max(0, min(mod.length * 64 - 1, targetRows))
-        applySeek(state: state, position: targetRows / 64, row: targetRows % 64)
+        let totalRows = Self.cumulativeRows(mod, upTo: mod.length)
+        targetRows = max(0, min(totalRows - 1, targetRows))
+        let target = Self.positionAndRow(mod, forGlobalRow: targetRows)
+        applySeek(state: state, mod: mod, position: target.position, row: target.row)
     }
 
-    private func applySeek(state: RealtimePlaybackState, position: Int, row: Int) {
+    private func applySeek(state: RealtimePlaybackState, mod: Mod, position: Int, row: Int) {
         // Ziel so setzen, dass der naechste Tick-Boundary die Zielzeile LAEDT
         // und ihre Noten triggert: eine Zeile davor auf dem letzten Tick stehen.
         // (rowIndex -1 ist fuer row 0 in Ordnung — der Row-Advance rechnet +1.)
@@ -522,7 +524,7 @@ public final class ModPlayerCoordinator: ObservableObject {
 
         let sampleRate = self.audioEngine?.mainMixerNode.outputFormat(forBus: 0).sampleRate ?? 44100.0
         let outputsPerTick = sampleRate * 60.0 / (Double(state.bpm) * 24.0)
-        state.elapsedFrames = UInt64(Double((position * 64 + row) * state.ticksPerRow) * outputsPerTick)
+        state.elapsedFrames = UInt64(Double(Self.cumulativeRows(mod, upTo: position, row: row) * state.ticksPerRow) * outputsPerTick)
 
         self.currentPosition = position
         self.currentRow = max(0, row)
@@ -621,7 +623,7 @@ public final class ModPlayerCoordinator: ObservableObject {
                 // ueber die angezeigte Gesamtdauer hinaus.
                 let currentBpm = state.bpm > 0 ? Double(state.bpm) : 125.0
                 let ticksPerRow = Double(max(1, state.ticksPerRow))
-                vis.totalDuration = Double(mod.length * 64) * ticksPerRow * 60.0 / (currentBpm * 24.0)
+                vis.totalDuration = Double(Self.cumulativeRows(mod, upTo: mod.length)) * ticksPerRow * 60.0 / (currentBpm * 24.0)
             }
         }
     }
@@ -1175,6 +1177,31 @@ public final class ModPlayerCoordinator: ObservableObject {
         let patternIndex = mod.patternTable[posIndex]
         guard patternIndex >= 0 && patternIndex < mod.patterns.count else { return 64 }
         return mod.patterns[patternIndex].rows.count
+    }
+
+    // Globaler Zeilen-Index: Summe der ECHTEN Pattern-Reihen aller Positionen vor
+    // `position`, plus `row`. Ersetzt die frühere (position*64 + row)-Annahme, die
+    // bei XM mit variablen Pattern-Längen die Elapsed-/Gesamtzeit und die
+    // Positionsanzeige verfälschte (z.B. Starfish: 212s statt 178s angezeigt).
+    // Nicht im Audio-Thread aufrufen (O(Positionen)); nur bei Seek/Zeitanzeige.
+    nonisolated static func cumulativeRows(_ mod: Mod, upTo position: Int, row: Int = 0) -> Int {
+        let clamped = max(0, min(mod.length, position))
+        var total = 0
+        for p in 0..<clamped { total += patternRowCount(mod, at: p) }
+        return total + max(0, row)
+    }
+
+    // Umkehrung von `cumulativeRows`: globaler Zeilen-Index -> (Position, Zeile)
+    // entlang der echten Pattern-Längen. Für den relativen Zeitsprung (+/- s).
+    nonisolated static func positionAndRow(_ mod: Mod, forGlobalRow globalRow: Int) -> (position: Int, row: Int) {
+        var remaining = max(0, globalRow)
+        for p in 0..<max(0, mod.length) {
+            let rows = patternRowCount(mod, at: p)
+            if remaining < rows { return (p, remaining) }
+            remaining -= rows
+        }
+        let last = max(0, mod.length - 1)
+        return (last, max(0, patternRowCount(mod, at: last) - 1))
     }
 
     nonisolated private static func advanceRowForProbe(
