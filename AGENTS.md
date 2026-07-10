@@ -457,8 +457,13 @@ Wichtige Leitplanken:
   Defaults, Raw Values, Codable-Verhalten sowie Parser- und Audiosemantik bleiben
   unverändert; `.it` und neue Playback-Semantik sind noch deaktiviert. Reviewer-
   `ACCEPT`, 44 gezielte Parser-Tests, 94 Swift-Tests, JS-Parität und signierter
-  App-/Quick-Look-Build sind grün. M1 ist damit gestartet; `IT-009` wird vor
-  weiteren Modelländerungen neu read-only geschnitten.
+  App-/Quick-Look-Build sind grün. M1 ist damit gestartet.
+- **IT-009 (Version 1.5.10):** `ModuleFormat.it` und das werttypische
+  `PlaybackSemantics` mit eigenem `ITCompatibility`-Profil bilden die interne
+  Typgrenze für ProTracker-, ST3-, FT2- und IT-Regeln. `Old Effects` und
+  `Compatible Gxx` müssen später ausdrücklich aus dem IT-Header kommen; `.it`
+  bleibt im Loader und in der App deaktiviert. Reviewer-`ACCEPT`, 99 Swift-Tests,
+  JS-Parität und signierter App-/Quick-Look-Build sind grün.
 
 ## Fallen / Agent-Hinweise
 

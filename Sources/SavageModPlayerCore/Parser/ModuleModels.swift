@@ -9,6 +9,7 @@ public enum ModuleFormat: String, Sendable, Codable {
     case multichannel   // MOD-Varianten mit 6/8/… Kanälen (6CHN, 8CHN, xxCH, FLT8, CD81, OKTA)
     case s3m            // ScreamTracker 3 (S3M)
     case xm             // FastTracker II Extended Module (XM) — Multi-Sample-Instrumente
+    case it             // Impulse Tracker (IT); Parser- und DSP-Anbindung folgen separat
 
     public var displayName: String {
         switch self {
@@ -17,8 +18,30 @@ public enum ModuleFormat: String, Sendable, Codable {
         case .multichannel: return "Multichannel MOD"
         case .s3m: return "ScreamTracker 3 (S3M)"
         case .xm: return "FastTracker II (XM)"
+        case .it: return "Impulse Tracker (IT)"
         }
     }
+}
+
+// IT speichert zwei Kompatibilitätsflags im Dateikopf. Sie beeinflussen die
+// genaue Effektberechnung und gehören deshalb zu den Wiedergaberegeln des Songs.
+public struct ITCompatibility: Sendable, Codable, Equatable {
+    public let oldEffects: Bool
+    public let compatibleGxx: Bool
+
+    public init(oldEffects: Bool, compatibleGxx: Bool) {
+        self.oldEffects = oldEffects
+        self.compatibleGxx = compatibleGxx
+    }
+}
+
+// Beschreibt die Tracker-Regeln unabhängig vom Dateiformat. So kann die Engine
+// später gezielt die Semantik auswählen, ohne Formatdetails erneut abzuleiten.
+public enum PlaybackSemantics: Sendable, Codable, Equatable {
+    case proTracker
+    case screamTracker3
+    case fastTracker2(linearFrequency: Bool)
+    case impulseTracker(ITCompatibility)
 }
 
 // Interne Effekt-IDs jenseits der ProTracker-Nibbles (0x00..0xEF). Der
