@@ -184,7 +184,8 @@ do {
         mod: mod,
         sampleRate: opts.rate,
         maxDurationSeconds: maxDuration,
-        normalize: opts.normalize
+        normalize: opts.normalize,
+        useInterpolation: opts.interpolation
     )
 } catch {
     FileHandle.standardError.write(Data("Render-Fehler: \(error.localizedDescription)\n".utf8))

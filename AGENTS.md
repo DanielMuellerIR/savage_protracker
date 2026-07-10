@@ -411,9 +411,15 @@ Wichtige Leitplanken:
   denselben privaten Pfad wie Live-, Probe- und Offline-Wiedergabe; vor dem Fix
   waren alle 32 Testframes trotz `playing == false` hörbar. Reviewer-`ACCEPT`,
   90 Swift-Tests, JS-Parität und signierter App-/Quick-Look-Build sind grün.
-- Nächstes Paket ist `IT-002` aus `tasks/2026-07-10-it-support/handoff.md`:
-  `savage-cli --no-interp` bis in `ModuleRenderer` durchreichen und den
-  Interpolationsunterschied mit einem synthetischen WAV-Test beweisen.
+- **IT-002 (Version 1.5.3):** `savage-cli --no-interp` wird bis in
+  `ModuleRenderer` durchgereicht. Der Default bleibt interpoliert und damit für
+  Quick Look unverändert; ein synthetischer WAV-Test beweist bytegleichen
+  Default/`true`-Output sowie hörbares, gleich langes, aber verschiedenes PCM
+  mit `false`. Reviewer-`ACCEPT`, 91 Swift-Tests, CLI-Build, JS-Parität und
+  signierter App-/Quick-Look-Build sind grün.
+- Nächstes Paket ist `IT-003` aus `tasks/2026-07-10-it-support/handoff.md`:
+  Die heutige Live-/Offline-/Probe-Sequencer-Semantik per Zustands-Trace
+  charakterisieren und einfrieren; noch kein Sequencer-Refactor.
 
 ## Fallen / Agent-Hinweise
 

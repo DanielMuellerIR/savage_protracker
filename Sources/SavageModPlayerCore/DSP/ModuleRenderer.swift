@@ -11,11 +11,14 @@ public enum ModuleRenderer {
     // normalize: Peak-Anhebung fürs Quick-Look (Standard). Für A/B-Vergleiche mit
     // Referenz-Renderern (openmpt123) auf false stellen — dann ist die Ausgabe die
     // rohe Engine-Ausgabe (identisch zum Live-Pfad, nur ohne Mixer-Volume).
+    // useInterpolation: Standard true bewahrt den Quick-Look-Klang; das CLI kann
+    // fuer rohe Nearest-Neighbor-Vergleiche gezielt false uebergeben.
     public static func renderWavData(
         mod: Mod,
         sampleRate: Double = 44100.0,
         maxDurationSeconds: Double = 300.0,
-        normalize: Bool = true
+        normalize: Bool = true,
+        useInterpolation: Bool = true
     ) throws -> Data {
         guard let stereoFormat = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2) else {
             throw NSError(domain: "ModuleRenderer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Konnte Audio-Format nicht erstellen"])
@@ -25,7 +28,7 @@ public enum ModuleRenderer {
         let channelCount = renderChannels.count
         let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: sampleRate)
         state.stereoSeparation = 0.8
-        state.useInterpolation = true
+        state.useInterpolation = useInterpolation
         state.palClock = true
 
         // Dummy-Puffer für VU/Waves — der Render-Block schreibt sie immer.
