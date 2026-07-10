@@ -469,6 +469,11 @@ Wichtige Leitplanken:
   Fade-Sentinel 252 werden über `Note.specialNote` abgeleitet, ohne gespeichertes
   Feld oder neue Wiedergabesemantik. Reviewer-`ACCEPT` nach einer Testkorrektur,
   102 Swift-Tests, JS-Parität und signierter App-/Quick-Look-Build sind grün.
+- **IT-011 (Version 1.5.12):** `NoteSampleMapping` bildet die 120 Einträge der
+  IT-Instrument-Notentabelle als validierten Werttyp ab. Zielnoten, Sample-IDs,
+  Tabellenlänge und manipulierte Codable-Daten werden kontrolliert geprüft;
+  Instrument, Parser und DSP bleiben bewusst unverdrahtet. Reviewer-`ACCEPT`,
+  108 Swift-Tests, JS-Parität und signierter App-/Quick-Look-Build sind grün.
 
 ## Fallen / Agent-Hinweise
 

@@ -77,6 +77,78 @@ public enum SpecialNote: String, Sendable, Codable {
     case fade
 }
 
+// Einige Tracker-Instrumente ordnen jeder spielbaren Ausgangsnote eine andere
+// Zielnote und ein Sample zu. Dieser Werttyp bildet nur diese neutrale Tabelle
+// ab; ein bestimmtes Dateiformat oder Wiedergabeverhalten kennt er noch nicht.
+public struct NoteSampleMapping: Sendable, Codable, Equatable {
+    public static let entryCount = 120
+
+    // Ein einzelner Tabelleneintrag. Sample 0 bedeutet, dass kein Sample
+    // ausgewählt ist; 1...99 sind echte, 1-basierte Sample-Nummern.
+    public struct Entry: Sendable, Codable, Equatable {
+        public let targetNote: Int
+        public let sampleID: Int
+
+        public init(targetNote: Int, sampleID: Int) throws {
+            guard (0..<NoteSampleMapping.entryCount).contains(targetNote) else {
+                throw ValidationError.invalidTargetNote(targetNote)
+            }
+            guard (0...99).contains(sampleID) else {
+                throw ValidationError.invalidSampleID(sampleID)
+            }
+
+            self.targetNote = targetNote
+            self.sampleID = sampleID
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case targetNote, sampleID
+        }
+
+        // Auch Daten von außen müssen dieselben Grenzen wie der öffentliche
+        // Initializer einhalten. So kann Codable keine ungültigen Werte bauen.
+        public init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            try self.init(
+                targetNote: values.decode(Int.self, forKey: .targetNote),
+                sampleID: values.decode(Int.self, forKey: .sampleID)
+            )
+        }
+    }
+
+    public enum ValidationError: Error, Sendable, Equatable {
+        case invalidEntryCount(Int)
+        case invalidTargetNote(Int)
+        case invalidSampleID(Int)
+    }
+
+    public let entries: [Entry]
+
+    public init(entries: [Entry]) throws {
+        guard entries.count == Self.entryCount else {
+            throw ValidationError.invalidEntryCount(entries.count)
+        }
+        self.entries = entries
+    }
+
+    // Eine ungültige Ausgangsnote liefert nil statt einen Array-Zugriff außerhalb
+    // der Grenzen auszulösen. Gültige Ausgangsnoten entsprechen dem Tabellenindex.
+    public func entry(forSourceNote sourceNote: Int) -> Entry? {
+        guard entries.indices.contains(sourceNote) else { return nil }
+        return entries[sourceNote]
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case entries
+    }
+
+    // Der öffentliche Initializer prüft auch beim Laden die feste Tabellenlänge.
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(entries: values.decode([Entry].self, forKey: .entries))
+    }
+}
+
 public struct Note: Sendable, Codable {
     public let instrument: Int      // 0..99 (0 = kein Instrument)
     public let period: Int          // 12-Bit-Wert für Amiga-Perioden (MOD); 0 bei S3M

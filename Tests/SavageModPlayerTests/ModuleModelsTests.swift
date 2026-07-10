@@ -97,6 +97,88 @@ final class ModuleModelsTests: XCTestCase {
         }
     }
 
+    func testNoteSampleMappingAcceptsAllBoundaryValuesAndQueriesSafely() throws {
+        var entries = try (0..<NoteSampleMapping.entryCount).map {
+            try NoteSampleMapping.Entry(targetNote: $0, sampleID: 0)
+        }
+        entries[0] = try NoteSampleMapping.Entry(targetNote: 119, sampleID: 99)
+        let mapping = try NoteSampleMapping(entries: entries)
+
+        XCTAssertEqual(NoteSampleMapping.entryCount, 120)
+        XCTAssertEqual(mapping.entry(forSourceNote: 0), entries[0])
+        XCTAssertEqual(mapping.entry(forSourceNote: 119), entries[119])
+        XCTAssertNil(mapping.entry(forSourceNote: -1))
+        XCTAssertNil(mapping.entry(forSourceNote: 120))
+    }
+
+    func testNoteSampleMappingRejectsWrongEntryCounts() throws {
+        let entry = try NoteSampleMapping.Entry(targetNote: 0, sampleID: 0)
+
+        for count in [0, 119, 121] {
+            XCTAssertThrowsError(try NoteSampleMapping(entries: Array(repeating: entry, count: count))) {
+                XCTAssertEqual($0 as? NoteSampleMapping.ValidationError, .invalidEntryCount(count))
+            }
+        }
+    }
+
+    func testNoteSampleMappingEntryRejectsInvalidTargetNotes() {
+        for targetNote in [-1, 120] {
+            XCTAssertThrowsError(try NoteSampleMapping.Entry(targetNote: targetNote, sampleID: 0)) {
+                XCTAssertEqual($0 as? NoteSampleMapping.ValidationError, .invalidTargetNote(targetNote))
+            }
+        }
+    }
+
+    func testNoteSampleMappingEntryRejectsInvalidSampleIDs() {
+        for sampleID in [-1, 100] {
+            XCTAssertThrowsError(try NoteSampleMapping.Entry(targetNote: 0, sampleID: sampleID)) {
+                XCTAssertEqual($0 as? NoteSampleMapping.ValidationError, .invalidSampleID(sampleID))
+            }
+        }
+    }
+
+    func testNoteSampleMappingSurvivesCodableRoundTrip() throws {
+        let entries = try (0..<NoteSampleMapping.entryCount).map {
+            try NoteSampleMapping.Entry(targetNote: 119 - $0, sampleID: $0 % 100)
+        }
+        let original = try NoteSampleMapping(entries: entries)
+
+        let encoded = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(NoteSampleMapping.self, from: encoded)
+
+        XCTAssertEqual(decoded, original)
+    }
+
+    func testNoteSampleMappingDecodingRejectsInvalidValues() throws {
+        let validEntry = try NoteSampleMapping.Entry(targetNote: 0, sampleID: 0)
+        let validEntries = Array(repeating: validEntry, count: NoteSampleMapping.entryCount)
+
+        try assertMappingDecodeFails(
+            entries: Array(validEntries.dropLast()),
+            expected: .invalidEntryCount(119)
+        )
+
+        var invalidTargetNote = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(try NoteSampleMapping(entries: validEntries))
+        ) as! [String: Any]
+        var targetEntries = invalidTargetNote["entries"] as! [[String: Any]]
+        targetEntries[0]["targetNote"] = 120
+        invalidTargetNote["entries"] = targetEntries
+        try assertMappingDecodeFails(
+            jsonObject: invalidTargetNote,
+            expected: .invalidTargetNote(120)
+        )
+
+        var invalidSampleID = invalidTargetNote
+        var sampleEntries = validEntries.map { ["targetNote": $0.targetNote, "sampleID": $0.sampleID] }
+        sampleEntries[0]["sampleID"] = 100
+        invalidSampleID["entries"] = sampleEntries
+        try assertMappingDecodeFails(
+            jsonObject: invalidSampleID,
+            expected: .invalidSampleID(100)
+        )
+    }
+
     /// Erstellt eine ansonsten leere Note, damit der jeweilige Schlüssel isoliert
     /// geprüft wird und keine Effekt- oder Instrumentdaten das Ergebnis beeinflussen.
     private func makeNote(key: Int) -> Note {
@@ -112,5 +194,31 @@ final class ModuleModelsTests: XCTestCase {
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(PlaybackSemantics.self, from: encoded)
         XCTAssertEqual(decoded, original, file: file, line: line)
+    }
+
+    /// Baut ein JSON-Objekt aus gültigen Einträgen und prüft den erwarteten,
+    /// kontrollierten Validierungsfehler beim Dekodieren.
+    private func assertMappingDecodeFails(
+        entries: [NoteSampleMapping.Entry],
+        expected: NoteSampleMapping.ValidationError,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let jsonObject: [String: Any] = [
+            "entries": entries.map { ["targetNote": $0.targetNote, "sampleID": $0.sampleID] },
+        ]
+        try assertMappingDecodeFails(jsonObject: jsonObject, expected: expected, file: file, line: line)
+    }
+
+    private func assertMappingDecodeFails(
+        jsonObject: [String: Any],
+        expected: NoteSampleMapping.ValidationError,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let data = try JSONSerialization.data(withJSONObject: jsonObject)
+        XCTAssertThrowsError(try JSONDecoder().decode(NoteSampleMapping.self, from: data), file: file, line: line) {
+            XCTAssertEqual($0 as? NoteSampleMapping.ValidationError, expected, file: file, line: line)
+        }
     }
 }
