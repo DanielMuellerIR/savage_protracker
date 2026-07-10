@@ -13,7 +13,7 @@
 A cross-platform, self-contained tracker module player in two flavors:
 
 1. **HTML5 (`savage-mod-player.html`)** — a single HTML file (under 50 KB) that runs straight from the file system with a double click, no web server required. Plays classic 4-channel ProTracker MODs.
-2. **Native macOS app (`Savage Mod Player.app`)** — a SwiftUI desktop application built on `AVAudioEngine`/`AVAudioSourceNode` with true real-time oscilloscopes and VU meters. Additionally plays multichannel MODs (6/8/… channels, including `6CHN`/`8CHN`/`FLT8`), 15-sample Soundtracker modules, and **ScreamTracker 3 (`.s3m`)** — and ships with a **Quick Look plugin**: pressing the space bar on a `.mod`/`.s3m` file in Finder opens a playable audio preview.
+2. **Native macOS app (`Savage Mod Player.app`)** — a SwiftUI desktop application built on `AVAudioEngine`/`AVAudioSourceNode` with true real-time oscilloscopes and VU meters. Additionally plays multichannel MODs (6/8/… channels, including `6CHN`/`8CHN`/`FLT8`), 15-sample Soundtracker modules, **ScreamTracker 3 (`.s3m`)**, and **FastTracker II (`.xm`)** — and ships with a **Quick Look plugin**: pressing the space bar on a `.mod`/`.s3m`/`.xm` file in Finder opens a playable audio preview.
 
 Neither variant bundles any module files. Songs are loaded via drag & drop or the file dialog.
 
@@ -37,21 +37,21 @@ The Quick Look plugin is embedded in the app bundle (`Contents/PlugIns/`) — th
 
 1. Drag the app from the DMG into **`/Applications`**.
 2. **Launch the app once** (this is when macOS registers the bundled Quick Look extension).
-3. Select a `.mod` or `.s3m` file in Finder and press the **space bar** — the preview shows the macOS audio player with the fully rendered song (play, scrubbing, volume). The first invocation takes a second or two because the song is rendered through the player engine in its entirety.
+3. Select a `.mod`, `.s3m`, or `.xm` file in Finder and press the **space bar** — the preview shows the macOS audio player with the fully rendered song (play, scrubbing, volume). The first invocation takes a second or two because the song is rendered through the player engine in its entirety.
 
 If no preview appears:
 
 - Reload the Quick Look service: run `qlmanage -r` in Terminal, then open the preview again.
 - Check the registration: `pluginkit -m -p com.apple.quicklook.preview | grep -i savage` should list an entry; if it does not, launch the app once or copy it to `/Applications` again.
-- **Note on `.mod` and VLC**: if VLC (or another app that registers `.mod` as an audio/video type) is installed, macOS intercepts `.mod` files with its built-in media preview before third-party plugins are consulted — a Quick Look system limitation. `.s3m` previews always work regardless.
+- **Note on `.mod` and VLC**: if VLC (or another app that registers `.mod` as an audio/video type) is installed, macOS intercepts `.mod` files with its built-in media preview before third-party plugins are consulted — a Quick Look system limitation. `.s3m`/`.xm` previews always work regardless.
 
 ---
 
 ## Features
 
-- **Format support (macOS app)**: ProTracker MOD, multichannel MOD (`xCHN`/`xxCH`/`CD81`/`OKTA`/`FLT8`), 15-sample Soundtracker, and ScreamTracker 3 (`.s3m`) including the volume column, panning, and S3M effects. The HTML5 player deliberately stays compact and plays 4-channel MODs.
-- **Quick Look preview (macOS app)**: the bundled Quick Look plugin renders `.mod`/`.s3m` with the player engine and shows the native audio player with play and scrubbing in Finder (space bar).
-- **Drag & drop**: drop individual `.mod`/`.s3m` files, entire folders (recursively), or Zip/7-Zip archives onto the player.
+- **Format support (macOS app)**: ProTracker MOD, multichannel MOD (`xCHN`/`xxCH`/`CD81`/`OKTA`/`FLT8`), 15-sample Soundtracker, ScreamTracker 3 (`.s3m`) including the volume column, panning, and S3M effects, and FastTracker II (`.xm`) with multi-sample instruments, volume/panning envelopes, auto-vibrato, and the XM effect set. The HTML5 player deliberately stays compact and plays 4-channel MODs.
+- **Quick Look preview (macOS app)**: the bundled Quick Look plugin renders `.mod`/`.s3m`/`.xm` with the player engine and shows the native audio player with play and scrubbing in Finder (space bar).
+- **Drag & drop**: drop individual `.mod`/`.s3m`/`.xm` files, entire folders (recursively), or Zip/7-Zip archives onto the player.
 - **Automatic playlist**: a configurable autoplay folder (macOS app: Settings, Cmd+,) is scanned at startup and loaded as a playlist; without configuration, an `audio/` subfolder next to the player or the app is used.
 - **Hierarchical playlist**: folders and archives appear as a collapsible tree. Folders start collapsed, the path to the playing track expands automatically, and playback and shuffle run across all folders.
 - **Archives as folders (macOS app)**: Zip and 7-Zip archives are extracted invisibly to a temporary directory (cleaned up on quit) and shown in the playlist like regular folders.
@@ -111,11 +111,13 @@ The audio engine simulates the Amiga Paula hardware behavior:
 
 For ScreamTracker 3 the engine switches to the ST3 period model (C2Spd-based periods against the 14.3 MHz ST3 clock) instead of Amiga Paula periods; the ProTracker effect set is extended with S3M specifics (fine/extra-fine slides with effect memory, tremor, fine vibrato, global volume).
 
+For FastTracker II the engine runs a dedicated instrument voice model: linear frequency table (exponential frequency from linear periods), multi-sample instruments with keymaps, volume and panning envelopes (sustain and loop, interpolated per tick), key-off with volume fadeout, auto-vibrato with sweep, and ping-pong sample loops. The XM effect set including the volume column and per-channel effect memory is translated onto the shared DSP core.
+
 ### Architecture
 
 | Layer | HTML5 | macOS (Swift) |
 |---|---|---|
-| Parser | `modplayer.js` | `ModuleLoader`/`ModParser`/`S3MParser` (SavageModPlayerCore) |
+| Parser | `modplayer.js` | `ModuleLoader`/`ModParser`/`S3MParser`/`XMParser` (SavageModPlayerCore) |
 | DSP / mixer | `mod-player-worklet.js` (AudioWorklet) | `ModPlayerCoordinator.swift` (`AVAudioSourceNode`, up to 32 channels) |
 | UI | vanilla JS + CSS grid | SwiftUI + Canvas |
 | Quick Look | — | `quicklook/PreviewProvider.swift` (appex, offline WAV render) |
@@ -145,7 +147,7 @@ Besides the app itself, `build_app.sh` compiles the Quick Look extension
 
 At startup the app fills the playlist from the autoplay folder configured in
 the Settings window (Cmd+,). If none is set, it looks for an `audio/` directory
-next to the application and automatically loads any `.mod`/`.s3m` files (or
+next to the application and automatically loads any `.mod`/`.s3m`/`.xm` files (or
 `mod.*` files) found there. These files are local test data only and do not
 belong in the git repository.
 
@@ -177,7 +179,7 @@ swift test --filter MultiFormatTests
 node Tests/js/worklet-timing.mjs
 ```
 
-The suite covers the parsers (all MOD variants, S3M, synthetic and real files),
+The suite covers the parsers (all MOD variants, S3M, XM, synthetic and real files),
 DSP timing, sequencing, the Quick Look plugin's offline WAV renderer, and the
 parity between the Swift and browser DSP implementations.
 
