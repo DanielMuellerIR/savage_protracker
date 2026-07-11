@@ -404,8 +404,9 @@ Wichtige Leitplanken:
   vorallokierten Voice-Pool.
 - `.it` wird erst nach dem abschließenden Integrations-Gate öffentlich in Loader,
   App-UTI und Quick Look aktiviert.
-- Die Agentenzelle ist auf vier feste Subagenten-Identitäten begrenzt; kein
-  Subagent darf weitere Agenten erzeugen.
+- Klar definierte Arbeit erfolgt bevorzugt mit Terra; schwierige Architektur-,
+  Parser-/DSP-Fehlersuche und Reviews mit Sol. Ohne verfügbaren Modellwechsel
+  wird mit dem bestgeeigneten Modell weitergearbeitet.
 - **IT-001 (Version 1.5.2):** Gestoppte geloopte Stimmen liefern im gemeinsamen
   Sample-Renderer sofort Stille. Ein gerätefreier Regressionstest läuft über
   denselben privaten Pfad wie Live-, Probe- und Offline-Wiedergabe; vor dem Fix
