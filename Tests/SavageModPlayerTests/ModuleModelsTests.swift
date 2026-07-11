@@ -366,6 +366,47 @@ final class ModuleModelsTests: XCTestCase {
         XCTAssertEqual(decoded.playbackSemantics, .impulseTracker(compatibility))
     }
 
+    func testUsedChannelCountIgnoresReservedEmptyChannelsAndUnusedPatterns() {
+        let empty = Note(instrument: 0, period: 0, effectId: 0, effectData: 0)
+        let audible = Note(instrument: 1, period: 428, effectId: 0, effectData: 0)
+        let effectOnly = Note(instrument: 0, period: 0, effectId: 0, effectData: 0, effectPresent: true)
+
+        var playedNotes = [Note](repeating: empty, count: 64)
+        playedNotes[2] = audible
+        playedNotes[17] = effectOnly
+        var unusedNotes = [Note](repeating: empty, count: 64)
+        unusedNotes[63] = audible
+
+        let module = Mod(
+            name: "Kanaltest",
+            length: 1,
+            patternTable: [0],
+            instruments: [nil],
+            patterns: [
+                Pattern(rows: [Row(notes: playedNotes)]),
+                Pattern(rows: [Row(notes: unusedNotes)])
+            ],
+            channelCount: 64,
+            format: .it
+        )
+
+        XCTAssertEqual(module.usedChannelCount, 2)
+    }
+
+    func testUsedChannelCountFallsBackToDeclaredCountForEmptySong() {
+        let empty = Note(instrument: 0, period: 0, effectId: 0, effectData: 0)
+        let module = Mod(
+            name: "Leer",
+            length: 1,
+            patternTable: [0],
+            instruments: [nil],
+            patterns: [Pattern(rows: [Row(notes: [empty, empty, empty, empty])])],
+            channelCount: 4
+        )
+
+        XCTAssertEqual(module.usedChannelCount, 4)
+    }
+
     func testLegacyModuleCodableDefaultsNewM1Fields() throws {
         let module = Mod(
             name: "Legacy",

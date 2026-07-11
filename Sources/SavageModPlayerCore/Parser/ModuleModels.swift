@@ -761,6 +761,37 @@ public struct Mod: Sendable, Codable {
         format == .it ? .impulseTracker128 : .tracker64
     }
 
+    // Die Dateiformate reservieren unterschiedlich viele logische Kanäle. Gerade
+    // IT hält immer 64 Header-Kanäle vor, obwohl ein konkreter Song oft nur einen
+    // Teil davon mit Noten, Instrumenten oder Effekten belegt. Die UI verwendet
+    // diesen Wert deshalb als verständliche Anzeige, ohne den DSP-Kanalumfang zu
+    // verändern.
+    public var usedChannelCount: Int {
+        var usedChannels = Set<Int>()
+
+        for patternIndex in patternTable where patterns.indices.contains(patternIndex) {
+            for row in patterns[patternIndex].rows {
+                for (channel, note) in row.notes.enumerated() where noteUsesChannel(note) {
+                    usedChannels.insert(channel)
+                }
+            }
+        }
+
+        // Leere oder ausschließlich aus leeren Patterns bestehende Dateien sollen
+        // nicht mit "0 Kanäle" erscheinen. Dann ist die deklarierte Kanalzahl die
+        // einzig sinnvolle Information.
+        return usedChannels.isEmpty ? channelCount : usedChannels.count
+    }
+
+    private func noteUsesChannel(_ note: Note) -> Bool {
+        note.instrument != 0
+            || note.period != 0
+            || note.key != -1
+            || note.volume != -1
+            || note.volCmd != 0
+            || note.hasEffect
+    }
+
     // Sichtbare, nicht-fatale Einschränkungen. Der Parser behält das spielbare
     // PCM/Pattern-Material, verschweigt aber externe MIDI-/Pluginpfade und
     // unbekannte OpenMPT-Erweiterungen nicht.

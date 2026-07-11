@@ -37,7 +37,7 @@ The Quick Look plugin is embedded in the app bundle (`Contents/PlugIns/`) — th
 
 1. Drag the app from the DMG into **`/Applications`**.
 2. **Launch the app once** (this is when macOS registers the bundled Quick Look extension).
-3. Select a `.mod`, `.s3m`, `.xm`, or `.it` file in Finder and press the **space bar** — the preview shows the macOS audio player with the fully rendered song (play, scrubbing, volume). The first invocation takes a second or two because the song is rendered through the player engine in its entirety.
+3. Select a `.mod`, `.s3m`, `.xm`, or `.it` file in Finder and press the **space bar** — the preview shows the macOS audio player with play, scrubbing, and volume. It renders up to the first 60 seconds, then caches that preview for unchanged files so later openings are immediate. Unsupported files show their parser error instead of an endless loading indicator.
 
 If no preview appears:
 
@@ -50,7 +50,7 @@ If no preview appears:
 ## Features
 
 - **Format support (macOS app)**: ProTracker MOD, multichannel MOD (`xCHN`/`xxCH`/`CD81`/`OKTA`/`FLT8`), 15-sample Soundtracker, ScreamTracker 3 (`.s3m`), FastTracker II (`.xm`), and native Impulse Tracker 2.14/2.15 (`.it`) files in sample or instrument mode. IT support includes 64 pattern channels, a preallocated 256-voice NNA pool, compressed 8/16-bit mono/stereo samples, envelopes, filters, effects, sustain loops, and compatibility flags. The HTML5 player deliberately stays compact and plays 4-channel MODs.
-- **Quick Look preview (macOS app)**: the bundled Quick Look plugin renders `.mod`/`.s3m`/`.xm`/`.it` with the player engine and shows the native audio player with play and scrubbing in Finder (space bar).
+- **Quick Look preview (macOS app)**: the bundled Quick Look plugin renders and caches up to the first 60 seconds of `.mod`/`.s3m`/`.xm`/`.it` files with the player engine, then shows the native audio player with play and scrubbing in Finder (space bar). Unsupported files show a readable reason.
 - **Drag & drop**: drop individual `.mod`/`.s3m`/`.xm`/`.it` files, entire folders (recursively), or Zip/7-Zip archives onto the player.
 - **Automatic playlist**: a configurable autoplay folder (macOS app: Settings, Cmd+,) is scanned at startup and loaded as a playlist; without configuration, an `audio/` subfolder next to the player or the app is used.
 - **Hierarchical playlist**: folders and archives appear as a collapsible tree. Folders start collapsed, the path to the playing track expands automatically, and playback and shuffle run across all folders.
@@ -62,7 +62,7 @@ If no preview appears:
 - **Multiple themes**:
   - **Dark**: graphite/black palette with good contrast and muted accent colors.
   - **Light**: a classic, bright macOS-like style with sober contrast.
-- **PAL & NTSC clocks**: switchable Paula clocking (3.546 MHz PAL vs. 3.580 MHz NTSC).
+- **PAL & NTSC clocks**: switchable Paula clocking (3.546 MHz PAL vs. 3.580 MHz NTSC) for Paula-based MOD formats; the control is hidden for formats with their own frequency model.
 - **Volume & stereo separation**: psychoacoustic (quadratic) volume scaling and adjustable stereo separation (bleed from 0% mono to 100% hard panning).
 - **Hi-fi resampling**: switchable linearly interpolated sample playback for a smoother sound (can be disabled for the original 8-bit crunch).
 - **WAV & stem export**: export the entire song to a stereo WAV file, or export individual instrument samples as WAV.
@@ -76,11 +76,12 @@ The transport buttons speak for themselves, but the tracker-specific readouts an
 
 **Header readouts**
 
+- **CH** (used channels): counts the pattern channels that actually contain notes, instruments, volume data, or effects; reserved empty channels are not included.
 - **BPM** (beats per minute): playback tempo. The Amiga standard is 125. Adjustable with −/+; a song can also change its own tempo via effects. Switching songs sets the new module's header value.
 - **SPD** (speed): ticks per pattern row (Amiga standard 6). Lower = rows advance faster, higher = slower. Together with BPM this sets the effective speed.
 - **PAT** (pattern position): the current pattern and the total in the song's play order. A pattern is a block of notes (usually 64 rows); the song plays them in this sequence.
 
-**Clock**
+**Clock** (shown next to the master oscilloscope for Paula-based MOD formats only)
 
 - **PAL** (3.546 MHz Paula clock): as on European Amigas — the reference pitch and speed for most modules.
 - **NTSC** (3.580 MHz Paula clock): as on US Amigas — modules sound slightly higher and run a little faster than with PAL.

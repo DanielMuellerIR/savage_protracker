@@ -1,3 +1,9 @@
+## 1.5.25 — 2026-07-11
+
+- The header now shows the number of pattern channels actually used by the song, before BPM.
+- PAL/NTSC moved next to the master oscilloscope and is available only for Paula-based MOD formats.
+- Quick Look now renders and caches a fast 60-second audio preview; unsupported files show a readable error instead of an endless loading indicator.
+
 The macOS app now plays **Impulse Tracker modules (`.it`)** in sample and instrument mode. The new engine covers native IT 2.14/2.15 playback from parsing through real-time audio, CLI rendering, drag & drop, and Quick Look.
 
 ## Added

@@ -1302,6 +1302,16 @@ struct MainView: View {
                 }
 
                 HStack(spacing: 16) {
+                    if let mod = coordinator.activeMod {
+                        HStack(spacing: 4) {
+                            Image(systemName: "slider.horizontal.3")
+                            Text(String(format: "CH: %d", mod.usedChannelCount))
+                                .fixedSize()
+                        }
+                        .fixedSize()
+                        .help("Genutzte Kanäle: zählt die Pattern-Kanäle, die im Song tatsächlich Noten, Instrumente, Lautstärke- oder Effektbefehle enthalten. Reservierte, komplett leere Kanäle werden nicht mitgezählt.")
+                    }
+
                     HStack(spacing: 4) {
                         Image(systemName: "metronome")
                         // fixedSize: verhindert, dass "BPM: 125" bei knappem Platz
@@ -1364,38 +1374,6 @@ struct MainView: View {
             // Block nur den Rest, den die intrinsisch breiten Buttons uebriglassen.
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // PAL / NTSC Clock Toggle selector
-            HStack(spacing: 4) {
-                Button("PAL (3.546MHz)") {
-                    coordinator.palClock = true
-                }
-                .font(.system(size: 9, weight: .bold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .background(coordinator.palClock ? (Color.accent(theme)) : Color.clear)
-                // Inaktive Beschriftung theme-abhängig: das Dark-Grau war im
-                // Light-Mode auf dem hellen Kasten unlesbar.
-                .foregroundColor(coordinator.palClock ? .white : (theme == .workbench ? .lightTextSecondary : .spaceTextSecondary))
-                .cornerRadius(4)
-                .buttonStyle(PlainButtonStyle())
-                .help("PAL-Paula-Takt (3,546 MHz) wie bei europäischen Amigas — die Referenz-Tonhöhe und -Geschwindigkeit der meisten Module.")
-
-                Button("NTSC (3.580MHz)") {
-                    coordinator.palClock = false
-                }
-                .font(.system(size: 9, weight: .bold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .background(!coordinator.palClock ? (Color.accent(theme)) : Color.clear)
-                .foregroundColor(!coordinator.palClock ? .white : (theme == .workbench ? .lightTextSecondary : .spaceTextSecondary))
-                .cornerRadius(4)
-                .buttonStyle(PlainButtonStyle())
-                .help("NTSC-Paula-Takt (3,580 MHz) wie bei US-Amigas — Module klingen minimal höher und laufen etwas schneller als mit PAL.")
-            }
-            .padding(2)
-            .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceBackground.opacity(0.4))
-            .cornerRadius(6)
-            
             // Theme Selector
             HStack(spacing: 4) {
                 ForEach(PlayerTheme.allCases) { t in
@@ -1629,7 +1607,59 @@ struct MainView: View {
                     .frame(width: 32, alignment: .trailing)
             }
             .help("Stereo-Separation: 100 % = hartes Amiga-Panning (Kanäle ganz links/rechts), 0 % = Mono. Dazwischen wird Übersprechen beigemischt, das Kopfhörer-Ermüdung vermeidet. Am deutlichsten mit Kopfhörern hörbar; über Laptop-Lautsprecher kaum.")
+
+            // PAL/NTSC verändert nur die Paula-basierten MOD-Formate. S3M, XM
+            // und IT verwenden eigene, feste Frequenzmodelle; dort blenden wir
+            // die wirkungslose Steuerung aus statt einen scheinbaren Schalter zu
+            // zeigen.
+            if usesAmigaClock {
+                palClockSelector
+            }
         }
+    }
+
+    private var usesAmigaClock: Bool {
+        switch coordinator.activeMod?.format {
+        case .protracker, .soundtracker, .multichannel:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private var palClockSelector: some View {
+        HStack(spacing: 4) {
+            Button("PAL (3.546MHz)") {
+                coordinator.palClock = true
+            }
+            .font(.system(size: 9, weight: .bold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(coordinator.palClock ? Color.accent(theme) : Color.clear)
+            .foregroundColor(coordinator.palClock ? .white : inactiveControlColor)
+            .cornerRadius(4)
+            .buttonStyle(PlainButtonStyle())
+            .help("PAL-Paula-Takt (3,546 MHz) wie bei europäischen Amigas — die Referenz-Tonhöhe und -Geschwindigkeit der meisten Module.")
+
+            Button("NTSC (3.580MHz)") {
+                coordinator.palClock = false
+            }
+            .font(.system(size: 9, weight: .bold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(!coordinator.palClock ? Color.accent(theme) : Color.clear)
+            .foregroundColor(!coordinator.palClock ? .white : inactiveControlColor)
+            .cornerRadius(4)
+            .buttonStyle(PlainButtonStyle())
+            .help("NTSC-Paula-Takt (3,580 MHz) wie bei US-Amigas — Module klingen minimal höher und laufen etwas schneller als mit PAL.")
+        }
+        .padding(2)
+        .background(theme == .workbench ? Color.lightSurfaceAlt : Color.spaceBackground.opacity(0.4))
+        .cornerRadius(6)
+    }
+
+    private var inactiveControlColor: Color {
+        theme == .workbench ? .lightTextSecondary : .spaceTextSecondary
     }
     
     // Einheitliche Optik der kleinen Transport-Buttons (Stop, Positions- und

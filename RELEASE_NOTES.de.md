@@ -1,3 +1,9 @@
+## 1.5.25 — 2026-07-11
+
+- Die Kopfzeile zeigt vor BPM die Anzahl der tatsächlich verwendeten Pattern-Kanäle.
+- PAL/NTSC liegt jetzt neben dem Master-Oszilloskop und ist nur bei Paula-basierten MOD-Formaten verfügbar.
+- Quick Look rendert und cached jetzt eine schnelle 60-Sekunden-Audiovorschau; nicht unterstützte Dateien zeigen einen lesbaren Fehler statt eines endlosen Ladeindikators.
+
 Die macOS-App spielt jetzt **Impulse-Tracker-Module (`.it`)** im Sample- und Instrument-Modus. Die neue Engine deckt native IT-2.14-/2.15-Wiedergabe vom Parser über Echtzeit-Audio bis CLI-Rendering, Drag & Drop und Quick Look ab.
 
 ## Neu
