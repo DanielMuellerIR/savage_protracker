@@ -7,7 +7,7 @@ Diese Datei ist die zentrale Projektdokumentation. Sie beschreibt die Architektu
 ## Typ & Zweck
 - **Typ:** GUI-App
 - **Zweck:** Nativer Amiga/Tracker-Modul-Player (MOD/S3M/XM/IT) mit SwiftUI, AVAudioEngine und Quick-Look-Plugin; plus HTML5-Variante.
-- **Plattform:** macOS-GUI, iOS
+- **Plattform:** macOS-GUI. `SavageModPlayerCore` ist iOS-tauglich deklariert (`.iOS(.v16)` in `Package.swift`, `#if os(iOS)`-Zweige im Coordinator), ein iOS-App-Target oder -Build-Pfad existiert aber nicht — iOS ist Option, kein Ist-Zustand.
 
 ## Datei-Verzeichnis
 
@@ -195,9 +195,9 @@ Report `2026-07-05` (MiniMax-Audit, gegen aktuellen Code verifiziert): von 11 re
 - **#6** totes `spaceSurfaceHover` entfernt, **#7** `try? removeItem`→`do/catch`, **#13** `@inline(__always)` auf `renderChannelSample`.
 - **#9/#10/#12** Light-Theme-Farben semantisch umbenannt (`amigaOrange`=blau→`lightAccent` usw.) + zentraler `Color.accent(theme)`-Helper.
 
-**Noch offen (bewusst aufgeschoben):**
-- **#3** `exportActiveModToWav` bricht per naiver Bedingung ab statt via `state.endReached` — kann bei Bxx-Position-Jump auf der letzten Position zu früh stoppen. Mit der XM-Arbeit prüfen (Verhaltensänderung am WAV-Export).
-- **#11** Live-Render-Block und `advanceRowForProbe` sind ~80 Zeilen duplizierte Sequencer-Logik (Pattern-Break/Position-Jump/Loop/Delay), subtil auseinandergelaufen — Zusammenführen ist audio-korrektheits-riskant, eigener Task mit Tests.
+**Ursprünglich aufgeschoben, inzwischen beide erledigt (verifiziert 2026-07-12):**
+- **#3** `exportActiveModToWav` bricht seit dem IT-Ausbau über `state.endReached` ab und trimmt zusätzlich am exakten `state.endReachedFrame` (v1.5.27) — der ursprünglich bemängelte naive Abbruch existiert nicht mehr.
+- **#11** Die duplizierte Sequencer-Logik (Live-Render-Block vs. `advanceRowForProbe`) wurde in IT-004 (v1.5.5) im gemeinsamen `SequencerCore` zusammengeführt, abgesichert durch den IT-003-Sequencer-Trace.
 
 Hinfällig im Report: #4 (bereits gefixt), #5 (Fehlalarm), #8 (Playlist-UI umgebaut).
 
@@ -214,11 +214,11 @@ Swift-Variante um das XM-Format erweitert — eine eigene Instrument-Engine (Ent
 
 **Bewusst vereinfacht / offen (dokumentiert im Code):**
 - **Amiga-Frequenz-XMs** (`flags` Bit0 = 0, selten) werden vorerst über das lineare Modell approximiert — echte Amiga-Periodentabelle ist ein Feinschliff (TODO in `configure`).
-- **Hxy** (globales Volume-Slide, braucht einen Per-Tick-Hook im Coordinator) und **Rxy** (Multi-Retrig mit Volume-Modi) noch nicht umgesetzt; **Gxx** (Set Global Volume) läuft.
+- **Hxy** (globales Volume-Slide) und **Rxy** (Multi-Retrig mit Volume-Modi) sind seit v1.5.29 (2026-07-12) umgesetzt: Hxy läuft über `state.globalVolumeSlide` im `SequencerCore` (nur Folgeticks, Skala 0...64, eigenes Kanal-Memory `xmGlobalVolumeSlideMemory`); Rxy nutzt den bestehenden Retrigger-Mechanismus plus die IT-Qxy-Volume-Modus-Tabelle und merkt sich wie FT2 beide Nibbles getrennt. Regressionstests: `testXMGlobalVolumeSlidePerTickWithMemory` (Sequencer-Pfad) + `testXMMultiRetrigAppliesVolumeModeAndMemory` (inkl. E9x-bleibt-neutral). A/B: alle 8 Test-XM unverändert oder besser (keiner nutzt H/R — Attribution per Stash-Vergleich geprüft). Bewusste Vereinfachung: FT2s zeilenübergreifender Retrig-Zähler und die Volume-Column-Wechselwirkungen sind nicht nachgebildet (Retrig auf `tick % y == 0`).
 - **restartPos** ignoriert (Song wrappt auf 0); Order-Einträge ≥ numPatterns → leeres Pattern.
-- XM-Effekt-Memory für 1xx/2xx/Axy/5xy/6xy ist implementiert (Param 0 =
-  letzter Nicht-Null-Parameter dieses Effekt-Typs); Hxy/Pxy/Rxy-Memory bleibt
-  optionaler Feinschliff mit den noch offenen Effekten.
+- XM-Effekt-Memory für 1xx/2xx/Axy/5xy/6xy/Hxy/Rxy ist implementiert (Param 0 =
+  letzter Nicht-Null-Parameter dieses Effekt-Typs; Rxy pro Nibble); nur
+  Pxy-Memory bleibt optionaler Feinschliff.
 
 **Test-Korpus:** 8 echte XM von Battle of the Bits liegen (gitignored) in `audio/` — der Realwelt-Test `XMParserTests/testRealXMFilesParseAndRender` parst + rendert sie (8–32 Kanäle, alle liefern hörbares Signal).
 
@@ -385,7 +385,7 @@ XM-Kern (M0–M5) steht, committet, getestet; im echten App-GUI verifiziert (spi
    ~halbiert (32ch 127 → 63 %, 4ch 65 → 37 %). Kernursachen (Disc-Timer-@State,
    2048-Zellen-Grid-ScrollView, 32 Streifen-Buttons) per Profiler gefunden + gefixt
    (Grid + Scopes als je EIN Canvas; VisualizerState/TransportState-Split).
-4. **Deferred aus den Meilensteinen:** Amiga-Frequenz-XMs (echte Periodentabelle statt linearer Näherung); XM-Effekte **Hxy** (globales Vol-Slide, braucht Per-Tick-Hook im Coordinator) + **Rxy** (Multi-Retrig); Memory/Feinheiten für die noch offenen XM-Effekte.
+4. **Deferred aus den Meilensteinen:** Amiga-Frequenz-XMs (echte Periodentabelle statt linearer Näherung); Pxy-Effekt-Memory. — XM **Hxy** + **Rxy** sind seit v1.5.29 (2026-07-12) umgesetzt (Details im Abschnitt „Bewusst vereinfacht / offen").
 5. **Länge-1-Modul: Headless-Test** — ✅ ERLEDIGT (2026-07-09). Die Crash-verhindernde Arithmetik wurde aus `PositionSlider` in den pure Core-Helfer `SongPositionScale` ausgelagert (der eigentliche SwiftUI-`Slider`-Crash bei `mod.length == 1` ist selbst nicht headless reproduzierbar). Regressionstest `LengthOneModuleTests` — Invariante „Slider-Range nie leer" (Längen 0/1/2/…) + Länge-1-Modul parst/rendert/seekt ohne Crash. Repro-Datei `audio/_ZZ_len1_crashtest.xm` entfernt.
 6. **Release** — ✅ ERLEDIGT (2026-07-10): v1.5.0 auf GitHub veröffentlicht (Tag + notarisiertes DMG, Notary-Profil per `NOTARY_PROFILE`-Env). READMEs auf XM aktualisiert, neuer Screenshot (32-Kanal-XM „Razer City", Dark Mode), Release-Notes EN/DE neu geschrieben.
 

@@ -319,4 +319,39 @@ final class CoordinatorSequencingTests: XCTestCase {
         XCTAssertEqual(delayWrapCounters, [2, 1, 0],
                        "EE2 muss die heutigen drei Row-2-Wiederholungen exakt bewahren")
     }
+
+    /// XM Hxy senkt (bzw. hebt) die globale Lautstärke auf jedem Folgetick der
+    /// Zeile; H00 nutzt das Kanal-Memory. Läuft über den echten Render-Block,
+    /// damit der SequencerCore-Pfad (Row-Reset + Per-Tick-Anwendung) geprüft ist.
+    func testXMGlobalVolumeSlidePerTickWithMemory() throws {
+        let empty = Note(instrument: 0, period: 0, effectId: 0, effectData: 0)
+        func effect(_ id: Int, _ data: Int) -> Note {
+            Note(instrument: 0, period: 0, effectId: id, effectData: data)
+        }
+        func emptyRow() -> Row { Row(notes: [Note](repeating: empty, count: 4)) }
+        var rows: [Row] = [
+            Row(notes: [effect(ModuleEffect.globalVolumeSlide, 0x04), empty, empty, empty]),
+            Row(notes: [effect(ModuleEffect.globalVolumeSlide, 0x00), empty, empty, empty])
+        ]
+        rows += (0..<6).map { _ in emptyRow() }
+        let mod = Mod(
+            name: "hxy",
+            length: 1,
+            patternTable: [0],
+            instruments: [nil],
+            patterns: [Pattern(rows: rows)],
+            channelCount: 4,
+            format: .xm,
+            linearFrequency: true
+        )
+        let traces = try renderBlockTraces(mod: mod, durationSeconds: 0.5)
+        let afterRow0 = try XCTUnwrap(traces.first { $0.row == 1 })
+        XCTAssertEqual(afterRow0.globalVolume, 44,
+                       "H04 muss auf den fünf Folgeticks von Row 0 je 4 abziehen")
+        let afterRow1 = try XCTUnwrap(traces.first { $0.row == 2 })
+        XCTAssertEqual(afterRow1.globalVolume, 24,
+                       "H00 muss den gemerkten 04-Parameter weiterverwenden")
+        XCTAssertEqual(try XCTUnwrap(traces.last).globalVolume, 24,
+                       "ohne weiteren H-Befehl bleibt die globale Lautstärke stehen")
+    }
 }

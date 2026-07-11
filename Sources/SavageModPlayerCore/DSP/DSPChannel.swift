@@ -284,6 +284,14 @@ public final class DSPChannel: Sendable {
     nonisolated(unsafe) public var xmPortaUpMemory: Int = 0
     nonisolated(unsafe) public var xmPortaDownMemory: Int = 0
     nonisolated(unsafe) public var xmVolumeSlideMemory: Int = 0
+    // XM Hxy/Rxy: H-Memory liest der Sequencer (globale Lautstärke), Rxy merkt
+    // sich wie FT2 beide Nibbles (Volume-Modus x, Intervall y) getrennt.
+    nonisolated(unsafe) public var xmGlobalVolumeSlideMemory: Int = 0
+    nonisolated(unsafe) public var xmMultiRetrigVolumeMemory: Int = 0
+    nonisolated(unsafe) public var xmMultiRetrigIntervalMemory: Int = 0
+    // Rxy auf dieser Row aktiv? Nur dann verändert der Retrigger die
+    // Lautstärke nach der Q-/R-Modus-Tabelle (MOD E9x bleibt neutral).
+    nonisolated(unsafe) private var xmMultiRetrigActive = false
     
     // Temp-Zustände für Ticks
     nonisolated(unsafe) public var setInstrument: Instrument?
@@ -422,6 +430,10 @@ public final class DSPChannel: Sendable {
         xmPortaUpMemory = 0
         xmPortaDownMemory = 0
         xmVolumeSlideMemory = 0
+        xmGlobalVolumeSlideMemory = 0
+        xmMultiRetrigVolumeMemory = 0
+        xmMultiRetrigIntervalMemory = 0
+        xmMultiRetrigActive = false
 
         setInstrument = nil
         setSample = nil
@@ -766,6 +778,7 @@ public final class DSPChannel: Sendable {
         tremolo = false
         arpActive = false
         retrigger = 0
+        xmMultiRetrigActive = false
         delayNote = -1
         cutNoteTick = -1
         keyOffTick = -1
@@ -1099,6 +1112,7 @@ public final class DSPChannel: Sendable {
         self.tremolo = false
         self.arpActive = false
         self.retrigger = 0
+        self.xmMultiRetrigActive = false
         self.delayNote = -1
         // Tremor gilt nur auf Rows mit Ixy; der Zähler läuft aber über
         // Row-Grenzen weiter (ST3-Verhalten), darum hier kein tremorCount-Reset.
@@ -1284,6 +1298,13 @@ public final class DSPChannel: Sendable {
             } else if effectLow > 0 {
                 self.panSlide = -Float(effectLow)
             }
+        case ModuleEffect.multiRetrig: // XM Rxy: Retrigger alle y Ticks, Volume-Modus x
+            // FT2 merkt sich beide Nibbles getrennt; 0 = letzter Wert.
+            if effectHigh > 0 { xmMultiRetrigVolumeMemory = effectHigh }
+            if effectLow > 0 { xmMultiRetrigIntervalMemory = effectLow }
+            retriggerVolumeMode = xmMultiRetrigVolumeMemory
+            retrigger = max(1, xmMultiRetrigIntervalMemory)
+            xmMultiRetrigActive = true
         case ModuleEffect.extraFinePortaUp: // XM X1x: einmalig Periode -x (höher)
             applyFinePeriod(delta: -Float(effectData))
         case ModuleEffect.extraFinePortaDown: // XM X2x: einmalig Periode +x (tiefer)
@@ -1767,6 +1788,9 @@ public final class DSPChannel: Sendable {
                 }
             } else if tick > 0 && (tick % self.retrigger) == 0 {
                 self.sampleIndex = 0.0
+                // XM Rxy verändert beim Retrigger zusätzlich die Lautstärke
+                // (gleiche Modus-Tabelle wie IT Qxy); MOD E9x bleibt neutral.
+                if xmMultiRetrigActive { applyITRetriggerVolume() }
             }
         }
         else if self.delayNote >= 0 && self.delayNote == tick {

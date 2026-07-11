@@ -394,6 +394,46 @@ final class DSPChannelTimingTests: XCTestCase {
                        "A00 muss den gespeicherten A20-Parameter weiterverwenden")
     }
 
+    /// XM Rxy: Retrigger alle y Ticks verändert die Lautstärke nach der
+    /// FT2-Modus-Tabelle (Modus 1 = -1 je Retrigger); R00 nutzt das getrennte
+    /// Nibble-Memory. MOD E9x retriggt dagegen ohne Volume-Änderung.
+    func testXMMultiRetrigAppliesVolumeModeAndMemory() {
+        let ch = makeXMChannel()
+        ch.volume = 32
+        ch.currentVolume = 32
+
+        // R12: Modus 1 (-1), Intervall 2 → bei Speed 6 Retrigger auf Tick 2 und 4.
+        ch.playNote(Note(instrument: 0, period: 0,
+                         effectId: ModuleEffect.multiRetrig, effectData: 0x12),
+                    instruments: [nil])
+        ch.playing = true
+        playRow(ch, ticksPerRow: 6)
+        XCTAssertEqual(ch.currentVolume, 30, accuracy: 0.001,
+                       "R12 muss zweimal retriggen und je -1 anwenden")
+
+        // R00 muss beide gemerkten Nibbles (Modus 1, Intervall 2) weiterverwenden.
+        ch.playNote(Note(instrument: 0, period: 0,
+                         effectId: ModuleEffect.multiRetrig, effectData: 0x00),
+                    instruments: [nil])
+        ch.playing = true
+        playRow(ch, ticksPerRow: 6)
+        XCTAssertEqual(ch.currentVolume, 28, accuracy: 0.001,
+                       "R00 muss den gespeicherten R12-Parameter weiterverwenden")
+
+        // MOD E9x nutzt denselben Retrigger-Mechanismus, darf die Lautstärke
+        // aber nicht verändern.
+        let modChannel = DSPChannel(index: 0)
+        modChannel.volume = 32
+        modChannel.currentVolume = 32
+        modChannel.playNote(Note(instrument: 0, period: 0,
+                                 effectId: 0xE9, effectData: 2),
+                            instruments: [nil])
+        modChannel.playing = true
+        playRow(modChannel, ticksPerRow: 6)
+        XCTAssertEqual(modChannel.currentVolume, 32, accuracy: 0.001,
+                       "E92 retriggt ohne Volume-Änderung")
+    }
+
     /// Volume-Column Set Panning (0xC0..0xCF) setzt das Panorama (y<<4)/255.
     func testXMVolumeColumnSetPanning() {
         let ch = makeXMChannel()

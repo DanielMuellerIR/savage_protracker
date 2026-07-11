@@ -75,6 +75,14 @@ enum SequencerCore {
                 )
             }
         }
+        // XM Hxy: globales Volume-Slide wirkt wie alle XM-Slides nur auf den
+        // Folgeticks der Zeile; die XM-Skala ist 0...64 (IT nutzt 0...128).
+        if mod.format == .xm, state.globalVolumeSlide != 0, state.tick > 0 {
+            state.globalVolume = max(
+                0,
+                min(64, state.globalVolume + Float(state.globalVolumeSlide))
+            )
+        }
 
         let clockRate = state.clockRateOverride > 0
             ? state.clockRateOverride
@@ -193,6 +201,11 @@ enum SequencerCore {
             state.globalVolumeSlide = 0
             state.patternDelaySeen = false
             channels.first?.itVoicePool?.resetPatternChannelRowEffects()
+        }
+        if mod.format == .xm {
+            // Hxy gilt nur auf Zeilen mit H-Befehl; ohne neuen Befehl endet
+            // der globale Slide am Zeilenende.
+            state.globalVolumeSlide = 0
         }
         for i in 0..<logicalChannelCount {
             let note = row.notes[i]
@@ -329,6 +342,19 @@ enum SequencerCore {
             }
         } else if note.hasEffect && note.effectId == ModuleEffect.globalVolume {
             state.globalVolume = Float(min(64, max(0, note.effectData)))
+        } else if note.hasEffect && note.effectId == ModuleEffect.globalVolumeSlide {
+            // XM Hxy: x hebt, y senkt die globale Lautstärke pro Folgetick;
+            // wie in FT2 gewinnt das Up-Nibble, wenn beide gesetzt sind.
+            // Parameter 0 nutzt den letzten Nicht-Null-Parameter des Kanals.
+            var value = note.effectData
+            if value == 0 {
+                value = channel.xmGlobalVolumeSlideMemory
+            } else {
+                channel.xmGlobalVolumeSlideMemory = value
+            }
+            let high = (value >> 4) & 0x0F
+            let low = value & 0x0F
+            state.globalVolumeSlide = high > 0 ? high : -low
         }
     }
 
