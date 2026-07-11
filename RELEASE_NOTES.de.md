@@ -1,4 +1,4 @@
-Die macOS-App spielt jetzt **Impulse-Tracker-Module (`.it`)** im Sample- und Instrument-Modus — das fünfte unterstützte Tracker-Format nach ProTracker MOD, Soundtracker, ScreamTracker 3 und FastTracker II. Die neue Engine deckt native IT-2.14-/2.15-Wiedergabe vom Parsen bis zum Echtzeit-Audio ab, einschließlich CLI-Rendering, Drag & Drop und Quick Look, und meldet OpenMPT-spezifische Fähigkeiten strukturiert.
+Die macOS-App spielt jetzt **Impulse-Tracker-Module (`.it`)** im Sample- und Instrument-Modus — das fünfte unterstützte Tracker-Format nach ProTracker MOD, Soundtracker, ScreamTracker 3 und FastTracker II. Version 1.5.29 vervollständigt außerdem zwei FastTracker-II-Effekte und strukturiert die UI-Implementierung der App neu, ohne Darstellung oder Verhalten zu verändern.
 
 ## Neu
 
@@ -11,6 +11,8 @@ Die macOS-App spielt jetzt **Impulse-Tracker-Module (`.it`)** im Sample- und Ins
 
 ## Verbessert
 
+- **FastTracker-II-Effekte**: `Hxy` (Global-Volume-Slide) folgt jetzt der FT2-Tick- und Memory-Semantik; `Rxy` (Multi-Retrigger) wendet die FT2-Lautstärkemodi an und merkt sich beide Parameter-Nibbles unabhängig.
+- **Wartbarkeit**: Die vormals monolithische `MainView.swift`-Implementierung ist in neun thematisch abgegrenzte Quelldateien aufgeteilt. Das ist ein interner Refactor mit Regressionstests für das unveränderte Verhalten.
 - Tracker-Grid und Oszilloskope zeigen nur die tatsächlich im Song belegten Kanäle unter ihrer ursprünglichen Kanalnummer; der Header zeigt die genutzte Kanalzahl vor dem BPM.
 - Quick Look rendert und cached eine schnelle 60-Sekunden-Audiovorschau; nicht unterstützte Dateien zeigen eine lesbare Fehlermeldung statt eines endlosen Ladeindikators.
 - PAL/NTSC ist neben das Master-Oszilloskop gewandert und nur noch für Paula-basierte MOD-Formate verfügbar.
@@ -18,7 +20,8 @@ Die macOS-App spielt jetzt **Impulse-Tracker-Module (`.it`)** im Sample- und Ins
 
 ## Verifikation
 
-- Die vollständige Swift-Testsuite, gezielte Filter-/NNA-/Stereo-Fixtures, ein 64-Kanal-/256-Voice-Release-Stresstest, die JS↔Swift-MOD-Parität, der signierte App-Build und die Quick-Look-Extension sind grün.
+- Die vollständige Swift-Testsuite (227 Tests), gezielte Filter-/NNA-/Stereo-Fixtures, ein 64-Kanal-/256-Voice-Release-Stresstest, die JS↔Swift-MOD-Parität, der signierte App-Build und die Quick-Look-Extension sind grün.
+- Die neuen XM-Effekttests decken das Tick-/Memory-Verhalten von `Hxy` sowie die Lautstärkemodi und das Nibble-Memory von `Rxy` ab; A/B-Renderings aller acht lokalen XM-Fixtures sind unverändert oder besser.
 - Die Wiedergabe wurde gegen die eingefrorene `openmpt123`-/libopenmpt-Referenz verglichen, für Filter- und Kompatibilitätsdetails zusätzlich gegen die Quelltexte von OpenMPT und Schism Tracker.
 
 ## Bekannte Grenzen

@@ -1,4 +1,4 @@
-The macOS app now plays **Impulse Tracker modules (`.it`)** in sample and instrument mode — the fifth supported tracker format after ProTracker MOD, Soundtracker, ScreamTracker 3, and FastTracker II. The new engine covers native IT 2.14/2.15 playback from parsing through real-time audio, CLI rendering, drag & drop, and Quick Look, and reports OpenMPT-specific capabilities in a structured way.
+The macOS app now plays **Impulse Tracker modules (`.it`)** in sample and instrument mode — the fifth supported tracker format after ProTracker MOD, Soundtracker, ScreamTracker 3, and FastTracker II. Version 1.5.29 also completes two FastTracker II effects and restructures the app UI implementation without changing its appearance or behavior.
 
 ## Added
 
@@ -11,6 +11,8 @@ The macOS app now plays **Impulse Tracker modules (`.it`)** in sample and instru
 
 ## Improved
 
+- **FastTracker II effects**: `Hxy` global-volume slide now follows FT2 tick and memory semantics; `Rxy` multi-retrigger applies the FT2 volume modes and remembers both parameter nibbles independently.
+- **Maintainability**: the former monolithic `MainView.swift` implementation is split into nine focused source files. This is an internal refactor with regression-tested behavior.
 - The tracker grid and oscilloscopes show only the channels actually used by the song, under their original channel numbers; the header shows the used channel count before the BPM.
 - Quick Look renders and caches a fast 60-second audio preview; unsupported files show a readable error instead of an endless loading indicator.
 - PAL/NTSC moved next to the master oscilloscope and is available only for Paula-based MOD formats.
@@ -18,7 +20,8 @@ The macOS app now plays **Impulse Tracker modules (`.it`)** in sample and instru
 
 ## Verification
 
-- The full Swift suite, dedicated filter/NNA/stereo fixtures, a 64-channel/256-voice release stress test, JS↔Swift MOD parity, the signed app build, and the Quick Look extension pass.
+- The full Swift suite (227 tests), dedicated filter/NNA/stereo fixtures, a 64-channel/256-voice release stress test, JS↔Swift MOD parity, the signed app build, and the Quick Look extension pass.
+- The new XM effect tests cover `Hxy` tick/memory behavior and `Rxy` volume modes plus per-nibble memory; A/B renders of all eight local XM fixtures are unchanged or improved.
 - Playback was compared against the pinned `openmpt123`/libopenmpt reference and, for filter and compatibility details, the OpenMPT and Schism Tracker source implementations.
 
 ## Known limitations
