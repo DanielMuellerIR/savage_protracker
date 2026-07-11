@@ -87,7 +87,7 @@ func noteName(_ key: Int) -> String {
 func printInfo(_ mod: Mod) {
     print("Name:            \(mod.name.isEmpty ? "(leer)" : mod.name)")
     print("Format:          \(mod.format)")
-    print("Kanäle:          \(mod.channelCount)")
+    print("Kanäle:          \(mod.usedChannelCount) genutzt, \(mod.displayChannelCount) sichtbar, \(mod.channelCount) technisch")
     print("Song-Länge:      \(mod.length) Positionen")
     print("Patterns:        \(mod.patterns.count)")
     print("Order-Table:     \(mod.patternTable)")

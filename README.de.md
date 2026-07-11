@@ -76,7 +76,7 @@ Die Transport-Tasten erklären sich von selbst, doch die tracker-typischen Anzei
 
 **Kopfzeilen-Anzeigen**
 
-- **CH** (genutzte Kanäle): zählt Pattern-Kanäle, die tatsächlich Noten, Instrumente, Lautstärkeangaben oder Effekte enthalten; reservierte, leere Kanäle zählen nicht mit.
+- **CH** (genutzte Kanäle): zählt Pattern-Kanäle, die tatsächlich Noten, Instrumente, Lautstärkeangaben oder Effekte enthalten; reservierte, leere Kanäle zählen nicht mit. Tracker-Grid und Kanal-Oszilloskope zeigen genau diese Kanäle unter ihrer ursprünglichen Kanalnummer, sodass weder ITs reservierte 64-Kanal-Kapazität noch Lücken leere Spalten oder eine unnötige Scrollbar erzeugen.
 - **BPM** (Beats per Minute): Wiedergabe-Tempo. Der Amiga-Standard ist 125. Mit −/+ veränderbar; ein Song kann sein Tempo per Effekt auch selbst umstellen. Bei Songwechsel wird der Header-Wert des neuen Moduls gesetzt.
 - **SPD** (Speed): Ticks pro Pattern-Zeile (Amiga-Standard 6). Kleiner = die Zeilen laufen schneller durch, größer = langsamer. Zusammen mit BPM ergibt das die effektive Geschwindigkeit.
 - **PAT** (Pattern-Position): aktuelles Pattern und Gesamtzahl in der Abspielreihenfolge des Songs. Ein Pattern ist ein Notenblock (meist 64 Zeilen); der Song spielt sie in dieser Reihenfolge ab.

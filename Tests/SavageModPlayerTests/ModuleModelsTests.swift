@@ -391,6 +391,34 @@ final class ModuleModelsTests: XCTestCase {
         )
 
         XCTAssertEqual(module.usedChannelCount, 2)
+        XCTAssertEqual(module.displayChannelIndices, [2, 17])
+        XCTAssertEqual(module.displayChannelCount, 2)
+    }
+
+    func testITPreviewUsesGlobalSamplePoolAndSkipsEmptyMappingSlots() throws {
+        let sample = Sample(
+            pcm: [0.25, -0.25], loopStart: 0, loopLength: 0, loopType: .none,
+            volume: 64, finetune: 0, name: "Global",
+            itProperties: ITSampleProperties(c5Speed: 44_100, globalVolume: 64, defaultPanning: nil)
+        )
+        let entries = try (0..<NoteSampleMapping.entryCount).map { note in
+            try NoteSampleMapping.Entry(targetNote: note == 12 ? 24 : note, sampleID: note == 12 ? 1 : 0)
+        }
+        let mapped = Instrument(
+            index: 1, name: "Mapped", samples: [],
+            noteSampleMapping: try NoteSampleMapping(entries: entries)
+        )
+        let placeholder = Instrument(index: 2, name: "Leer", samples: [])
+        let module = Mod(
+            name: "IT Preview", length: 0, patternTable: [],
+            instruments: [nil, mapped, placeholder], samplePool: [nil, sample],
+            patterns: [], channelCount: 64, format: .it
+        )
+
+        let selection = try XCTUnwrap(module.previewSelection(instrumentIndex: 1))
+        XCTAssertEqual(selection.sample.name, "Global")
+        XCTAssertEqual(selection.targetNote, 24)
+        XCTAssertEqual(module.playableInstrumentIndices, [1])
     }
 
     func testUsedChannelCountFallsBackToDeclaredCountForEmptySong() {

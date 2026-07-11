@@ -32,7 +32,7 @@ struct RowIndexCell: View {
 struct ChannelCellsCanvas: View, Equatable {
     let pattern: SavageModPlayerCore.Pattern
     let patternIndex: Int
-    let channelCount: Int
+    let channelIndices: [Int]
     let rowCount: Int
     let cellWidth: CGFloat
     let showVolume: Bool
@@ -40,7 +40,7 @@ struct ChannelCellsCanvas: View, Equatable {
     let theme: PlayerTheme
 
     nonisolated static func == (lhs: ChannelCellsCanvas, rhs: ChannelCellsCanvas) -> Bool {
-        lhs.patternIndex == rhs.patternIndex && lhs.channelCount == rhs.channelCount
+        lhs.patternIndex == rhs.patternIndex && lhs.channelIndices == rhs.channelIndices
             && lhs.rowCount == rhs.rowCount && lhs.cellWidth == rhs.cellWidth
             && lhs.showVolume == rhs.showVolume && lhs.fontSize == rhs.fontSize && lhs.theme == rhs.theme
     }
@@ -58,12 +58,13 @@ struct ChannelCellsCanvas: View, Equatable {
             for r in 0..<rowCount {
                 let y = CGFloat(r) * rowHeight
                 let notes = pattern.rows[r].notes
-                for c in 0..<min(channelCount, notes.count) {
-                    let colX = CGFloat(c) * cellWidth
+                for (column, channelIndex) in channelIndices.enumerated()
+                    where channelIndex < notes.count {
+                    let colX = CGFloat(column) * cellWidth
                     // Kanal-Trennlinie.
                     ctx.fill(Path(CGRect(x: colX, y: y, width: 1, height: rowHeight)), with: .color(sepColor))
 
-                    let n = notes[c]
+                    let n = notes[channelIndex]
                     let hasNote = n.period > 0 || n.key >= 0
                     let hasInst = n.instrument > 0
                     let hasEff = n.hasEffect
@@ -151,7 +152,8 @@ struct GridCellsBlock: View, Equatable {
     let showVolume: Bool
     let fontSize: CGFloat
     let rowCount: Int
-    let channelCount: Int
+    let channelIndices: [Int]
+    private var channelCount: Int { channelIndices.count }
     // Für die eigene H-Scrollbar in TrackerGridView: der GeometryReader schreibt den
     // aktuellen Offset hierhin. NICHT im == — Scroll-Updates laufen über die
     // ScrollView-Geometrie, nicht über einen Block-Rerender.
@@ -167,7 +169,7 @@ struct GridCellsBlock: View, Equatable {
             && lhs.showVolume == rhs.showVolume
             && lhs.fontSize == rhs.fontSize
             && lhs.rowCount == rhs.rowCount
-            && lhs.channelCount == rhs.channelCount
+            && lhs.channelIndices == rhs.channelIndices
     }
 
     @ViewBuilder
@@ -205,7 +207,7 @@ struct GridCellsBlock: View, Equatable {
             // Horizontal scrollbare Kanalspalten — ALLE Zellen in EINEM Canvas.
             horizontalWrapper {
                 ChannelCellsCanvas(
-                    pattern: pattern, patternIndex: patternIndex, channelCount: channelCount,
+                    pattern: pattern, patternIndex: patternIndex, channelIndices: channelIndices,
                     rowCount: rowCount, cellWidth: cellStride, showVolume: showVolume,
                     fontSize: fontSize, theme: theme
                 )
@@ -219,13 +221,14 @@ struct TrackerGridView: View {
     let pattern: SavageModPlayerCore.Pattern
     let patternIndex: Int
     let currentRow: Int
+    let channelIndices: [Int]
     let theme: PlayerTheme
     var onSeekRow: (Int) -> Void = { _ in }
 
     @State private var hScrollOffset: CGFloat = 0
 
-    private var channelCount: Int { pattern.rows.first?.notes.count ?? 4 }
     private var rowCount: Int { pattern.rows.count }
+    private var channelCount: Int { max(1, channelIndices.count) }
 
     // Eigene horizontale Scrollbar: duenn, dezent, nur wenn Inhalt breiter als View.
     @ViewBuilder
@@ -290,7 +293,7 @@ struct TrackerGridView: View {
                                 showVolume: showVolume,
                                 fontSize: fontSize,
                                 rowCount: rowCount,
-                                channelCount: channelCount,
+                                channelIndices: channelIndices.isEmpty ? [0] : channelIndices,
                                 hScrollOffset: $hScrollOffset,
                                 onSeekRow: onSeekRow
                             )

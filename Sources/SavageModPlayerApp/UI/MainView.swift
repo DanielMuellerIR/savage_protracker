@@ -268,7 +268,8 @@ struct MainView: View {
                            !mod.patternTable.isEmpty {
                             // Grid + Zeilenmarkierung beobachten transport (row-rate),
                             // damit die Zeilenwechsel MainView nicht neu evaluieren.
-                            TrackerGridContainer(transport: coordinator.transport, mod: mod, theme: theme,
+                            TrackerGridContainer(transport: coordinator.transport, mod: mod,
+                                                 channelIndices: mod.displayChannelIndices, theme: theme,
                                                  onSeekRow: { row in
                                                      // Zu (aktuelle Position, geklickte Zeile) springen;
                                                      // Tempo wird rekonstruiert. Play/Weiter spielt ab hier.
@@ -1171,8 +1172,9 @@ struct MainView: View {
             if let mod = coordinator.activeMod {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 4) {
-                        ForEach(1..<32) { i in
-                            if i < mod.instruments.count, let inst = mod.instruments[i] {
+                        ForEach(mod.playableInstrumentIndices, id: \.self) { i in
+                            if let inst = mod.instruments[i],
+                               let previewSample = mod.previewSelection(instrumentIndex: i)?.sample {
                                 Button(action: { coordinator.previewInstrument(index: i) }) {
                                     HStack(spacing: 8) {
                                         Text(String(format: "%02d", i))
@@ -1187,7 +1189,7 @@ struct MainView: View {
                                                     .lineLimit(1)
                                                 Spacer()
                                                 
-                                                if (inst.primarySample?.pcm.count ?? 0) > 0 {
+                                                if !previewSample.pcm.isEmpty {
                                                     // Save individual instrument to WAV
                                                     Button(action: { runInstrumentSampleExport(index: i) }) {
                                                         Image(systemName: "square.and.arrow.down")
@@ -1200,7 +1202,7 @@ struct MainView: View {
                                             
                                             // Visual progress bar of length
                                             GeometryReader { geo in
-                                                let lengthRatio = min(1.0, Double(inst.primarySample?.pcm.count ?? 0) / 65536.0)
+                                                let lengthRatio = min(1.0, Double(previewSample.pcm.count) / 65536.0)
                                                 ZStack(alignment: .leading) {
                                                     Rectangle()
                                                         .fill(theme == .workbench ? Color.lightTextPrimary.opacity(0.1) : Color.white.opacity(0.03))
@@ -1212,7 +1214,7 @@ struct MainView: View {
                                             .frame(height: 3)
                                             .cornerRadius(1)
                                             
-                                            Text(String(format: "Len: %d B | Fine: %d | Vol: %d", inst.primarySample?.pcm.count ?? 0, inst.primarySample?.finetune ?? 0, inst.primarySample?.volume ?? 0))
+                                            Text(String(format: "Len: %d B | Fine: %d | Vol: %d", previewSample.pcm.count, previewSample.finetune, previewSample.volume))
                                                 .font(.system(size: 8.5))
                                                 .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.6) : .spaceTextSecondary)
                                         }
@@ -1427,7 +1429,8 @@ struct MainView: View {
             ChannelStripsView(
                 visualizer: coordinator.visualizerState,
                 coordinator: coordinator,
-                channelCount: coordinator.channelCount,
+                channelIndices: coordinator.activeMod?.displayChannelIndices
+                    ?? Array(0..<coordinator.channelCount),
                 theme: theme
             )
 

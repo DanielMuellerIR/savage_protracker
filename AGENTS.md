@@ -563,6 +563,13 @@ Wichtige Leitplanken:
   Harness-Tests, JS-Parität, signierter App-/Quick-Look-Build sowie die sichtbare
   Finder-Leertasten-Wiedergabe von `CarryNNA.it` sind grün. M0 bis M10 sind damit
   vollständig abgeschlossen.
+- **IT-UI-Regel (Version 1.5.26):** Tracker-Grid und Oszilloskope zeigen nur die
+  tatsächlich im Song belegten Kanäle unter ihrer ursprünglichen Kanalnummer;
+  ITs reservierte 64 Pattern-Kanäle und Lücken bleiben eine DSP-Grenze und
+  erzeugen keine leeren UI-Spalten.
+  Die Instrumentliste blendet nicht spielbare Platzhalter aus und löst IT-
+  Instrument-Notemaps über den globalen Sample-Pool auf. Die Vorschau stimmt IT-
+  Samples anhand von C5Speed statt mit der Amiga-Paula-Periode.
 
 ## Fallen / Agent-Hinweise
 

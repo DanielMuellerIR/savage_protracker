@@ -1091,8 +1091,8 @@ public final class ModPlayerCoordinator: ObservableObject {
     public func previewInstrument(index: Int) {
         guard let mod = activeMod, index >= 1 && index < mod.instruments.count,
               let inst = mod.instruments[index],
-              // C-4-Sample über die Keymap (MOD/S3M: das einzige Sample).
-              let smp = inst.sample(forNote: 48), smp.pcm.count > 0 else { return }
+              let selection = mod.previewSelection(instrumentIndex: index) else { return }
+        let smp = selection.sample
 
         // Laufende Vorschau zuerst abbauen — erneuter Klick startet frisch.
         stopPreview()
@@ -1108,6 +1108,15 @@ public final class ModPlayerCoordinator: ObservableObject {
         if mod.format == .s3m {
             // C-4 im ST3-Periodenmodell (Key 48) mit Instrument-C2Spd.
             ch.period = DSPChannel.s3mPeriod(key: 48, c2spd: smp.c2spd)
+        } else if mod.format == .it {
+            // IT stimmt Samples ueber C5Speed. Instrument-Mode kann die
+            // Vorschau-Note zusaetzlich per 120er Notemap transponieren.
+            ch.period = mod.linearFrequency
+                ? DSPChannel.itLinearPeriod(key: selection.targetNote)
+                : DSPChannel.itAmigaPeriod(
+                    key: selection.targetNote,
+                    c5Speed: smp.itProperties?.c5Speed ?? smp.c2spd
+                )
         } else {
             // C-3 note period = 214
             ch.period = 214.0 - Float(smp.finetune)
@@ -1125,8 +1134,19 @@ public final class ModPlayerCoordinator: ObservableObject {
         // sampleSpeed aus der Periode ableiten — dieselbe Formel wie in
         // performTick (Paula-Frequenz / Ausgabe-Rate). clockRate wie im Song-Pfad:
         // S3M nutzt den festen ST3-Takt, MOD den PAL/NTSC-Amiga-Takt.
-        let clockRate = mod.format == .s3m ? 14317056.0 : (self.palClock ? 3546894.6 : 3579545.25)
-        ch.sampleSpeed = ch.currentPeriod > 0 ? (clockRate / Double(ch.currentPeriod)) / sampleRate : 0.0
+        let clockRate = (mod.format == .s3m || mod.format == .it)
+            ? 14317056.0
+            : (self.palClock ? 3546894.6 : 3579545.25)
+        if mod.format == .it {
+            ch.sampleSpeed = Self.itPreviewSampleSpeed(
+                sample: smp,
+                targetNote: selection.targetNote,
+                linearFrequency: mod.linearFrequency,
+                sampleRate: sampleRate
+            )
+        } else {
+            ch.sampleSpeed = ch.currentPeriod > 0 ? (clockRate / Double(ch.currentPeriod)) / sampleRate : 0.0
+        }
 
         // Frame-Budget: geloopte Samples nach ~1,6 s ausklingen lassen (sonst
         // droehnen sie endlos); nicht-geloopte enden ohnehin von selbst, weil
@@ -1145,6 +1165,26 @@ public final class ModPlayerCoordinator: ObservableObject {
         } catch {
             print("Fehler beim Starten der Preview-Engine: \(error)")
         }
+    }
+
+    // IT-Samplevorschau in derselben Stimmung wie die Song-Engine. C-5 spielt
+    // genau mit C5Speed; jede Oktave verdoppelt beziehungsweise halbiert die
+    // Abspielrate. Der getrennte Helfer macht diese Regression hardwarefrei
+    // testbar, obwohl previewInstrument selbst eine AVAudioEngine startet.
+    nonisolated static func itPreviewSampleSpeed(
+        sample: Sample,
+        targetNote: Int,
+        linearFrequency: Bool,
+        sampleRate: Double
+    ) -> Double {
+        guard sampleRate > 0 else { return 0 }
+        let c5Speed = sample.itProperties?.c5Speed ?? sample.c2spd
+        guard c5Speed > 0 else { return 0 }
+        if linearFrequency {
+            return Double(c5Speed) * pow(2.0, Double(targetNote - 60) / 12.0) / sampleRate
+        }
+        let period = DSPChannel.itAmigaPeriod(key: targetNote, c5Speed: c5Speed)
+        return period > 0 ? 14_317_056.0 / Double(period) / sampleRate : 0
     }
 
     // Minimaler Render-Block der Vorschau: genau EIN Kanal, mittig gepannt, ohne
@@ -1578,11 +1618,15 @@ public final class ModPlayerCoordinator: ObservableObject {
     
     public func exportInstrumentToWav(index: Int, destinationURL: URL) throws {
         guard let mod = activeMod, index >= 1 && index < mod.instruments.count,
-              let inst = mod.instruments[index],
-              let smp = inst.primarySample, smp.pcm.count > 0 else { return }
+              let selection = mod.previewSelection(instrumentIndex: index) else { return }
+        let smp = selection.sample
         let pcm = smp.pcm
 
-        let sampleRate = 22050.0 // Standard Amiga sample rate
+        // IT-Samples mit ihrer C5-Bezugsrate exportieren; die bestehenden
+        // MOD-/S3M-/XM-Exportregeln bleiben unveraendert.
+        let sampleRate = mod.format == .it
+            ? Double(smp.itProperties?.c5Speed ?? smp.c2spd)
+            : 22050.0
         guard let monoFormat = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1) else {
             throw NSError(domain: "ModPlayer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Konnte Mono-Format nicht erstellen"])
         }

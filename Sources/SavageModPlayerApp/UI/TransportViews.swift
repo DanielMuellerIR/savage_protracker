@@ -63,6 +63,7 @@ struct ResizableDivider: View {
 struct TrackerGridContainer: View {
     @ObservedObject var transport: TransportState
     let mod: Mod
+    let channelIndices: [Int]
     let theme: PlayerTheme
     // Klick auf eine Zeile -> zu (aktuelle Position, Zeile) springen.
     var onSeekRow: (Int) -> Void = { _ in }
@@ -73,7 +74,8 @@ struct TrackerGridContainer: View {
         let patternIndex = mod.patternTable[max(0, min(mod.patternTable.count - 1, tableIdx))]
         if patternIndex >= 0, patternIndex < mod.patterns.count {
             TrackerGridView(pattern: mod.patterns[patternIndex], patternIndex: patternIndex,
-                            currentRow: transport.currentRow, theme: theme,
+                            currentRow: transport.currentRow,
+                            channelIndices: channelIndices, theme: theme,
                             onSeekRow: onSeekRow)
         } else {
             Color.clear

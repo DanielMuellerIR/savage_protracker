@@ -380,6 +380,29 @@ final class MultiFormatTests: XCTestCase {
 
     // MARK: - Instrument-Vorschau (eigener Render-Pfad, previewInstrument)
 
+    func testITPreviewUsesC5SpeedAtNativePitch() {
+        let sample = Sample(
+            pcm: [0.25], loopStart: 0, loopLength: 0, loopType: .none,
+            volume: 64, finetune: 0,
+            itProperties: ITSampleProperties(c5Speed: 44_100, globalVolume: 64, defaultPanning: nil)
+        )
+
+        XCTAssertEqual(
+            ModPlayerCoordinator.itPreviewSampleSpeed(
+                sample: sample, targetNote: 60, linearFrequency: true, sampleRate: 44_100
+            ),
+            1.0,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            ModPlayerCoordinator.itPreviewSampleSpeed(
+                sample: sample, targetNote: 72, linearFrequency: true, sampleRate: 44_100
+            ),
+            2.0,
+            accuracy: 0.000_001
+        )
+    }
+
     // Der Preview-Render-Block muss (a) hoerbares Signal liefern, solange das
     // Frame-Budget laeuft, und (b) danach exakt Stille — sonst wuerde ein
     // gelooptes Instrument endlos droehnen. Laeuft rein rechnerisch ueber einen

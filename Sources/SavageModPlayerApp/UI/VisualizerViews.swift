@@ -25,21 +25,22 @@ func formatPlaybackTime(_ sec: Double) -> String {
 struct ChannelStripsView: View {
     let visualizer: VisualizerState      // NICHT @ObservedObject: nur das Canvas-Kind beobachtet
     let coordinator: ModPlayerCoordinator
-    let channelCount: Int
+    let channelIndices: [Int]
     let theme: PlayerTheme
 
     var body: some View {
         GeometryReader { geo in
-            let count = max(1, channelCount)
+            let indices = channelIndices.isEmpty ? [0] : channelIndices
+            let count = indices.count
             let spacing: CGFloat = count > 8 ? 6 : 12
             let minStripWidth: CGFloat = 26
             let ideal = (geo.size.width - spacing * CGFloat(count - 1)) / CGFloat(count)
             let stripWidth = max(minStripWidth, ideal)
             let content = VStack(spacing: 4) {
-                ChannelScopesCanvas(visualizer: visualizer, count: count,
+                ChannelScopesCanvas(visualizer: visualizer, channelIndices: indices,
                                     stripWidth: stripWidth, spacing: spacing, theme: theme)
                     .frame(height: 50)
-                ChannelFootersRow(coordinator: coordinator, count: count,
+                ChannelFootersRow(coordinator: coordinator, channelIndices: indices,
                                   stripWidth: stripWidth, spacing: spacing, theme: theme)
             }
             if ideal >= minStripWidth {
@@ -56,7 +57,7 @@ struct ChannelStripsView: View {
 // den visualizerState und rendert 30×/s — aber als EIN Knoten statt 64.
 struct ChannelScopesCanvas: View {
     @ObservedObject var visualizer: VisualizerState
-    let count: Int
+    let channelIndices: [Int]
     let stripWidth: CGFloat
     let spacing: CGFloat
     let theme: PlayerTheme
@@ -69,10 +70,10 @@ struct ChannelScopesCanvas: View {
             let scopeBg = theme == .workbench ? Color.white : Color.black.opacity(0.2)
             let vuW = min(24, max(6, stripWidth * 0.20))
             let innerGap: CGFloat = 4
-            for i in 0..<count {
-                let colX = CGFloat(i) * (stripWidth + spacing)
+            for (column, channelIndex) in channelIndices.enumerated() {
+                let colX = CGFloat(column) * (stripWidth + spacing)
                 // ---- VU-Meter (12 Segmente) ----
-                let level = i < vuLevels.count ? vuLevels[i] : 0
+                let level = channelIndex < vuLevels.count ? vuLevels[channelIndex] : 0
                 let segCount = 12
                 let segGap: CGFloat = 2
                 let segH = (size.height - 4 - segGap * CGFloat(segCount - 1)) / CGFloat(segCount)
@@ -91,8 +92,8 @@ struct ChannelScopesCanvas: View {
                 let scopeW = max(0, stripWidth - vuW - innerGap)
                 let box = CGRect(x: scopeX, y: 0, width: scopeW, height: size.height)
                 ctx.fill(Path(roundedRect: box, cornerRadius: 3), with: .color(scopeBg))
-                if i < waves.count, scopeW > 1 {
-                    let history = waves[i]
+                if channelIndex < waves.count, scopeW > 1 {
+                    let history = waves[channelIndex]
                     if history.count > 1 {
                         var path = Path()
                         let step = scopeW / CGFloat(history.count - 1)
@@ -124,23 +125,23 @@ struct ChannelScopesCanvas: View {
 // statt SwiftUI-Button (ButtonBehavior ist teuer und war im Profil heiß).
 struct ChannelFootersRow: View {
     @ObservedObject var coordinator: ModPlayerCoordinator
-    let count: Int
+    let channelIndices: [Int]
     let stripWidth: CGFloat
     let spacing: CGFloat
     let theme: PlayerTheme
 
     var body: some View {
         HStack(spacing: spacing) {
-            ForEach(0..<count, id: \.self) { i in
+            ForEach(channelIndices, id: \.self) { channelIndex in
                 HStack(spacing: 4) {
-                    Text("\(i + 1)")
+                    Text("\(channelIndex + 1)")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundColor(theme == .workbench ? .lightTextPrimary.opacity(0.7) : .spaceTextSecondary)
                         .lineLimit(1)
-                    tag("M", on: coordinator.isMuted(channelIndex: i), color: .red)
-                        .onTapGesture { coordinator.toggleMute(channelIndex: i) }
-                    tag("S", on: coordinator.isSoloed(channelIndex: i), color: .green)
-                        .onTapGesture { coordinator.toggleSolo(channelIndex: i) }
+                    tag("M", on: coordinator.isMuted(channelIndex: channelIndex), color: .red)
+                        .onTapGesture { coordinator.toggleMute(channelIndex: channelIndex) }
+                    tag("S", on: coordinator.isSoloed(channelIndex: channelIndex), color: .green)
+                        .onTapGesture { coordinator.toggleSolo(channelIndex: channelIndex) }
                 }
                 .frame(width: stripWidth, alignment: .leading)
             }

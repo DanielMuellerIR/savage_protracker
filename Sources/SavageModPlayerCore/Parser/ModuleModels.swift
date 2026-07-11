@@ -767,6 +767,17 @@ public struct Mod: Sendable, Codable {
     // diesen Wert deshalb als verständliche Anzeige, ohne den DSP-Kanalumfang zu
     // verändern.
     public var usedChannelCount: Int {
+        // Leere oder ausschließlich aus leeren Patterns bestehende Dateien sollen
+        // nicht mit "0 Kanäle" erscheinen. Dann ist die deklarierte Kanalzahl die
+        // einzig sinnvolle Information.
+        let used = usedChannelIndices
+        return used.isEmpty ? channelCount : used.count
+    }
+
+    // Tatsaechlich im Song belegte Kanalindizes. IT kann zwischen benutzten
+    // Kanaelen reservierte Luecken enthalten; die UI blendet diese aus, behaelt
+    // aber die Originalindizes fuer Beschriftung, Mute/Solo und Scope-Daten.
+    public var usedChannelIndices: [Int] {
         var usedChannels = Set<Int>()
 
         for patternIndex in patternTable where patterns.indices.contains(patternIndex) {
@@ -777,10 +788,45 @@ public struct Mod: Sendable, Codable {
             }
         }
 
-        // Leere oder ausschließlich aus leeren Patterns bestehende Dateien sollen
-        // nicht mit "0 Kanäle" erscheinen. Dann ist die deklarierte Kanalzahl die
-        // einzig sinnvolle Information.
-        return usedChannels.isEmpty ? channelCount : usedChannels.count
+        return usedChannels.sorted()
+    }
+
+    public var displayChannelIndices: [Int] {
+        let used = usedChannelIndices
+        return used.isEmpty ? Array(0..<max(1, channelCount)) : used
+    }
+
+    public var displayChannelCount: Int {
+        displayChannelIndices.count
+    }
+
+    // Liefert fuer die Instrumentvorschau ein wirklich spielbares Sample samt
+    // Zielnote. IT-Instrumente halten ihre Samples im globalen Sample-Pool und
+    // nicht in Instrument.samples; der alte Vorschaupfad blieb dort daher stumm.
+    // Wenn C-5 nicht belegt ist, wird der erste gueltige Mapping-Eintrag genutzt.
+    public func previewSelection(instrumentIndex: Int) -> (sample: Sample, targetNote: Int)? {
+        guard instruments.indices.contains(instrumentIndex),
+              let instrument = instruments[instrumentIndex] else { return nil }
+
+        if format == .it, let mapping = instrument.noteSampleMapping {
+            let preferredSourceNote = 60
+            let candidates = [preferredSourceNote] + mapping.entries.indices.filter { $0 != preferredSourceNote }
+            for sourceNote in candidates {
+                let entry = mapping.entries[sourceNote]
+                guard entry.sampleID > 0, samplePool.indices.contains(entry.sampleID),
+                      let sample = samplePool[entry.sampleID], !sample.pcm.isEmpty else { continue }
+                return (sample, entry.targetNote)
+            }
+            return nil
+        }
+
+        let sourceNote = format == .it ? 60 : 48
+        guard let sample = instrument.sample(forNote: sourceNote), !sample.pcm.isEmpty else { return nil }
+        return (sample, sourceNote)
+    }
+
+    public var playableInstrumentIndices: [Int] {
+        instruments.indices.dropFirst().filter { previewSelection(instrumentIndex: $0) != nil }
     }
 
     private func noteUsesChannel(_ note: Note) -> Bool {

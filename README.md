@@ -76,7 +76,7 @@ The transport buttons speak for themselves, but the tracker-specific readouts an
 
 **Header readouts**
 
-- **CH** (used channels): counts the pattern channels that actually contain notes, instruments, volume data, or effects; reserved empty channels are not included.
+- **CH** (used channels): counts the pattern channels that actually contain notes, instruments, volume data, or effects; reserved empty channels are not included. The tracker grid and channel oscilloscopes show exactly these channels while retaining their original channel numbers, so IT's reserved 64-channel capacity and gaps do not create empty columns or a needless scrollbar.
 - **BPM** (beats per minute): playback tempo. The Amiga standard is 125. Adjustable with −/+; a song can also change its own tempo via effects. Switching songs sets the new module's header value.
 - **SPD** (speed): ticks per pattern row (Amiga standard 6). Lower = rows advance faster, higher = slower. Together with BPM this sets the effective speed.
 - **PAT** (pattern position): the current pattern and the total in the song's play order. A pattern is a block of notes (usually 64 rows); the song plays them in this sequence.
