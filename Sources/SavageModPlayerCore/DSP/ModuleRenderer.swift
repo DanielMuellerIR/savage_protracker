@@ -63,7 +63,9 @@ public enum ModuleRenderer {
         }
 
         let renderChannels = ModPlayerCoordinator.makeRenderChannels(for: mod)
-        let channelCount = renderChannels.count
+        let channelCount = mod.format == .it
+            ? max(1, min(ModPlayerCoordinator.maxChannels, mod.channelCount))
+            : renderChannels.count
         let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: sampleRate)
         state.stereoSeparation = 0.8
         state.useInterpolation = useInterpolation

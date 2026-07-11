@@ -522,6 +522,15 @@ Wichtige Leitplanken:
   normales IT-Rendering und öffentliche Dateizuordnungen bleiben bis M10
   gesperrt. Zwei OpenMPT-NNA=Cut-Dateien, 162 Gesamttests, beide Audio-
   Regressionen, JS-Parität und signierter App-Build sind grün.
+- **M7-Abschluss (Version 1.5.21):** IT-Instrument-Mode besitzt einen
+  vorallozierten 256er-Voice-Pool mit fester Aktivliste und je logischem Kanal
+  einer dynamischen Vordergrundstimme. NNA Cut/Continue/Off/Fade, DCT nach
+  Note/Sample/Instrument, DCA Cut/Off/Fade, S70...S76, Envelope-Carry über
+  physische Voice-Wechsel und deterministisches Stealing sind implementiert.
+  Mute, Solo, VU, Scope und Float-Stems aggregieren alle Stimmen ihres
+  Besitzerkanals; Sample-Mode bleibt beim günstigeren 64-Kanal-Pfad. Der volle
+  256-Voice-Release-Stress bleibt schneller als Echtzeit, `CarryNNA.it` endet
+  wie OpenMPT nach 5,760 Sekunden. `.it` bleibt bis M10 öffentlich deaktiviert.
 
 ## Fallen / Agent-Hinweise
 

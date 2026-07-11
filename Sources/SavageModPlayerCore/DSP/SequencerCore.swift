@@ -38,8 +38,20 @@ enum SequencerCore {
         let clockRate = state.clockRateOverride > 0
             ? state.clockRateOverride
             : (state.palClock ? 3546894.6 : 3579545.25)
-        for i in 0..<channels.count {
-            channels[i].performTick(tick: state.tick, sampleRate: sampleRate, clockRate: clockRate)
+        if let pool = channels.first?.itVoicePool, pool.usesBackgroundVoices {
+            pool.compactActiveVoices(channels)
+            for position in 0..<pool.activeVoiceCount {
+                let index = pool.activeVoiceIndex(at: position)
+                channels[index].performTick(
+                    tick: state.tick,
+                    sampleRate: sampleRate,
+                    clockRate: clockRate
+                )
+            }
+        } else {
+            for i in 0..<channels.count {
+                channels[i].performTick(tick: state.tick, sampleRate: sampleRate, clockRate: clockRate)
+            }
         }
         state.outputsUntilNextTick += state.outputsPerTick
     }
@@ -104,19 +116,40 @@ enum SequencerCore {
         let pattern = mod.patterns[patternIndex]
         guard state.rowIndex >= 0 && state.rowIndex < pattern.rows.count else { return }
         let row = pattern.rows[state.rowIndex]
-        guard row.notes.count >= channels.count else { return }
+        let logicalChannelCount = min(mod.channelCount, row.notes.count)
+        guard logicalChannelCount > 0 else { return }
 
         if mod.format == .it { state.tempoSlide = 0 }
-        for i in 0..<channels.count {
+        for i in 0..<logicalChannelCount {
             let note = row.notes[i]
-            let channel = channels[i]
+            let channel: DSPChannel
+            if mod.format == .it,
+               let pool = channels.first?.itVoicePool,
+               i < pool.patternChannels.count {
+                let voiceIndex = max(
+                    0,
+                    min(channels.count - 1, pool.patternChannels[i].foregroundVoiceIndex)
+                )
+                channel = channels[voiceIndex]
+            } else {
+                channel = channels[i]
+            }
             applyGlobalEffect(
                 note,
                 channel: channel,
                 state: state,
                 sampleRate: sampleRate
             )
-            channel.playNote(note, instruments: mod.instruments)
+            if mod.format == .it, let pool = channels.first?.itVoicePool {
+                pool.process(
+                    note: note,
+                    logicalChannel: i,
+                    voices: channels,
+                    instruments: mod.instruments
+                )
+            } else {
+                channel.playNote(note, instruments: mod.instruments)
+            }
         }
     }
 

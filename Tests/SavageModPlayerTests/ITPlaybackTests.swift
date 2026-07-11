@@ -11,7 +11,8 @@ final class ITPlaybackTests: XCTestCase {
         let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
 
         XCTAssertEqual(channels.count, 64)
-        XCTAssertEqual(channels.compactMap { $0.itPatternState }.count, 64)
+        XCTAssertEqual(channels.first?.itVoicePool?.patternChannels.count, 64)
+        XCTAssertEqual(channels.prefix(64).compactMap { $0.itPatternState }.count, 64)
         XCTAssertEqual(channels[0].itPatternState?.channelVolume, 0)
         XCTAssertEqual(channels[63].itPatternState?.channelVolume, 63)
         XCTAssertFalse(channels[0].itPatternState === channels[1].itPatternState)

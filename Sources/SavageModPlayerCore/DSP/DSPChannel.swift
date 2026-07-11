@@ -126,6 +126,13 @@ public final class DSPChannel: Sendable {
     nonisolated(unsafe) public var itLinearMode: Bool = false
     nonisolated(unsafe) public var itInstrumentMode: Bool = false
     nonisolated(unsafe) public var itPatternState: ITPatternChannelState?
+    nonisolated(unsafe) public var itVoicePool: ITPlaybackVoicePool?
+    nonisolated(unsafe) public var itIsBackgroundVoice: Bool = false
+    nonisolated(unsafe) public var itTriggerNote: Int = -1
+    nonisolated(unsafe) public var itTriggerSampleID: Int = 0
+    nonisolated(unsafe) public var itTriggerInstrumentID: Int = 0
+    nonisolated(unsafe) public var itVoiceGeneration: UInt64 = 0
+    nonisolated(unsafe) public var itNNAOverride: NewNoteAction?
     // IT-Instrumente referenzieren Samples global per 1-basierter ID. Alle
     // Kanäle teilen den vorab aufgebauten Array-Puffer per Swift-COW.
     nonisolated(unsafe) public var itSamplePool: [Sample?] = []
@@ -278,6 +285,13 @@ public final class DSPChannel: Sendable {
         itLinearMode = false
         itInstrumentMode = false
         itPatternState = nil
+        itVoicePool = nil
+        itIsBackgroundVoice = false
+        itTriggerNote = -1
+        itTriggerSampleID = 0
+        itTriggerInstrumentID = 0
+        itVoiceGeneration = 0
+        itNNAOverride = nil
         itSamplePool = []
         keyReleased = false
         itEnvelopeReleased = false
@@ -536,6 +550,7 @@ public final class DSPChannel: Sendable {
         }
         if let pan = self.setPanning {
             self.panning = max(0, min(1, pan))
+            if itMode { self.itPatternState?.channelPanning = self.panning }
         }
         
         if let per = self.setPeriod {
@@ -557,6 +572,54 @@ public final class DSPChannel: Sendable {
             let mayCarry = itMode && itInstrumentMode
                 && previousInstrumentIndex == self.instrument?.index
             initInstrumentVoice(preserveCarry: mayCarry)
+        }
+    }
+
+    // Eine NNA-Hintergrundstimme behält Sample, Envelope, Fade und Filter,
+    // erhält aber ab jetzt keine Pattern-Effekte mehr.
+    @inline(__always)
+    public func detachFromPatternEffects() {
+        volumeSlide = 0
+        volColVolSlide = 0
+        panSlide = 0
+        periodDelta = 0
+        portamento = false
+        vibrato = false
+        tremolo = false
+        arpActive = false
+        retrigger = 0
+        delayNote = -1
+        cutNoteTick = -1
+        keyOffTick = -1
+        tremorActive = false
+    }
+
+    @inline(__always)
+    public func applyITVoiceAction(_ action: NewNoteAction) {
+        switch action {
+        case .cut:
+            playing = false
+            fadeVolume = 0
+        case .continuePlaying:
+            break
+        case .noteOff:
+            keyReleased = true
+            if instrument?.volumeEnvelope == nil
+                || (instrument?.volumeEnvelope?.loopEnabled == true
+                    && (instrument?.fadeout ?? 0) > 0) {
+                noteFadeActive = true
+            }
+        case .noteFade:
+            noteFadeActive = true
+        }
+    }
+
+    @inline(__always)
+    public func applyITDuplicateAction(_ action: DuplicateCheckAction) {
+        switch action {
+        case .cut: applyITVoiceAction(.cut)
+        case .noteOff: applyITVoiceAction(.noteOff)
+        case .noteFade: applyITVoiceAction(.noteFade)
         }
     }
 

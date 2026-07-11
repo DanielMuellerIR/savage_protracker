@@ -248,6 +248,7 @@ public final class ModPlayerCoordinator: ObservableObject {
     // IT-Patterns besitzen bis zu 64 logische Kanäle. Die zugehörigen
     // VU-/Scope-Puffer werden wie zuvor einmalig vor dem Audiostart reserviert.
     nonisolated public static let maxChannels = 64
+    nonisolated public static let itVoiceCapacity = ITPlaybackVoicePool.voiceCapacity
 
     // Vorallozierte DSP-Kanäle. Wird in setMod() passend zur Kanalzahl des
     // Moduls neu aufgebaut (der Render-Block captured das Array bei play()).
@@ -304,7 +305,12 @@ public final class ModPlayerCoordinator: ObservableObject {
 
         // Kanal-Setup passend zum Modul neu aufbauen (4 bei MOD, N bei S3M).
         let count = max(1, min(Self.maxChannels, mod.channelCount))
-        self.channels = (1...count).map { DSPChannel(index: $0) }
+        // Nur der IT-Instrument-Modus braucht NNA-Hintergrundstimmen. Im
+        // Sample-Modus bleibt die direkte 64-Kanal-Zuordnung deutlich billiger.
+        let voiceCount = mod.format == .it && mod.itProperties?.usesInstruments == true
+            ? Self.itVoiceCapacity
+            : count
+        self.channels = (1...voiceCount).map { DSPChannel(index: $0) }
         Self.configure(channels: self.channels, for: mod)
         self.channelCount = count
         self.visualizerState.resize(channelCount: count)
@@ -328,6 +334,10 @@ public final class ModPlayerCoordinator: ObservableObject {
     // Klemmgrenzen, Effekt-Memory). Muss nach jedem DSPChannel.reset() erneut
     // angewandt werden (reset() stellt die MOD-Defaults wieder her).
     nonisolated static func configure(channels: [DSPChannel], for mod: Mod) {
+        if mod.format == .it {
+            ITPlaybackVoicePool(mod: mod).configure(voices: channels)
+            return
+        }
         for (i, ch) in channels.enumerated() {
             if i < mod.channelPannings.count {
                 ch.panning = mod.channelPannings[i]
@@ -346,20 +356,6 @@ public final class ModPlayerCoordinator: ObservableObject {
                 ch.xmLinearMode = true
                 ch.periodMin = 1
                 ch.periodMax = 7680
-            } else if mod.format == .it {
-                ch.itMode = true
-                ch.itLinearMode = mod.linearFrequency
-                ch.itInstrumentMode = mod.itProperties?.usesInstruments ?? false
-                ch.itSamplePool = mod.samplePool
-                ch.itPatternState = ITPatternChannelState(
-                    channelVolume: i < mod.channelVolumes.count ? mod.channelVolumes[i] : 64
-                )
-                ch.periodScale = 4
-                ch.periodMin = 1
-                ch.periodMax = mod.linearFrequency ? 7680 : 65_535
-                if i < mod.channelDisabled.count, mod.channelDisabled[i] {
-                    ch.isMuted = true
-                }
             }
         }
     }
@@ -716,8 +712,14 @@ public final class ModPlayerCoordinator: ObservableObject {
     }
     
     public func toggleMute(channelIndex: Int) {
-        guard channelIndex >= 0 && channelIndex < channels.count else { return }
-        channels[channelIndex].isMuted.toggle()
+        guard channelIndex >= 0 && channelIndex < channelCount else { return }
+        if activeMod?.format == .it,
+           let states = channels.first?.itVoicePool?.patternChannels,
+           channelIndex < states.count {
+            states[channelIndex].isMuted.toggle()
+        } else {
+            channels[channelIndex].isMuted.toggle()
+        }
         objectWillChange.send()
         // Die Kanal-Streifen beobachten den visualizerState (nicht den Coordinator).
         // Ohne diesen Anstoß aktualisierte sich die M/S-Optik im gestoppten Zustand
@@ -726,19 +728,35 @@ public final class ModPlayerCoordinator: ObservableObject {
     }
 
     public func toggleSolo(channelIndex: Int) {
-        guard channelIndex >= 0 && channelIndex < channels.count else { return }
-        channels[channelIndex].isSoloed.toggle()
+        guard channelIndex >= 0 && channelIndex < channelCount else { return }
+        if activeMod?.format == .it,
+           let states = channels.first?.itVoicePool?.patternChannels,
+           channelIndex < states.count {
+            states[channelIndex].isSoloed.toggle()
+        } else {
+            channels[channelIndex].isSoloed.toggle()
+        }
         objectWillChange.send()
         visualizerState.nudge()
     }
 
     public func isMuted(channelIndex: Int) -> Bool {
-        guard channelIndex >= 0 && channelIndex < channels.count else { return false }
+        guard channelIndex >= 0 && channelIndex < channelCount else { return false }
+        if activeMod?.format == .it,
+           let states = channels.first?.itVoicePool?.patternChannels,
+           channelIndex < states.count {
+            return states[channelIndex].isMuted
+        }
         return channels[channelIndex].isMuted
     }
 
     public func isSoloed(channelIndex: Int) -> Bool {
-        guard channelIndex >= 0 && channelIndex < channels.count else { return false }
+        guard channelIndex >= 0 && channelIndex < channelCount else { return false }
+        if activeMod?.format == .it,
+           let states = channels.first?.itVoicePool?.patternChannels,
+           channelIndex < states.count {
+            return states[channelIndex].isSoloed
+        }
         return channels[channelIndex].isSoloed
     }
 
@@ -854,7 +872,11 @@ public final class ModPlayerCoordinator: ObservableObject {
         // unkorrelierte Kanäle addieren sich in Leistung, nicht in Amplitude —
         // lineares 4/N machte 16-Kanal-S3Ms ~12 dB zu leise (praktisch stumm).
         // Rest-Spitzen fängt der tanh-Limiter weich ab.
-        let channelCount = dspChannels.count
+        let voiceCount = dspChannels.count
+        let logicalChannelCount = mod.format == .it
+            ? max(1, min(Self.maxChannels, mod.channelCount))
+            : voiceCount
+        let itVoicePool = mod.format == .it ? dspChannels.first?.itVoicePool : nil
         let mixGain: Float
         if mod.format == .it {
             // ITs reservieren stets 64 logische Kanäle; deren Zahl darf den Mix
@@ -862,7 +884,7 @@ public final class ModPlayerCoordinator: ObservableObject {
             // Volume (0...128, 64 = neutral) der vorgesehene Masterfaktor.
             mixGain = Float(mod.itProperties?.mixVolume ?? 64) / 64.0
         } else {
-            mixGain = channelCount > 4 ? (4.0 / Float(channelCount)).squareRoot() : 1.0
+            mixGain = voiceCount > 4 ? (4.0 / Float(voiceCount)).squareRoot() : 1.0
         }
         let globalVolumeScale = Float(mod.globalVolumeScale.rawValue)
 
@@ -895,7 +917,20 @@ public final class ModPlayerCoordinator: ObservableObject {
                 var outL: Float = 0.0
                 var outR: Float = 0.0
 
-                let hasSolo = dspChannels.contains(where: { $0.isSoloed })
+                var hasSolo = false
+                if let itVoicePool {
+                    for channel in 0..<itVoicePool.logicalChannelCount {
+                        if itVoicePool.patternChannels[channel].isSoloed {
+                            hasSolo = true
+                            break
+                        }
+                    }
+                } else {
+                    for channel in 0..<logicalChannelCount where dspChannels[channel].isSoloed {
+                        hasSolo = true
+                        break
+                    }
+                }
                 // Globale Lautstärke (S3M Vxx) wirkt auf alle Kanäle gleich.
                 let globalGain = state.globalVolume / globalVolumeScale
                 let captureStems = capture?.stemsPointer
@@ -905,8 +940,27 @@ public final class ModPlayerCoordinator: ObservableObject {
                 state.waveWriteIndex = (state.waveWriteIndex + 1) % 32
                 let wIdx = state.waveWriteIndex
 
-                for i in 0..<channelCount {
-                    let ch = dspChannels[i]
+                // Der sichtbare Kanalpuffer und die Capture-Stems gehören den
+                // logischen Kanälen, nicht den bis zu 256 physischen Stimmen.
+                for channel in 0..<logicalChannelCount {
+                    waveBuffer.channelWavesPointer[channel * 32 + wIdx] = 0.0
+                    if let captureStems {
+                        captureStems[channel * captureFrameCapacity + frame] = 0.0
+                    }
+                }
+
+                let renderedVoiceCount = itVoicePool?.usesBackgroundVoices == true
+                    ? itVoicePool!.activeVoiceCount
+                    : voiceCount
+                for renderPosition in 0..<renderedVoiceCount {
+                    let voiceIndex = itVoicePool?.usesBackgroundVoices == true
+                        ? itVoicePool!.activeVoiceIndex(at: renderPosition)
+                        : renderPosition
+                    let ch = dspChannels[voiceIndex]
+                    let ownerIndex = itVoicePool == nil
+                        ? voiceIndex
+                        : (ch.itPatternState?.channelIndex ?? -1)
+                    guard ownerIndex >= 0, ownerIndex < logicalChannelCount else { continue }
                     let outputSample = Self.renderChannelSample(
                         channel: ch,
                         useInterpolation: state.useInterpolation
@@ -915,22 +969,22 @@ public final class ModPlayerCoordinator: ObservableObject {
                     // Roh-Stem vor Panning, Mix-Gain und Limiter. Bei Capture=nil
                     // bleibt dies nur ein einfacher optionaler Pointer-Check.
                     if let captureStems {
-                        captureStems[i * captureFrameCapacity + frame] = outputSample
+                        captureStems[ownerIndex * captureFrameCapacity + frame] += outputSample
                     }
 
                     // Mute / Solo logic
-                    var isChannelMuted = ch.isMuted
-                    if hasSolo && !ch.isSoloed {
+                    let ownerState = ch.itPatternState
+                    var isChannelMuted = ownerState?.isMuted ?? ch.isMuted
+                    if hasSolo && !(ownerState?.isSoloed ?? ch.isSoloed) {
                         isChannelMuted = true
                     }
 
                     if isChannelMuted {
-                        waveBuffer.channelWavesPointer[i * 32 + wIdx] = 0.0
                         continue
                     }
 
-                    // Write to channel waves buffer (Thread-safe, preallocated)
-                    waveBuffer.channelWavesPointer[i * 32 + wIdx] = outputSample
+                    // Alle Vorder-/Hintergrundstimmen eines Besitzers addieren.
+                    waveBuffer.channelWavesPointer[ownerIndex * 32 + wIdx] += outputSample
 
                     // Panning LRRL mit Separation (XM: inkl. Panning-Hüllkurve)
                     let p = ch.effectivePanning
@@ -942,10 +996,12 @@ public final class ModPlayerCoordinator: ObservableObject {
                     outL += outputSample * lGain * mixGain
                     outR += outputSample * rGain * mixGain
 
-                    // Peak-Level
-                    let absVal = abs(outputSample)
-                    if absVal > vuBuffer.pointer[i] {
-                        vuBuffer.pointer[i] = absVal
+                }
+
+                for channel in 0..<logicalChannelCount {
+                    let absVal = abs(waveBuffer.channelWavesPointer[channel * 32 + wIdx])
+                    if absVal > vuBuffer.pointer[channel] {
+                        vuBuffer.pointer[channel] = absVal
                     }
                 }
 
@@ -1075,7 +1131,10 @@ public final class ModPlayerCoordinator: ObservableObject {
     // Frisch konfigurierte Offline-Render-Kanäle für ein Modul (Panning +
     // Format-Modell), z.B. für WAV-Export, Render-Probe und Quick-Look.
     nonisolated static func makeRenderChannels(for mod: Mod) -> [DSPChannel] {
-        let count = max(1, min(Self.maxChannels, mod.channelCount))
+        let logicalCount = max(1, min(Self.maxChannels, mod.channelCount))
+        let count = mod.format == .it && mod.itProperties?.usesInstruments == true
+            ? Self.itVoiceCapacity
+            : logicalCount
         let renderChannels = (1...count).map { DSPChannel(index: $0) }
         configure(channels: renderChannels, for: mod)
         return renderChannels
@@ -1130,7 +1189,9 @@ public final class ModPlayerCoordinator: ObservableObject {
         state.useInterpolation = useInterpolation
         state.palClock = palClock
 
-        let channelCount = renderChannels.count
+        let channelCount = mod.format == .it
+            ? max(1, min(Self.maxChannels, mod.channelCount))
+            : renderChannels.count
         let dummyPeaks = UnsafeMutablePointer<Float>.allocate(capacity: channelCount)
         defer { dummyPeaks.deallocate() }
         for j in 0..<channelCount { dummyPeaks[j] = 0.0 }
@@ -1193,7 +1254,9 @@ public final class ModPlayerCoordinator: ObservableObject {
         sampleRate: Double = 44100.0
     ) -> [RenderProbeSample] {
         let renderChannels = Self.makeRenderChannels(for: mod)
-        let channelCount = renderChannels.count
+        let channelCount = mod.format == .it
+            ? max(1, min(Self.maxChannels, mod.channelCount))
+            : renderChannels.count
         let state = Self.makeRenderState(for: mod, sampleRate: sampleRate)
         state.stereoSeparation = 0.8
         state.useInterpolation = true
@@ -1215,8 +1278,21 @@ public final class ModPlayerCoordinator: ObservableObject {
             state.elapsedFrames += 1
 
             var channelOutputs = [Float](repeating: 0, count: channelCount)
-            for i in 0..<channelCount {
-                channelOutputs[i] = Self.renderChannelSample(channel: renderChannels[i], useInterpolation: state.useInterpolation)
+            let pool = renderChannels.first?.itVoicePool
+            let renderedVoiceCount = pool?.usesBackgroundVoices == true
+                ? pool!.activeVoiceCount
+                : renderChannels.count
+            for renderPosition in 0..<renderedVoiceCount {
+                let voice = pool?.usesBackgroundVoices == true
+                    ? renderChannels[pool!.activeVoiceIndex(at: renderPosition)]
+                    : renderChannels[renderPosition]
+                let owner = mod.format == .it ? (voice.itPatternState?.channelIndex ?? -1) : voice.channelIndex - 1
+                if owner >= 0, owner < channelCount {
+                    channelOutputs[owner] += Self.renderChannelSample(
+                        channel: voice,
+                        useInterpolation: state.useInterpolation
+                    )
+                }
             }
 
             if frame % 256 == 0 {
