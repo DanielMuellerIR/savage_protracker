@@ -201,7 +201,7 @@ final class MultiFormatTests: XCTestCase {
         let smp = try XCTUnwrap(inst.primarySample)
         XCTAssertEqual(smp.c2spd, 8363)
         XCTAssertEqual(smp.volume, 64)
-        XCTAssertEqual(smp.pcm, [0, 127.0 / 256.0, 0, -128.0 / 256.0])
+        XCTAssertEqual(smp.pcm, [0, Float(127) / 256, 0, Float(-128) / 256])
 
         // Note: Key, Volume-Column, uebersetzter Effekt
         let note = mod.patterns[0].rows[0].notes[0]

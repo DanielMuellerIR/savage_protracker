@@ -40,10 +40,10 @@ final class ITSampleParserTests: XCTestCase {
         ]
         let module = try ITParser.parse(data: makeSampleIT(specs))
 
-        assertPCM(module.samplePool[1]!, [-0.5, 0, 127.0 / 256.0])
-        assertPCM(module.samplePool[2]!, [-0.5, 0, 127.0 / 256.0])
-        assertPCM(module.samplePool[3]!, [1.0 / 256.0, 2.0 / 256.0, 0])
-        assertPCM(module.samplePool[4]!, [0, 1.0 / 256.0, 0])
+        assertPCM(module.samplePool[1]!, [-0.5, 0, Float(127) / 256])
+        assertPCM(module.samplePool[2]!, [-0.5, 0, Float(127) / 256])
+        assertPCM(module.samplePool[3]!, [Float(1) / 256, Float(2) / 256, 0])
+        assertPCM(module.samplePool[4]!, [0, Float(1) / 256, 0])
     }
 
     func testSixteenBitSignedUnsignedEndianAndDeltaGoldenVectors() throws {
@@ -92,8 +92,8 @@ final class ITSampleParserTests: XCTestCase {
         )
         let sample = try XCTUnwrap(ITParser.parse(data: makeSampleIT([spec])).samplePool[1])
 
-        XCTAssertEqual(sample.pcm, [-0.5, 0, 127.0 / 256.0])
-        XCTAssertEqual(sample.rightPCM, [127.0 / 256.0, 0, -0.5])
+        XCTAssertEqual(sample.pcm, [-0.5, 0, Float(127) / 256])
+        XCTAssertEqual(sample.rightPCM, [Float(127) / 256, 0, -0.5])
     }
 
     func testEveryUncompressedFlagCombinationGoldenMatrix() throws {
@@ -203,8 +203,8 @@ final class ITSampleParserTests: XCTestCase {
         )
 
         let module = try ITParser.parse(data: makeSampleIT([it214, it215]))
-        XCTAssertEqual(module.samplePool[1]?.pcm, [1.0 / 256.0, 2.0 / 256.0, 0])
-        XCTAssertEqual(module.samplePool[2]?.pcm, [1.0 / 256.0, 3.0 / 256.0, 6.0 / 256.0])
+        XCTAssertEqual(module.samplePool[1]?.pcm, [Float(1) / 256, Float(2) / 256, 0])
+        XCTAssertEqual(module.samplePool[2]?.pcm, [Float(1) / 256, Float(3) / 256, Float(6) / 256])
     }
 
     func testLongCompressedWaveformMatchesReferencePCM() throws {
