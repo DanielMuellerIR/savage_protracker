@@ -71,7 +71,12 @@ struct ResizableDivider: View {
         // abfangen. highPriorityGesture lässt das Ziehen des Handles gewinnen,
         // sobald der Cursor in seiner Trefferfläche liegt.
         .highPriorityGesture(
-                DragGesture(minimumDistance: 1)
+                // WICHTIG: `.global` als Koordinatenraum. Im (Default-)lokalen
+                // Raum wandert die Referenz mit dem Handle mit, während dieser
+                // beim Ziehen seine Position ändert — die `translation` koppelt
+                // dadurch zurück und der Trenner zittert mit hoher Frequenz hin
+                // und her (Bug 2026-07-12). Global gemessen ist der Bezug fix.
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
                     .onChanged { value in
                         let base = startValue ?? width
                         if startValue == nil { startValue = width }
