@@ -81,7 +81,17 @@ struct MainView: View {
     
     // Search & Filter
     @State var playlistSearchQuery: String = ""
-    
+    // Favoriten-Filter: zeigt nur mit Stern markierte Titel (Umschalt-Knopf im
+    // Playlist-Kopf).
+    @State var favoritesOnly = false
+    // Gemerkte Favoriten. Schlüssel ist bewusst der BEREINIGTE Dateiname
+    // (cleanFilename), NICHT der Pfad: Drag&Drop-Titel werden in pro-Sitzung
+    // wechselnde Temp-Ordner kopiert — ein pfadbasierter Schlüssel überlebte den
+    // Neustart nicht. Der bereinigte Name (ohne Temp-UUID-Präfix) ist über
+    // Sitzungen hinweg stabil. Persistiert in UserDefaults (siehe
+    // loadFavorites/toggleFavorite).
+    @State var favorites: Set<String> = []
+
     // Recent Songs History
     @State var recentSongs: [URL] = []
     
@@ -310,6 +320,7 @@ struct MainView: View {
             }
             .onAppear {
                 isDiskAnimating = coordinator.isPlaying
+                loadFavorites()
                 setupNotifications()
                 installKeyMonitor()
                 setupMediaRemoteCommands()

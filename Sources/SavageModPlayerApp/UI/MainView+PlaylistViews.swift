@@ -8,11 +8,43 @@ import MediaPlayer
 // Playlist- und Instrumenten-Sidebar.
 extension MainView {
     var filteredPlaylist: [URL] {
-        if playlistSearchQuery.isEmpty {
-            return playlist
-        } else {
-            return playlist.filter { cleanFilename($0).localizedCaseInsensitiveContains(playlistSearchQuery) }
+        var result = playlist
+        // Favoriten-Filter (Stern) und Textsuche greifen beide NUR die Anzeige
+        // ab; die volle `playlist` bleibt für Auswahl/Auto-Next unangetastet.
+        if favoritesOnly {
+            result = result.filter { isFavorite($0) }
         }
+        if !playlistSearchQuery.isEmpty {
+            result = result.filter { cleanFilename($0).localizedCaseInsensitiveContains(playlistSearchQuery) }
+        }
+        return result
+    }
+
+    // MARK: - Favoriten
+
+    // UserDefaults-Schlüssel der gemerkten Favoriten (bereinigte Dateinamen).
+    static let favoritesDefaultsKey = "savage.favoriteTracks"
+
+    // Ist dieser Titel als Favorit markiert? Vergleich über den bereinigten
+    // Dateinamen (stabil über Temp-Kopien/Neustarts hinweg).
+    func isFavorite(_ url: URL) -> Bool {
+        favorites.contains(cleanFilename(url))
+    }
+
+    // Favoriten aus UserDefaults laden (beim App-Start, siehe .onAppear).
+    func loadFavorites() {
+        favorites = Set(UserDefaults.standard.stringArray(forKey: MainView.favoritesDefaultsKey) ?? [])
+    }
+
+    // Favorit an-/abschalten und sofort persistieren.
+    func toggleFavorite(_ url: URL) {
+        let key = cleanFilename(url)
+        if favorites.contains(key) {
+            favorites.remove(key)
+        } else {
+            favorites.insert(key)
+        }
+        UserDefaults.standard.set(Array(favorites).sorted(), forKey: MainView.favoritesDefaultsKey)
     }
 
     // Eine sichtbare Zeile der Playlist-Sidebar: entweder ein auf-/zuklappbarer
@@ -32,7 +64,9 @@ extension MainView {
     // Sichtbare Zeilen aus Baum + Aufklapp-Zustand berechnen. Bei aktiver Suche
     // stattdessen eine flache Trefferliste — Hierarchie waere dabei nur im Weg.
     var playlistRows: [PlaylistRow] {
-        if !playlistSearchQuery.isEmpty {
+        // Bei aktiver Suche ODER aktivem Favoriten-Filter eine flache
+        // Trefferliste zeigen — die Ordner-Hierarchie wäre dabei nur im Weg.
+        if !playlistSearchQuery.isEmpty || favoritesOnly {
             return filteredPlaylist.map { PlaylistRow(id: $0.absoluteString, depth: 0, kind: .file($0)) }
         }
         guard let tree = playlistTree else {
@@ -94,34 +128,55 @@ extension MainView {
         case .file(let fileURL):
             let playlistIndex = playlist.firstIndex(of: fileURL) ?? -1
             let isPlayingSong = playlistIndex == currentPlaylistIndex
+            let fav = isFavorite(fileURL)
 
-            Button(action: { selectPlaylistSong(at: playlistIndex) }) {
-                HStack(spacing: 8) {
-                    Image(systemName: isPlayingSong ? "speaker.wave.2.fill" : "music.note")
-                        .font(.system(size: 11))
-                        .foregroundColor(isPlayingSong ? (Color.accent(theme)) : .spaceTextSecondary)
+            // Zeile = Abspiel-Button (Icon + Titel) + separater Stern-Button
+            // (Favorit an/aus), beide auf gemeinsamem Zeilen-Hintergrund. Zwei
+            // Geschwister-Buttons statt eines verschachtelten, damit Klick auf
+            // den Stern NICHT den Titel startet.
+            HStack(spacing: 0) {
+                Button(action: { selectPlaylistSong(at: playlistIndex) }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: isPlayingSong ? "speaker.wave.2.fill" : "music.note")
+                            .font(.system(size: 11))
+                            .foregroundColor(isPlayingSong ? (Color.accent(theme)) : .spaceTextSecondary)
 
-                    Text(cleanFilename(fileURL))
-                        .font(.system(size: 11, weight: isPlayingSong ? .bold : .medium))
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(cleanFilename(fileURL))
+                            .font(.system(size: 11, weight: isPlayingSong ? .bold : .medium))
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.leading, 12 + indent)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .foregroundColor(isPlayingSong ? (theme == .workbench ? .lightAccent : .white) : (theme == .workbench ? .lightTextPrimary : .spaceTextSecondary))
                 }
-                .padding(.leading, 12 + indent)
-                .padding(.trailing, 12)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-                .contentShape(Rectangle())
-                .background(
-                    RoundedRectangle(cornerRadius: theme == .workbench ? 0 : 6)
-                        .fill(
-                            isPlayingSong
-                            ? (theme == .workbench ? Color.lightAccent.opacity(0.2) : Color.spaceAccent.opacity(0.15))
-                            : Color.clear
-                        )
-                )
-                .foregroundColor(isPlayingSong ? (theme == .workbench ? .lightAccent : .white) : (theme == .workbench ? .lightTextPrimary : .spaceTextSecondary))
+                .buttonStyle(PremiumHoverButtonStyle(theme: theme))
+
+                // Stern: gelb = Favorit, sonst dezent. Immer sichtbar, damit man
+                // jeden Titel direkt markieren kann.
+                Button(action: { toggleFavorite(fileURL) }) {
+                    Image(systemName: fav ? "star.fill" : "star")
+                        .font(.system(size: 11))
+                        .foregroundColor(fav
+                                         ? .yellow
+                                         : (theme == .workbench ? .lightTextSecondary.opacity(0.5) : .spaceTextSecondary.opacity(0.5)))
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 38)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .help(fav ? "Favorit entfernen" : "Als Favorit markieren")
             }
-            .buttonStyle(PremiumHoverButtonStyle(theme: theme))
+            .background(
+                RoundedRectangle(cornerRadius: theme == .workbench ? 0 : 6)
+                    .fill(
+                        isPlayingSong
+                        ? (theme == .workbench ? Color.lightAccent.opacity(0.2) : Color.spaceAccent.opacity(0.15))
+                        : Color.clear
+                    )
+            )
         }
     }
 
@@ -185,6 +240,15 @@ extension MainView {
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(theme == .workbench ? .lightAccent : .spaceAccentGlow)
                     Spacer()
+                    // Umschalter „nur Favoriten": gelber Stern = aktiv.
+                    Button(action: { favoritesOnly.toggle() }) {
+                        Image(systemName: favoritesOnly ? "star.fill" : "star")
+                            .font(.system(size: 11))
+                            .foregroundColor(favoritesOnly ? .yellow : (theme == .workbench ? .lightAccent : .spaceTextSecondary))
+                    }
+                    .buttonStyle(PremiumHoverButtonStyle(theme: theme))
+                    .help(favoritesOnly ? "Alle Titel zeigen" : "Nur Favoriten zeigen")
+                    .padding(.trailing, 4)
                     Button("Leeren") {
                         coordinator.stop()
                         playlist.removeAll()

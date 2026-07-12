@@ -95,11 +95,20 @@ struct ResizableDivider: View {
                     }
                     .onEnded { _ in startValue = nil }
             )
-            .onHover { inside in
+            // Resize-Cursor. `onContinuousHover` (statt `onHover` + push/pop):
+            // Der horizontale Handle grenzt an ScrollViews, die bei jeder
+            // Mausbewegung ihren eigenen Cursor-Rect neu setzen und den einmalig
+            // gepushten Resize-Cursor sofort wieder überschreiben. Deshalb den
+            // Cursor bei JEDER Bewegung über dem Handle neu setzen (`.set()`),
+            // dann bleibt er stehen. Beim Verlassen zurück auf den Pfeil.
+            .onContinuousHover { phase in
                 #if canImport(AppKit)
-                if inside {
-                    (axis == .vertical ? NSCursor.resizeLeftRight : NSCursor.resizeUpDown).push()
-                } else { NSCursor.pop() }
+                switch phase {
+                case .active:
+                    (axis == .vertical ? NSCursor.resizeLeftRight : NSCursor.resizeUpDown).set()
+                case .ended:
+                    NSCursor.arrow.set()
+                }
                 #endif
             }
             .help(axis == .vertical
