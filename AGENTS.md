@@ -516,13 +516,12 @@ Harness: die headless Render-CLI `savage-cli` (Target `SavageCLI`,
    erzwingen.
 Achtung: `~/Nextcloud/**` ist Cloud-Sync — nur LESEN, keine Repos/Code dort
 anlegen; Fixes passieren im Repo-Code, nicht an den Musikdateien.
-**VORAUSSETZUNG auf M5 (2026-07-12 geprüft):** Dort sind alle 61 ZIPs
-**dehydrierte Nextcloud-Suffix-Platzhalter** (`*.zip.nextcloud`, 0 Byte Inhalt) —
-nicht lesbar, bis heruntergeladen. Vor dem Test erst hydrieren: im Finder den
-Ordner `~/Nextcloud/Musik/mods/game mods/` bzw. die ZIPs → „Jetzt herunterladen"/
-„Immer auf diesem Gerät behalten" (Suffix-VFS hydriert NICHT bei `cat`/SSH-Zugriff,
-nur über den Nextcloud-Client/Finder; Hintergrund: `projektextern/
-nextcloud-vfs-suffix-macos.md`). Auf M3 sind sie bereits hydriert (echte `.zip`).
+**Nextcloud-Hydrierung (2026-07-12):** Auf M5 lagen die 61 ZIPs zunächst als
+**dehydrierte Suffix-Platzhalter** (`*.zip.nextcloud`) vor — Suffix-VFS hydriert
+NICHT bei `cat`/SSH-Zugriff. Daniel hat sie am 2026-07-12 bereits hydriert (61
+echte `.zip` verifiziert). Falls Dateien erneut dehydriert sind: **per Projekt
+`NC_PIN` hydrieren** (Daniels Nextcloud-Pin/Hydrier-Tool). Hintergrund zum
+Suffix-VFS: `projektextern/nextcloud-vfs-suffix-macos.md`.
 Abnahme: Report „X/Y Module spielen, Z mit Begründung nicht"; die fixbaren sind
 grün, Regressionstests dazu.
 
