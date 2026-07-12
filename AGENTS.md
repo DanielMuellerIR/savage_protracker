@@ -619,6 +619,50 @@ Abnahme: Fenster kleinziehen → Grid/Oszis/Master/Marker weg, „Now Playing"
 deutlichen CPU-Abfall Richtung Floor. Vergrößern → alles zurück, kein Flackern.
 Konzept bewusst „wie eine Website, die eine Mobile-Version nachbekommt".
 
+## Offene Optimierungs-Todos (Stand 2026-07-12)
+
+Entstanden aus der CPU-Analyse zu Punkt 10 (Messung M5, Release, `top` +
+`sample`-Profiler). **Aktueller Stand der Optimierungen** (spielend, 4-Kanal-MOD):
+
+| Zustand | CPU | Anteil |
+|---|---|---|
+| Gestoppt (nur App, kein Audio) | ~0,2 % | statische UI ist gratis |
+| Audio-DSP (Modul-Dekodierung) | ~3–4 % | Grundlast, kaum senkbar |
+| 30-Hz-`vuUpdateTimer` (VU/Oszi/Zeit via SwiftUI) | ~12 % | **Hauptkosten** |
+| Rotierende Play-Disk (30 Hz) | ~0,5 % | vernachlässigbar |
+| **Full-Modus gesamt** | **~23 %** | |
+| **Compact (vuUpdateTimer 5 Hz, Views raus)** | **~11 %** | ✅ umgesetzt |
+
+Kernbefund: NICHT das Zeichnen der Oszis/des Grids und NICHT die Audio-DSP sind
+teuer, sondern das reaktive 30×/s-Durchschieben der `@Published`-Werte durch
+SwiftUI. Theoretischer Floor beim Abspielen (DSP + Baseline + minimaler UI-Tick):
+~5–6 %.
+
+**Todo A — Oszi-Framerate als EINSTELLUNG (Default = aktuelle Rate beibehalten).**
+20 fps wäre bereits eine sichtbare optische Verschlechterung, daher NICHT den
+Default senken. Stattdessen in den Einstellungen (`SettingsView`) einen Regler
+„Visualizer-Bildrate" anbieten (z. B. 30 / 24 / 15 / 10 Hz), der `vuUpdateInterval`
+im Full-Modus speist. Default bleibt 30 Hz (0 % Ertrag, volle Optik). Opt-in-
+Ertrag: ~24 fps ≈ −3–4 %, ~15 fps ≈ −6 % (nahezu linear mit der Rate). Für Nutzer
+auf schwacher Hardware, die Glätte gegen CPU tauschen wollen.
+
+**Todo B — Header-Infozeile im Compact bei sehr schmaler Breite (<~550 px)
+aufräumen.** CH/BPM/SPD/PAT (fixedSize + Stepper) klippt rechts. Optionen: bei
+schmaler Breite Stepper ausblenden / Infozeile umbrechen / Theme-Switcher+ÖFFNEN
+im Compact weglassen. Rein optisch, keine CPU-Frage.
+
+**Todo C (optional, größer) — Full-Modus-`@Published`-Churn senken OHNE Optik-
+verlust.** Geschätzter Maximal-Ertrag ~2–4 % bei voller 30-Hz-Glätte:
+- Die Uhr (`elapsedTime`) vom Oszi-Takt entkoppeln (Uhr braucht nur ~2–4 Hz; sie
+  hängt aktuell am selben 30-Hz-`@Published`-Objekt und triggert es mit).
+- Schlankerer Visualizer-Datenpfad (z. B. `TimelineView`+`Canvas`, der die Puffer
+  direkt zieht, statt 30×/s mehrere `@Published`-Arrays zuzuweisen und den ganzen
+  ViewGraph anzustoßen). Unsicher ohne Prototyp; erst messen.
+
+**Audio-DSP:** bewusst NICHT optimieren — nur ~3–4 %, und die HI-FI-Interpolation
+IST die Klangqualität (mind. Original-Spiele-Niveau soll bleiben). Kein lohnender
+Hebel.
+
 ## IT-Ausbau (seit 2026-07-10)
 
 Daniel hat die schrittweise Unterstützung von Impulse Tracker (`.it`) freigegeben.
