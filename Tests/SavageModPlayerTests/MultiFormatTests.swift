@@ -507,8 +507,11 @@ final class MultiFormatTests: XCTestCase {
         XCTAssertGreaterThan(wav.count, 44) // Header + Nutzdaten
         XCTAssertEqual(String(decoding: wav.prefix(4), as: UTF8.self), "RIFF")
         XCTAssertEqual(String(decoding: wav.subdata(in: 8..<12), as: UTF8.self), "WAVE")
-        // data-Chunk-Laenge muss zur Dateigroesse passen.
-        let dataSize = wav.subdata(in: 40..<44).withUnsafeBytes { $0.load(as: UInt32.self) }
+        // data-Chunk-Laenge muss zur Dateigroesse passen. loadUnaligned, weil die
+        // Basisadresse eines Data-Slices nicht zwingend 4-Byte-ausgerichtet ist:
+        // load(as:) crasht dann unter Linux hart ("misaligned raw pointer"),
+        // waehrend Darwin es toleriert.
+        let dataSize = wav.subdata(in: 40..<44).withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }
         XCTAssertEqual(Int(dataSize), wav.count - 44)
         // Es muss hoerbares Signal drin sein (Demo-Mod ist nicht still).
         let payload = wav.subdata(in: 44..<min(wav.count, 44 + 88200))

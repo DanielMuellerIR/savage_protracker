@@ -91,6 +91,13 @@ final class PlaylistScannerTests: XCTestCase {
     private static let sevenZipFixtureBase64 = "N3q8ryccAATZ8ns+mQAAAAAAAAAiAAAAAAAAAKxU7hQBAAJ4eHgAAACBMweuD84lflFCynNIGZqoUZTnWFv8ZmYGcG13U53ZggeBDAzB8o5I0anqwxnW/rhjcps9sIvSAoEiOVrO6+r7ZZVEQtnNAcSLzgb6BFxP+wgEOb4uJbOflweo3aMUoAy0Z7Bg1mOI5QcyHrl3sDtLu/afdnufYpe2vkwzcjoasFLGjLA8Fy+v6omM20gAAAAXBgcBCYCSAAcLAQABIwMBAQVdABAAAAyBMgoB+cP6zwAA"
 
     private func runArchiveTest(base64: String, filename: String) throws {
+        // Ohne System-bsdtar kann der Scanner grundsaetzlich nicht entpacken
+        // (z.B. schlanker Linux-Container ohne libarchive-tools). Das ist kein
+        // Fehler des Scanners — sauber ueberspringen statt rot melden.
+        try XCTSkipIf(
+            PlaylistScanner.bsdtarURL == nil,
+            "bsdtar nicht installiert — Archiv-Scan nicht pruefbar (Linux: libarchive-tools)"
+        )
         let archiveURL = workDir.appendingPathComponent(filename)
         try XCTUnwrap(Data(base64Encoded: base64)).write(to: archiveURL)
 

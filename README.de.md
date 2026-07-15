@@ -177,6 +177,28 @@ Player pipen. `--list` gibt einen Pfad je Zeile aus und endet mit Exit-Code 1,
 wenn nichts Spielbares gefunden wurde. `--normalize` hebt den Pegel wie Quick
 Look an; für rohe Vergleiche weglassen.
 
+#### Linux
+
+Die Core-Bibliothek und `savage-cli` bauen und laufen unter Linux; die SwiftUI-App
+und die Quick-Look-Extension sind macOS-only und werden dort aus dem Paket
+ausgeblendet.
+
+```bash
+docker run --rm -v "$PWD":/src -w /src swift:6.0 \
+  bash -c "apt-get update -qq && apt-get install -y -qq libarchive-tools && swift build && swift test"
+```
+
+`libarchive-tools` liefert `bsdtar`, mit dem der Playlist-Scanner `.zip`/`.7z`
+liest. Ohne das Paket werden Archive ignoriert und zwei Tests übersprungen; alles
+Übrige funktioniert.
+
+Der Render ist je Plattform deterministisch, aber **nicht** bitgleich *zwischen*
+den Plattformen: `tanh` im Limiter rundet in glibc und Darwin-libm
+unterschiedlich, wodurch rund 0,01 % der Samples um ein einzelnes LSB abweichen —
+etwa 115 dB unter dem Signal und damit weit unter der Hörschwelle. Echtzeit-
+Wiedergabe über ALSA gibt es noch nicht; stattdessen `--stdout` nach `aplay`
+pipen.
+
 ### HTML5-Bonusplayer
 
 ```bash

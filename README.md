@@ -181,6 +181,26 @@ messages stay on stderr, so the stream can be piped directly into a player.
 `--normalize` raises the level like Quick Look does; leave it off for raw
 comparisons.
 
+#### Linux
+
+The core library and `savage-cli` build and run on Linux; the SwiftUI app and the
+Quick Look extension are macOS-only and are excluded from the package there.
+
+```bash
+docker run --rm -v "$PWD":/src -w /src swift:6.0 \
+  bash -c "apt-get update -qq && apt-get install -y -qq libarchive-tools && swift build && swift test"
+```
+
+`libarchive-tools` provides `bsdtar`, which the playlist scanner uses to read
+`.zip`/`.7z` archives. Without it, archives are skipped and two tests skip with
+them; everything else works.
+
+Rendering is deterministic per platform but not bit-identical *across* platforms:
+`tanh` in the limiter rounds differently in glibc and Darwin libm, which shifts
+about 0.01 % of samples by a single LSB — roughly 115 dB below the signal, far
+below audibility. Real-time ALSA playback is not implemented yet; pipe
+`--stdout` into `aplay` instead.
+
 ### Bonus HTML5 player
 
 ```bash

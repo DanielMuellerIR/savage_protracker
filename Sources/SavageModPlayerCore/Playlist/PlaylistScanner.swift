@@ -121,8 +121,13 @@ public enum PlaylistScanner {
 
         for url in urls {
             // Drag&Drop liefert ggf. security-scoped URLs (Sandbox) — Zugriff
-            // pro Wurzel-URL oeffnen und wieder schliessen.
+            // pro Wurzel-URL oeffnen und wieder schliessen. Die API gibt es nur
+            // auf Apple-Plattformen; unter Linux existiert weder die Sandbox noch
+            // der Aufruf, und der Pfad ist ohnehin direkt lesbar.
+            #if canImport(Darwin)
             let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            #endif
             var isDir: ObjCBool = false
             if fm.fileExists(atPath: url.path, isDirectory: &isDir) {
                 if isDir.boolValue {
@@ -131,7 +136,6 @@ public enum PlaylistScanner {
                     handleFile(url, folderPath: [], archiveDepth: 0)
                 }
             }
-            if accessed { url.stopAccessingSecurityScopedResource() }
         }
         return entries
     }
@@ -141,13 +145,17 @@ public enum PlaylistScanner {
     // (libarchive), das sowohl Zip als auch 7-Zip lesen kann — keine
     // Zusatz-Abhaengigkeit noetig.
     private static func extractArchive(_ archive: URL, tempDir: URL) -> URL? {
-        #if os(macOS)
+        // bsdtar liegt auf macOS und den meisten Linux-Distributionen unter
+        // /usr/bin (dort aus dem Paket libarchive-tools). Fehlt es, wird das
+        // Archiv still ignoriert — dasselbe Verhalten wie bei einem defekten
+        // Archiv, kein Grund den ganzen Scan abzubrechen.
+        guard let bsdtar = bsdtarURL else { return nil }
         let fm = FileManager.default
         let dest = tempDir.appendingPathComponent("extracted-\(UUID().uuidString)", isDirectory: true)
         do {
             try fm.createDirectory(at: dest, withIntermediateDirectories: true, attributes: nil)
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/bsdtar")
+            process.executableURL = bsdtar
             process.arguments = ["-x", "-f", archive.path, "-C", dest.path]
             // Fehlermeldungen nicht ins App-Log spammen; Erfolg zaehlt per Exit-Code.
             process.standardOutput = FileHandle.nullDevice
@@ -163,11 +171,16 @@ public enum PlaylistScanner {
             print("Archiv-Entpacken fehlgeschlagen: \(error)")
             return nil
         }
-        #else
-        // Auf Nicht-macOS-Plattformen gibt es kein Process/bsdtar — Archive
-        // werden dort schlicht ignoriert.
-        return nil
-        #endif
+    }
+
+    // Vorhandenes System-bsdtar (libarchive), oder nil. Frueher lief der ganze
+    // Zweig unter `#if os(macOS)` mit der Begruendung, ausserhalb gebe es kein
+    // Process/bsdtar — das stimmt nicht: swift-corelibs-foundation hat Process,
+    // und bsdtar liegt unter Linux an derselben Stelle. Statt der Plattform wird
+    // jetzt die tatsaechliche Verfuegbarkeit geprueft.
+    public static var bsdtarURL: URL? {
+        let candidate = URL(fileURLWithPath: "/usr/bin/bsdtar")
+        return FileManager.default.isExecutableFile(atPath: candidate.path) ? candidate : nil
     }
 
     // MARK: - Baum bauen & abflachen
