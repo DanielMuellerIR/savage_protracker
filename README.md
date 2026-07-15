@@ -171,6 +171,7 @@ checks without touching the GUI.
 swift build                                  # → .build/debug/savage-cli
 savage-cli song.it --info                    # structured module diagnosis, no render
 savage-cli song.mod -o out.wav -s 30         # render 30 s to WAV
+savage-cli song.mod --play                   # real-time playback (CoreAudio / ALSA)
 savage-cli song.mod --stdout | aplay -f S16_LE -c2 -r44100   # raw PCM to a player
 savage-cli --list audio/                     # list playable modules in a folder
 ```
@@ -195,11 +196,14 @@ docker run --rm -v "$PWD":/src -w /src swift:6.0 \
 `.zip`/`.7z` archives. Without it, archives are skipped and two tests skip with
 them; everything else works.
 
+`--play` uses the platform's audio output — AVAudioEngine on macOS, ALSA on Linux
+(needs `libasound2-dev` at build time). The playback path renders sample-identical
+output to the offline renderer; both pull from the same engine.
+
 Rendering is deterministic per platform but not bit-identical *across* platforms:
 `tanh` in the limiter rounds differently in glibc and Darwin libm, which shifts
 about 0.01 % of samples by a single LSB — roughly 115 dB below the signal, far
-below audibility. Real-time ALSA playback is not implemented yet; pipe
-`--stdout` into `aplay` instead.
+below audibility. Keyboard control and playlist playback are not implemented yet.
 
 ### Bonus HTML5 player
 

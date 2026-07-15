@@ -167,6 +167,7 @@ Prüfungen ohne GUI.
 swift build                                  # → .build/debug/savage-cli
 savage-cli song.it --info                    # strukturierte Moduldiagnose, kein Render
 savage-cli song.mod -o out.wav -s 30         # 30 s als WAV rendern
+savage-cli song.mod --play                   # Echtzeit-Wiedergabe (CoreAudio / ALSA)
 savage-cli song.mod --stdout | aplay -f S16_LE -c2 -r44100   # rohes PCM in einen Player
 savage-cli --list audio/                     # spielbare Module eines Ordners auflisten
 ```
@@ -192,12 +193,16 @@ docker run --rm -v "$PWD":/src -w /src swift:6.0 \
 liest. Ohne das Paket werden Archive ignoriert und zwei Tests übersprungen; alles
 Übrige funktioniert.
 
+`--play` nutzt die Audio-Ausgabe der Plattform — AVAudioEngine auf macOS, ALSA
+unter Linux (braucht `libasound2-dev` zum Bauen). Der Wiedergabepfad liefert
+sample-identisch dasselbe wie der Offline-Renderer; beide holen aus derselben
+Engine.
+
 Der Render ist je Plattform deterministisch, aber **nicht** bitgleich *zwischen*
 den Plattformen: `tanh` im Limiter rundet in glibc und Darwin-libm
 unterschiedlich, wodurch rund 0,01 % der Samples um ein einzelnes LSB abweichen —
-etwa 115 dB unter dem Signal und damit weit unter der Hörschwelle. Echtzeit-
-Wiedergabe über ALSA gibt es noch nicht; stattdessen `--stdout` nach `aplay`
-pipen.
+etwa 115 dB unter dem Signal und damit weit unter der Hörschwelle.
+Tastatursteuerung und Playlist-Wiedergabe fehlen noch.
 
 ### HTML5-Bonusplayer
 

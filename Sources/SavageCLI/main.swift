@@ -30,6 +30,7 @@ struct Options {
     var quiet = false
     var toStdout = false           // rohes PCM-s16le nach stdout statt in eine WAV-Datei
     var listDir: String?           // Ordner rekursiv nach spielbaren Modulen durchsuchen
+    var play = false               // Echtzeit-Wiedergabe ueber die Audio-Ausgabe der Plattform
 }
 
 func parseArgs(_ argv: [String]) -> Options {
@@ -47,6 +48,7 @@ func parseArgs(_ argv: [String]) -> Options {
         case "--pattern":        i += 1; o.dumpPattern = Int(i < argv.count ? argv[i] : "")
         case "--quiet", "-q":    o.quiet = true
         case "--stdout":         o.toStdout = true
+        case "--play":           o.play = true
         case "--list":           i += 1; o.listDir = i < argv.count ? argv[i] : nil
         case "--help", "-h":     printUsageAndExit()
         default:
@@ -72,6 +74,7 @@ func printUsageAndExit() -> Never {
       -q, --quiet          keine Fortschrittsausgabe
           --stdout         rohes PCM (s16le, stereo) nach stdout statt in eine Datei
           --list <ordner>  Ordner rekursiv nach spielbaren Modulen durchsuchen
+          --play           Echtzeit-Wiedergabe (macOS: AVAudioEngine, Linux: ALSA)
 
     Beispiel (Linux):
       savage-cli song.mod --stdout | aplay -f S16_LE -c2 -r44100
@@ -363,6 +366,38 @@ if opts.infoOnly || opts.dumpPattern != nil {
     printInfo(mod)
     if let p = opts.dumpPattern { print(""); dumpPattern(mod, orderIndex: p) }
     exit(0)
+}
+
+// --play: Echtzeit-Wiedergabe ueber die Audio-Ausgabe der Plattform. Laeuft ueber
+// dieselbe Engine wie Offline-Render und App — nur die Ausgabe ist eine andere
+// (AVAudioEngine auf macOS, ALSA auf Linux). Blockiert bis Songende oder Ctrl-C.
+if opts.play {
+    let format = PCMSinkFactory.preferredFormat(channels: 2)
+    let source = ModulePCMSource(mod: mod, format: format)
+    let sink = PCMSinkFactory.makeDefault(format: format)
+    log(
+        "Spiele '\(mod.name.isEmpty ? inputURL.lastPathComponent : mod.name)' "
+        + "(\(mod.format), \(mod.channelCount) ch) @ \(Int(format.sampleRate)) Hz … Ctrl-C beendet.",
+        quiet: opts.quiet
+    )
+    do {
+        try sink.start(render: source.renderBlock())
+    } catch {
+        FileHandle.standardError.write(Data("Wiedergabe-Fehler: \(error.localizedDescription)\n".utf8))
+        exit(1)
+    }
+    let reason = sink.waitUntilFinished()
+    switch reason {
+    case .sourceFinished, .stopped, .outputClosed:
+        log("Wiedergabe beendet (\(reason)).", quiet: opts.quiet)
+        exit(0)
+    case .failed(let detail):
+        FileHandle.standardError.write(Data("Wiedergabe abgebrochen: \(detail)\n".utf8))
+        exit(1)
+    case .notStarted:
+        FileHandle.standardError.write(Data("Wiedergabe startete nicht.\n".utf8))
+        exit(1)
+    }
 }
 
 let maxDuration = opts.seconds > 0 ? opts.seconds : 600.0

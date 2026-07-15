@@ -18,5 +18,10 @@ build/
 *.zip
 *.tar
 *.tar.gz
-audio/
-archive/
+# Fuehrender Slash = nur der Ordner im Repo-Wurzelverzeichnis. Ohne ihn greift das
+# Muster auf JEDER Ebene und verschluckt Quellcode-Ordner wie
+# Sources/SavageModPlayerCore/Audio/ — auf macOS zusaetzlich unabhaengig von der
+# Gross-/Kleinschreibung (core.ignorecase=true), unter Linux dagegen nicht. Der
+# Code waere dann je nach Rechner im Repo oder nicht.
+/audio/
+/archive/

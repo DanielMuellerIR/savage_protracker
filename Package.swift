@@ -32,9 +32,23 @@ let package = Package(
         .library(name: "SavageModPlayerCore", targets: ["SavageModPlayerCore"])
     ],
     targets: appTargets + [
+        // ALSA-Systembibliothek (nur Linux; siehe Sources/CALSA/module.modulemap).
+        // Braucht auf dem Build-Rechner das Paket libasound2-dev.
+        .systemLibrary(
+            name: "CALSA",
+            path: "Sources/CALSA",
+            pkgConfig: "alsa",
+            providers: [
+                .apt(["libasound2-dev"])
+            ]
+        ),
         .target(
             name: "SavageModPlayerCore",
-            dependencies: [],
+            dependencies: [
+                // Nur der Linux-Build zieht ALSA herein — auf macOS laeuft die
+                // Ausgabe ueber AVAudioEngine und CALSA wird nie angefasst.
+                .target(name: "CALSA", condition: .when(platforms: [.linux]))
+            ],
             path: "Sources/SavageModPlayerCore"
         ),
         // Kopfloser CLI-Renderer (headless Tests + Linux-Port-Fundament).

@@ -1,0 +1,15 @@
+// Bruecke von Swift zur ALSA-C-Bibliothek (Linux-Audioausgabe).
+//
+// SwiftPM kann C-Bibliotheken des Systems direkt einbinden — dafuer braucht es
+// nur diese Modulkarte plus den Shim-Header. "[system]" sagt dem Compiler, dass
+// es Systemcode ist und dessen Warnungen nicht uns gehoeren. `link "asound"`
+// haengt beim Linken -lasound an.
+//
+// Auf macOS existiert ALSA nicht. Deshalb haengt in Package.swift nur der
+// Linux-Build von diesem Modul ab (`condition: .when(platforms: [.linux])`) —
+// auf dem Mac wird es gar nicht erst angefasst.
+module CALSA [system] {
+    header "shim.h"
+    link "asound"
+    export *
+}

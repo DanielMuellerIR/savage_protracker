@@ -162,23 +162,44 @@ Archiv-Test braucht der Lauf `apt-get install -y libarchive-tools`; ohne das
   Fehler-RMS < 0,1 LSB. Für Regressionen innerhalb *einer* Plattform bleibt
   Byteidentität das Gate (macOS: erfüllt, siehe Phase 0).
 
-### Phase 2 — Echtzeit-Playback + Steuerung (~1 PT, startbereit)
+### Phase 2 — Echtzeit-Playback (✅ Kern erledigt 2026-07-15)
 
-ALSA-`systemLibrary`-Anbindung, Tastatursteuerung (Pause, nächster Titel, Quit).
+Die Sink-Schicht **kam doch aus dem SID-Port** — Daniel hat sie am 2026-07-15
+gebaut, damit war die ursprüngliche Reihenfolge des Plans (SID zuerst, savage
+guckt ab) am Ende doch die richtige. Übernommen aus
+`vicious_sidplayer/Sources/`, bewusst als Kopie:
 
-Nicht mehr blockiert: `libasound2-dev` ist seit 2026-07-15 auf dem Testhost
-installiert, und **`--stdout | aplay` deckt die Pipe-Wiedergabe bereits ohne
-jeden ALSA-Code ab**. Die eigene ALSA-Anbindung ist damit kein Muss für „spielt
-unter Linux", sondern nur für nahtlose Playlist-Wiedergabe mit Tastatursteuerung.
-Der PCMSink aus dem alten Plan wird dafür neu entworfen — es gibt keine Vorlage
-aus dem SID-Port (siehe oben).
+- `Audio/PCMSink.swift` — Vertrag (Pull-Modell, interleaved Float, Sendable).
+- `Audio/PCMSinkFactory.swift` — einzige Plattformweiche.
+- `Audio/ALSAPCMSink.swift`, `Audio/AVAudioEnginePCMSink.swift`,
+  `Audio/StdoutPCMSink.swift` — die drei Ausgaben.
+- `Sources/CALSA/` — Systemmodul-Brücke zu libasound.
 
-**Erfolgskriterium (agentenprüfbar, korrigiert):** Die Fleet-Doku dokumentiert
-PipeWire mit `parec` auf dem Testhost. Wiedergabe über die echte Audiokette
-mitschneiden, WAV zurückholen und gegen den Offline-Render prüfen: keine Lücken
-(Dropouts), Pegel plausibel, Abweichung im selben Rahmen wie Phase 1 (≤ 1 LSB
-plus Resampling der Kette). „Klingt gut" im ästhetischen Sinn bleibt Daniels Ohr,
-aber „ohne Aussetzer" ist messbar und braucht ihn nicht.
+Der Code ist frei von Format-Wissen und ließ sich unverändert übernehmen; nur die
+Kommentare zeigten auf SID-Interna und wurden auf den savage-Kontext umgeschrieben.
+Eine Extraktion in ein gemeinsames Paket lohnt erst, wenn sich die Schicht in
+beiden Repos bewährt hat — bis dahin: Änderungen hier und dort im Blick behalten.
+
+Eigenanteil ist `Audio/ModulePCMSource.swift`: die Brücke vom `ModuleRenderBlock`
+(getrennte L/R-Puffer, kein Endesignal) zum `PCMRenderBlock` (interleaved, Rückgabe
+= gefüllte Frames). Voralloziierte Chunk-Puffer, damit der Audio-Thread nicht
+alloziert; Songende über `endReachedFrame` als kurze Lieferung.
+
+**Verifiziert:**
+
+- `savage-cli --play` spielt auf macOS (AVAudioEngine) und Linux (ALSA).
+- Linux-Laufzeit lautlos geprüft, ohne Popos Desktop zu beschallen: `.asoundrc`
+  mit `pcm.!default { type null }` biegt `default` auf ALSAs null-Plugin um —
+  echter `snd_pcm_open`/`writei`/`drain`-Pfad, Ergebnis `sourceFinished`, Exit 0.
+- `ModulePCMSourceTests`: der Echtzeitpfad liefert **sample-identisch** dasselbe
+  wie `ModuleRenderer` (Offline), trotz unterschiedlicher Blockgrößen (1024 vs.
+  4096) — die „eine Engine"-Invariante ist damit testgedeckt, nicht nur behauptet.
+  Zweiter Test: Songende kommt als kurze Lieferung an, sonst hinge der Sink.
+
+**Noch offen aus Phase 2:** Tastatursteuerung (Pause, nächster Titel, Quit) und
+Playlist-Wiedergabe über `--list`. Ebenfalls offen: eine Aufnahme über die echte
+PipeWire-Kette per `parec` als Dropout-Nachweis unter Last — das null-Device sagt
+nichts über Aussetzer auf echter Hardware.
 
 ### Phase 3 (optional) — Desktop-Integration
 
