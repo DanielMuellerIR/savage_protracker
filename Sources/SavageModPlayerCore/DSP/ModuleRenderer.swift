@@ -1,5 +1,4 @@
 import Foundation
-import AVFoundation
 
 // Offline-Renderer: spielt ein Modul mit derselben DSP-Engine wie die
 // Live-Wiedergabe komplett durch und liefert fertige WAV-Daten (16-Bit-PCM,
@@ -58,15 +57,11 @@ public enum ModuleRenderer {
         useInterpolation: Bool,
         captureConsumer: ((RenderCaptureBlock) -> Void)?
     ) throws -> Data {
-        guard let stereoFormat = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2) else {
-            throw NSError(domain: "ModuleRenderer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Konnte Audio-Format nicht erstellen"])
-        }
-
-        let renderChannels = ModPlayerCoordinator.makeRenderChannels(for: mod)
+        let renderChannels = RenderEngine.makeRenderChannels(for: mod)
         let channelCount = mod.format == .it
-            ? max(1, min(ModPlayerCoordinator.maxChannels, mod.channelCount))
+            ? max(1, min(RenderEngine.maxChannels, mod.channelCount))
             : renderChannels.count
-        let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: sampleRate)
+        let state = RenderEngine.makeRenderState(for: mod, sampleRate: sampleRate)
         state.stereoSeparation = 0.8
         state.useInterpolation = useInterpolation
         state.palClock = true
@@ -115,7 +110,7 @@ public enum ModuleRenderer {
             captureStemsPointer?.deallocate()
         }
 
-        let block = ModPlayerCoordinator.createRenderBlock(
+        let block = RenderEngine.createRenderBlock(
             state: state,
             vuBuffer: RealtimeVUBuffer(pointer: dummyPeaks),
             waveBuffer: RealtimeWaveBuffer(channelWaves: dummyWaves, masterWaves: dummyMasterWaves),
@@ -125,8 +120,21 @@ public enum ModuleRenderer {
             capture: renderCapture
         )
 
-        guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: stereoFormat, frameCapacity: blockFrames) else {
-            throw NSError(domain: "ModuleRenderer", code: 2, userInfo: [NSLocalizedDescriptionKey: "Konnte Buffer nicht erstellen"])
+        // Eigene, voralloziierte Float-Stereopuffer statt AVAudioPCMBuffer: der
+        // Offline-Renderpfad ist damit plattformneutral und trägt das Linux-CLI.
+        // Layout wie beim Live-Pfad (non-interleaved Float32), also identische
+        // Engine-Ausgabe.
+        let leftBuffer = UnsafeMutablePointer<Float>.allocate(capacity: Int(blockFrames))
+        leftBuffer.initialize(repeating: 0.0, count: Int(blockFrames))
+        defer {
+            leftBuffer.deinitialize(count: Int(blockFrames))
+            leftBuffer.deallocate()
+        }
+        let rightBuffer = UnsafeMutablePointer<Float>.allocate(capacity: Int(blockFrames))
+        rightBuffer.initialize(repeating: 0.0, count: Int(blockFrames))
+        defer {
+            rightBuffer.deinitialize(count: Int(blockFrames))
+            rightBuffer.deallocate()
         }
 
         let totalFrames = UInt64(sampleRate * maxDurationSeconds)
@@ -134,16 +142,8 @@ public enum ModuleRenderer {
         var pcmData = Data()
         pcmData.reserveCapacity(1_048_576)
 
-        var isSilence = ObjCBool(false)
-        var timeStamp = AudioTimeStamp()
-
         while renderedFrames < totalFrames {
-            pcmBuffer.frameLength = blockFrames
-            let abl = pcmBuffer.mutableAudioBufferList
-            let status = block(&isSilence, &timeStamp, blockFrames, abl)
-            if status != noErr {
-                throw NSError(domain: "ModuleRenderer", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Audio-Render-Fehler"])
-            }
+            block(blockFrames, leftBuffer, rightBuffer)
 
             var validFrames = UInt64(blockFrames)
             validFrames = min(validFrames, totalFrames - renderedFrames)
@@ -182,18 +182,16 @@ public enum ModuleRenderer {
             }
 
             // Float-Stereo in interleaved 16-Bit-PCM (Little Endian) wandeln.
-            if let floatData = pcmBuffer.floatChannelData {
-                var chunk = [UInt8](repeating: 0, count: frames * 4)
-                for f in 0..<frames {
-                    let l = Int16(max(-1.0, min(1.0, floatData[0][f])) * 32767.0)
-                    let r = Int16(max(-1.0, min(1.0, floatData[1][f])) * 32767.0)
-                    chunk[f * 4 + 0] = UInt8(truncatingIfNeeded: l)
-                    chunk[f * 4 + 1] = UInt8(truncatingIfNeeded: l >> 8)
-                    chunk[f * 4 + 2] = UInt8(truncatingIfNeeded: r)
-                    chunk[f * 4 + 3] = UInt8(truncatingIfNeeded: r >> 8)
-                }
-                pcmData.append(contentsOf: chunk)
+            var chunk = [UInt8](repeating: 0, count: frames * 4)
+            for f in 0..<frames {
+                let l = Int16(max(-1.0, min(1.0, leftBuffer[f])) * 32767.0)
+                let r = Int16(max(-1.0, min(1.0, rightBuffer[f])) * 32767.0)
+                chunk[f * 4 + 0] = UInt8(truncatingIfNeeded: l)
+                chunk[f * 4 + 1] = UInt8(truncatingIfNeeded: l >> 8)
+                chunk[f * 4 + 2] = UInt8(truncatingIfNeeded: r)
+                chunk[f * 4 + 3] = UInt8(truncatingIfNeeded: r >> 8)
             }
+            pcmData.append(contentsOf: chunk)
             renderedFrames += validFrames
 
             // Songende: Der Sequencer hat hinter die letzte Position gewrappt.

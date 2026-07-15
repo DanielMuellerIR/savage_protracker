@@ -1,5 +1,4 @@
 import XCTest
-import AVFoundation
 @testable import SavageModPlayerCore
 
 /// Regressionstests fuer die Song-Sequenzierung im Render-/Probe-Pfad des
@@ -81,8 +80,8 @@ final class CoordinatorSequencingTests: XCTestCase {
         durationSeconds: Double,
         sampleRate: Double = 44100.0
     ) throws -> [SequencerTraceSnapshot] {
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
-        let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: sampleRate)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
+        let state = RenderEngine.makeRenderState(for: mod, sampleRate: sampleRate)
         state.stereoSeparation = 0.8
         state.useInterpolation = true
         state.palClock = true
@@ -98,7 +97,7 @@ final class CoordinatorSequencingTests: XCTestCase {
         defer { masterWaves.deallocate() }
         masterWaves.initialize(repeating: 0, count: 128)
 
-        let block = ModPlayerCoordinator.createRenderBlock(
+        let block = RenderEngine.createRenderBlock(
             state: state,
             vuBuffer: RealtimeVUBuffer(pointer: peaks),
             waveBuffer: RealtimeWaveBuffer(channelWaves: waves, masterWaves: masterWaves),
@@ -106,32 +105,22 @@ final class CoordinatorSequencingTests: XCTestCase {
             mod: mod,
             sampleRate: sampleRate
         )
-        let format = try XCTUnwrap(AVAudioFormat(
-            standardFormatWithSampleRate: sampleRate, channels: 2))
-        let pcm = try XCTUnwrap(AVAudioPCMBuffer(
-            pcmFormat: format, frameCapacity: 256))
-        var isSilence = ObjCBool(false)
-        var timestamp = AudioTimeStamp()
+        let buffer = StereoRenderBuffer(capacity: 256)
         let totalFrames = Int(sampleRate * durationSeconds)
         var renderedFrames = 0
         var traces: [SequencerTraceSnapshot] = []
 
         for frame in stride(from: 0, to: totalFrames, by: 256) {
             let frameCount = frame + 1 - renderedFrames
-            pcm.frameLength = AVAudioFrameCount(frameCount)
-            let status = block(
-                &isSilence,
-                &timestamp,
-                UInt32(frameCount),
-                pcm.mutableAudioBufferList
-            )
-            XCTAssertEqual(status, noErr)
+            block(UInt32(frameCount), buffer.left, buffer.right)
             renderedFrames += frameCount
             traces.append(SequencerTraceSnapshot(frame: frame, state: state, mod: mod))
         }
         return traces
     }
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Pause haelt die Engine an, ohne den Zustand zu verwerfen; resume() setzt
     /// fort; stop() raeumt beide Flags auf. Braucht ein echtes Audio-Geraet —
     /// ohne (z.B. CI) startet play() nicht und der Test wird uebersprungen.
@@ -160,7 +149,10 @@ final class CoordinatorSequencingTests: XCTestCase {
         XCTAssertFalse(coordinator.isPlaying)
         XCTAssertFalse(coordinator.isPaused)
     }
+#endif
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Seek im gestoppten Zustand merkt die Position vor; play() startet dort.
     @MainActor
     func testSeekWhileStoppedStartsPlaybackAtPosition() async throws {
@@ -178,7 +170,10 @@ final class CoordinatorSequencingTests: XCTestCase {
         XCTAssertEqual(coordinator.currentPosition, 1, "Wiedergabe muss an der vorgemerkten Position starten")
         coordinator.stop()
     }
+#endif
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Relativer Zeitsprung (+30s) rechnet Sekunden in Zeilen um und springt
     /// zeilengenau; das Ziel wird ans Songende geklemmt.
     @MainActor
@@ -198,7 +193,10 @@ final class CoordinatorSequencingTests: XCTestCase {
         XCTAssertEqual(coordinator.currentPosition, 1)
         coordinator.stop()
     }
+#endif
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Vor dem Fix: ein Dxx mit BCD-Wert > 63 (z.B. D99 = 99) setzte rowIndex
     /// auf 99; der Wrap-Test `== 64` traf nie, also kletterte die Zeile endlos
     /// und der Song hing stumm fest. Jetzt muss rowIndex immer 0..63 bleiben.
@@ -214,7 +212,10 @@ final class CoordinatorSequencingTests: XCTestCase {
         XCTAssertLessThanOrEqual(maxRow, 63, "rowIndex darf nie ueber 63 klettern (kein Hang)")
         XCTAssertGreaterThanOrEqual(samples.map { $0.row }.min() ?? -1, 0)
     }
+#endif
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Hardware-freier Render-Smoke-Test: Das eingebaute Demo-Mod muss ueber
     /// renderProbe hoerbares Audio erzeugen. Laeuft OHNE audio/-Ordner und OHNE
     /// Audio-Geraet (reine Berechnung) — die DSP-Regression skippt also nie still,
@@ -228,7 +229,10 @@ final class CoordinatorSequencingTests: XCTestCase {
         let peak = samples.flatMap { $0.channelOutputs }.map { abs($0) }.max() ?? 0
         XCTAssertGreaterThan(peak, 0.001, "Demo-Mod muss hoerbares Audio rendern")
     }
+#endif
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Regressionstest fuer die toten BPM-/Speed-Stepper: vor dem Fix hatten
     /// `coordinator.bpm`/`coordinator.speed` keinen `didSet`, der den Wert an den
     /// Echtzeit-Zustand durchreichte. Eine Stepper-Aenderung wurde deshalb nie
@@ -257,7 +261,10 @@ final class CoordinatorSequencingTests: XCTestCase {
 
         coordinator.stop()
     }
+#endif
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Ein wohlgeformtes Break (D32 = Zeile 32) muss exakt diese Zielzeile
     /// erreichen und NICHT umgelenkt werden.
     @MainActor
@@ -270,7 +277,10 @@ final class CoordinatorSequencingTests: XCTestCase {
         let reached = samples.contains { $0.position == 1 && $0.row == 32 }
         XCTAssertTrue(reached, "D32 muss Position 1 / Row 32 erreichen")
     }
+#endif
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Friert die heutige doppelte Sequencer-Implementierung vor dem Refactor
     /// zustandsgenau ein. Coverage-Marker verhindern, dass zwei wirkungslose
     /// Pfade durch lauter identische Defaultwerte versehentlich bestehen.
@@ -319,6 +329,7 @@ final class CoordinatorSequencingTests: XCTestCase {
         XCTAssertEqual(delayWrapCounters, [2, 1, 0],
                        "EE2 muss die heutigen drei Row-2-Wiederholungen exakt bewahren")
     }
+#endif
 
     /// XM Hxy senkt (bzw. hebt) die globale Lautstärke auf jedem Folgetick der
     /// Zeile; H00 nutzt das Kanal-Memory. Läuft über den echten Render-Block,

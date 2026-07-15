@@ -157,6 +157,26 @@ Für Release-Builds signiert `build_app.sh` automatisch mit der Developer-ID
 Schlüsselbund verfügbar ist. Lokale unsignierte Builds sind mit
 `SIGN_APP=0 bash build_app.sh` möglich.
 
+### Kommandozeile (`savage-cli`)
+
+Ein kopfloser Renderer, der exakt dieselbe DSP-Engine nutzt wie App und Quick
+Look — gedacht für A/B-Vergleiche gegen Referenz-Renderer und für skriptbare
+Prüfungen ohne GUI.
+
+```bash
+swift build                                  # → .build/debug/savage-cli
+savage-cli song.it --info                    # strukturierte Moduldiagnose, kein Render
+savage-cli song.mod -o out.wav -s 30         # 30 s als WAV rendern
+savage-cli song.mod --stdout | aplay -f S16_LE -c2 -r44100   # rohes PCM in einen Player
+savage-cli --list audio/                     # spielbare Module eines Ordners auflisten
+```
+
+`--stdout` schreibt rohes 16-Bit-Stereo-PCM (Little Endian) nach stdout, während
+Statusmeldungen auf stderr bleiben — der Strom lässt sich also direkt in einen
+Player pipen. `--list` gibt einen Pfad je Zeile aus und endet mit Exit-Code 1,
+wenn nichts Spielbares gefunden wurde. `--normalize` hebt den Pegel wie Quick
+Look an; für rohe Vergleiche weglassen.
+
 ### HTML5-Bonusplayer
 
 ```bash

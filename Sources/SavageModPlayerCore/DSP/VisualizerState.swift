@@ -1,4 +1,9 @@
 import Foundation
+
+// Nur die SwiftUI-App beobachtet diesen Zustand; unter Linux (kein Combine, keine
+// GUI) gibt es weder Beobachter noch Nutzen. Der Renderkern in RenderEngine.swift
+// schreibt seine VU-/Wave-Daten in rohe Float-Puffer und braucht diese Klasse nicht.
+#if canImport(Combine)
 import Combine
 
 // Hochfrequenter (30 Hz) Visualisierungs-Zustand — bewusst vom ModPlayerCoordinator
@@ -53,3 +58,5 @@ public final class TransportState: ObservableObject {
     @Published public var currentRow = 0
     public init() {}
 }
+
+#endif

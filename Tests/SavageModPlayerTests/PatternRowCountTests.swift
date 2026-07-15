@@ -9,7 +9,7 @@ import XCTest
 /// bevor es zur nächsten Position wechselte. Folge: Timing-Drift durch den
 /// ganzen Song (bei _Starfish – Life Support_ Gesamtdauer 212,6 s statt
 /// korrekter 178,8 s) und weiterlaufende Volume-Slides → laute, fehlplatzierte
-/// Percussion. Fix: `ModPlayerCoordinator.patternRowCount(_:at:)` liefert die
+/// Percussion. Fix: `RenderEngine.patternRowCount(_:at:)` liefert die
 /// echte Reihenzahl, beide Wrap-Stellen (Live-Block + Probe) nutzen sie.
 final class PatternRowCountTests: XCTestCase {
 
@@ -64,10 +64,10 @@ final class PatternRowCountTests: XCTestCase {
     /// Die pure Reihenzahl-Funktion liefert die echte Pattern-Länge.
     func testPatternRowCountReportsRealLength() {
         let mod = makeMod(firstPatternRows: 8)
-        XCTAssertEqual(ModPlayerCoordinator.patternRowCount(mod, at: 0), 8)
-        XCTAssertEqual(ModPlayerCoordinator.patternRowCount(mod, at: 1), 8)
+        XCTAssertEqual(RenderEngine.patternRowCount(mod, at: 0), 8)
+        XCTAssertEqual(RenderEngine.patternRowCount(mod, at: 1), 8)
         // Position außerhalb der Order-Table wird geklemmt (kein Crash).
-        XCTAssertEqual(ModPlayerCoordinator.patternRowCount(mod, at: 99), 8)
+        XCTAssertEqual(RenderEngine.patternRowCount(mod, at: 99), 8)
     }
 
     /// Globaler Zeilen-Index und Umkehrung müssen die echten Pattern-Längen
@@ -75,19 +75,19 @@ final class PatternRowCountTests: XCTestCase {
     /// korrekte Elapsed-/Gesamtzeit und die Positionsanzeige beim Seek ab (#9).
     func testCumulativeRowsUsesRealLengths() {
         let mod = makeMod(firstPatternRows: 30)
-        XCTAssertEqual(ModPlayerCoordinator.cumulativeRows(mod, upTo: 0), 0)
-        XCTAssertEqual(ModPlayerCoordinator.cumulativeRows(mod, upTo: 1), 30, "nicht 64")
-        XCTAssertEqual(ModPlayerCoordinator.cumulativeRows(mod, upTo: 1, row: 3), 33)
-        XCTAssertEqual(ModPlayerCoordinator.cumulativeRows(mod, upTo: 2), 38, "Gesamtreihen 30+8")
+        XCTAssertEqual(RenderEngine.cumulativeRows(mod, upTo: 0), 0)
+        XCTAssertEqual(RenderEngine.cumulativeRows(mod, upTo: 1), 30, "nicht 64")
+        XCTAssertEqual(RenderEngine.cumulativeRows(mod, upTo: 1, row: 3), 33)
+        XCTAssertEqual(RenderEngine.cumulativeRows(mod, upTo: 2), 38, "Gesamtreihen 30+8")
 
         // Round-Trip: globaler Index -> (Position, Zeile) -> derselbe Index.
         for (gr, pos, row) in [(0, 0, 0), (29, 0, 29), (30, 1, 0), (33, 1, 3)] {
-            let t = ModPlayerCoordinator.positionAndRow(mod, forGlobalRow: gr)
+            let t = RenderEngine.positionAndRow(mod, forGlobalRow: gr)
             XCTAssertEqual(t.position, pos, "globalRow \(gr)")
             XCTAssertEqual(t.row, row, "globalRow \(gr)")
         }
         // Über das Songende hinaus wird auf die letzte Zeile geklemmt.
-        let end = ModPlayerCoordinator.positionAndRow(mod, forGlobalRow: 999)
+        let end = RenderEngine.positionAndRow(mod, forGlobalRow: 999)
         XCTAssertEqual(end.position, 1)
         XCTAssertEqual(end.row, 7)
     }

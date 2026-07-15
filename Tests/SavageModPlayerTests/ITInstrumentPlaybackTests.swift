@@ -233,8 +233,8 @@ final class ITInstrumentPlaybackTests: XCTestCase {
     }
 
     private func sequencedDuration(mod: Mod, sampleRate: Double) -> Double {
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
-        let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: sampleRate)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
+        let state = RenderEngine.makeRenderState(for: mod, sampleRate: sampleRate)
         let frameLimit = Int(sampleRate * 30)
         var frames = 0
         while frames < frameLimit {

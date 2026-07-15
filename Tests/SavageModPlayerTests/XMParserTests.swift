@@ -450,6 +450,8 @@ final class XMParserTests: XCTestCase {
         XCTAssertEqual(s.relativeNote, 3)
     }
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     // Optionaler Realwelt-Test: parst alle .xm rekursiv aus audio/
     // (gitignoriert, lokal) und prüft grundlegende Plausibilität + dass beim
     // Rendern hörbares Signal entsteht. Überspringt still, wenn keine .xm da sind.
@@ -508,4 +510,5 @@ final class XMParserTests: XCTestCase {
             print("✓ XM geparst + gerendert: \(fileName) (\"\(mod.name)\"), \(mod.channelCount) Kanäle, \(mod.instruments.count - 1) Instrumente, \(mod.patterns.count) Patterns, Probe-Peak \(peak)")
         }
     }
+#endif
 }

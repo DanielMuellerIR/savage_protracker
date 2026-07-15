@@ -30,15 +30,17 @@ final class SeekToRowTests: XCTestCase {
     /// Rekonstruktion Set-Speed-Effekte bis zur Zielzeile anwendet.
     func testReconstructGlobalParamsAppliesSpeedUpToRow() {
         let mod = makeMod()
-        XCTAssertEqual(ModPlayerCoordinator.reconstructGlobalParams(mod, toPosition: 0, row: 2).speed, 6,
+        XCTAssertEqual(RenderEngine.reconstructGlobalParams(mod, toPosition: 0, row: 2).speed, 6,
                        "Vor dem Speed-Effekt gilt der Modul-Default")
-        XCTAssertEqual(ModPlayerCoordinator.reconstructGlobalParams(mod, toPosition: 0, row: 3).speed, 8,
+        XCTAssertEqual(RenderEngine.reconstructGlobalParams(mod, toPosition: 0, row: 3).speed, 8,
                        "Ab der Effekt-Zeile gilt Speed 8")
-        XCTAssertEqual(ModPlayerCoordinator.reconstructGlobalParams(mod, toPosition: 0, row: 9).speed, 8)
+        XCTAssertEqual(RenderEngine.reconstructGlobalParams(mod, toPosition: 0, row: 9).speed, 8)
         // Spätere Position erbt den zuletzt gesetzten Speed.
-        XCTAssertEqual(ModPlayerCoordinator.reconstructGlobalParams(mod, toPosition: 1, row: 0).speed, 8)
+        XCTAssertEqual(RenderEngine.reconstructGlobalParams(mod, toPosition: 1, row: 0).speed, 8)
     }
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Seek im gestoppten Zustand merkt Position+Zeile vor und zeigt sie an;
     /// out-of-range wird geklemmt (kein Crash).
     @MainActor
@@ -58,4 +60,5 @@ final class SeekToRowTests: XCTestCase {
         coordinator.seek(toPosition: 42, row: 0)
         XCTAssertEqual(coordinator.currentPosition, 1)
     }
+#endif
 }

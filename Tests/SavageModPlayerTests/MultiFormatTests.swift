@@ -1,5 +1,4 @@
 import XCTest
-import AVFoundation
 @testable import SavageModPlayerCore
 
 // Tests für die neuen Modul-Formate: Multichannel-MOD-Varianten (6CHN/8CHN/
@@ -341,6 +340,8 @@ final class MultiFormatTests: XCTestCase {
         XCTAssertEqual(ch.period, 1712, accuracy: 0.5)
     }
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     // Optionaler Realwelt-Test: parst alle .s3m rekursiv aus audio/
     // (gitignoriert, lokal) und rendert je 2 Sekunden — es muss hoerbares
     // Signal entstehen.
@@ -389,6 +390,7 @@ final class MultiFormatTests: XCTestCase {
             print("✓ S3M geparst + gerendert: \(fileName) (\"\(mod.name)\"), \(mod.channelCount) Kanäle, Probe-Peak \(peak), WAV-Peak \(wavPeak), WAV \(wav.count) Bytes")
         }
     }
+#endif
 
     // MARK: - Instrument-Vorschau (eigener Render-Pfad, previewInstrument)
 
@@ -400,14 +402,14 @@ final class MultiFormatTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            ModPlayerCoordinator.itPreviewSampleSpeed(
+            RenderEngine.itPreviewSampleSpeed(
                 sample: sample, targetNote: 60, linearFrequency: true, sampleRate: 44_100
             ),
             1.0,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
-            ModPlayerCoordinator.itPreviewSampleSpeed(
+            RenderEngine.itPreviewSampleSpeed(
                 sample: sample, targetNote: 72, linearFrequency: true, sampleRate: 44_100
             ),
             2.0,
@@ -418,7 +420,7 @@ final class MultiFormatTests: XCTestCase {
     // Der Preview-Render-Block muss (a) hoerbares Signal liefern, solange das
     // Frame-Budget laeuft, und (b) danach exakt Stille — sonst wuerde ein
     // gelooptes Instrument endlos droehnen. Laeuft rein rechnerisch ueber einen
-    // AVAudioPCMBuffer, ohne echtes Audiogeraet.
+    // Float-Stereopuffer, ohne echtes Audiogeraet.
     func testPreviewRenderBlockProducesSignalThenSilence() throws {
         // Konstantes, nicht-gelooptes Sample: jeder gueltige Index liefert Signal.
         let inst = Instrument(index: 1, name: "P", length: 64, finetune: 0, volume: 64,
@@ -440,20 +442,15 @@ final class MultiFormatTests: XCTestCase {
 
         let budget = 40
         let voice = PreviewVoice(framesLeft: budget)
-        let block = ModPlayerCoordinator.createPreviewRenderBlock(
+        let block = RenderEngine.createPreviewRenderBlock(
             channel: ch, voice: voice, useInterpolation: false)
 
-        let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2))
-        let frames: AVAudioFrameCount = 128
-        let pcm = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames))
-        pcm.frameLength = frames
-        var silence = ObjCBool(false)
-        var ts = AudioTimeStamp()
-        let status = block(&silence, &ts, frames, pcm.mutableAudioBufferList)
-        XCTAssertEqual(status, noErr)
+        let frames: UInt32 = 128
+        let buffer = StereoRenderBuffer(capacity: Int(frames))
+        block(frames, buffer.left, buffer.right)
 
-        let left = try XCTUnwrap(pcm.floatChannelData)[0]
-        let right = try XCTUnwrap(pcm.floatChannelData)[1]
+        let left = buffer.left
+        let right = buffer.right
         // Innerhalb des Budgets: Signal, und mittig (L == R).
         for i in 0..<budget {
             XCTAssertGreaterThan(abs(left[i]), 0.01, "Frame \(i) sollte Signal tragen")
@@ -486,20 +483,15 @@ final class MultiFormatTests: XCTestCase {
         ch.sampleSpeed = 0.375
         ch.playing = false
 
-        let frames: AVAudioFrameCount = 32
+        let frames: UInt32 = 32
         let voice = PreviewVoice(framesLeft: Int(frames))
-        let block = ModPlayerCoordinator.createPreviewRenderBlock(
+        let block = RenderEngine.createPreviewRenderBlock(
             channel: ch, voice: voice, useInterpolation: false)
-        let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2))
-        let pcm = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames))
-        pcm.frameLength = frames
-        var silence = ObjCBool(false)
-        var ts = AudioTimeStamp()
+        let buffer = StereoRenderBuffer(capacity: Int(frames))
 
-        let status = block(&silence, &ts, frames, pcm.mutableAudioBufferList)
+        block(frames, buffer.left, buffer.right)
 
-        XCTAssertEqual(status, noErr)
-        let left = try XCTUnwrap(pcm.floatChannelData)[0]
+        let left = buffer.left
         for frame in 0..<Int(frames) {
             XCTAssertEqual(left[frame], 0.0, accuracy: 0.0,
                            "Gestoppter Loop war in Frame \(frame) noch hoerbar")

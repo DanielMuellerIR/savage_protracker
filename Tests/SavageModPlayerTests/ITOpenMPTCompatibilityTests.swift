@@ -69,7 +69,7 @@ final class ITOpenMPTCompatibilityTests: XCTestCase {
         let alternative = try ITParser.parse(data: makeIT(endExtensions: songExtensions([
             ("..MT", le(1, size: 1)),
         ])))
-        let alternativeState = ModPlayerCoordinator.makeRenderState(
+        let alternativeState = RenderEngine.makeRenderState(
             for: alternative, sampleRate: 48_000
         )
         XCTAssertEqual(alternativeState.tempoMode, .alternative)
@@ -82,7 +82,7 @@ final class ITOpenMPTCompatibilityTests: XCTestCase {
                 (".BPR", le(4, size: 4)),
             ])
         ))
-        let modernState = ModPlayerCoordinator.makeRenderState(for: modern, sampleRate: 48_000)
+        let modernState = RenderEngine.makeRenderState(for: modern, sampleRate: 48_000)
         XCTAssertEqual(modernState.tempoMode, .modern)
         XCTAssertEqual(modernState.rowsPerBeat, 4)
         XCTAssertEqual(modernState.outputsPerTick, 960, accuracy: 0.0001)
@@ -318,7 +318,7 @@ final class ITOpenMPTCompatibilityTests: XCTestCase {
         XCTAssertEqual(extensions.playBehaviours.map(\.bit), [0] + Array(7...50) + [87, 88, 100])
         XCTAssertTrue(module.compatibilityWarnings.isEmpty)
         XCTAssertEqual(
-            ModPlayerCoordinator.sequencedDuration(of: module),
+            RenderEngine.sequencedDuration(of: module),
             46.080,
             accuracy: 1.0 / 44_100.0
         )

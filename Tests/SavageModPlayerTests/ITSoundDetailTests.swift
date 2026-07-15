@@ -151,7 +151,7 @@ final class ITSoundDetailTests: XCTestCase {
         )
         let channel = voice(sample: held)
         let heldFrames = (0..<6).map { _ in
-            ModPlayerCoordinator.renderChannelStereoSampleForTesting(
+            RenderEngine.renderChannelStereoSampleForTesting(
                 channel: channel, useInterpolation: false
             ).left
         }
@@ -159,7 +159,7 @@ final class ITSoundDetailTests: XCTestCase {
 
         channel.keyReleased = true
         let releasedFrames = (0..<4).map { _ in
-            ModPlayerCoordinator.renderChannelStereoSampleForTesting(
+            RenderEngine.renderChannelStereoSampleForTesting(
                 channel: channel, useInterpolation: false
             ).left
         }
@@ -178,7 +178,7 @@ final class ITSoundDetailTests: XCTestCase {
             )
         )
         let channel = voice(sample: stereo)
-        let frame = ModPlayerCoordinator.renderChannelStereoSampleForTesting(
+        let frame = RenderEngine.renderChannelStereoSampleForTesting(
             channel: channel, useInterpolation: false
         )
         XCTAssertEqual(frame.left, 0.25, accuracy: 0.000_001)
@@ -355,8 +355,8 @@ final class ITSoundDetailTests: XCTestCase {
     }
 
     private func sequencedDuration(_ module: Mod, limit: Double) -> Double {
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: module)
-        let state = ModPlayerCoordinator.makeRenderState(for: module, sampleRate: sampleRate)
+        let channels = RenderEngine.makeRenderChannels(for: module)
+        let state = RenderEngine.makeRenderState(for: module, sampleRate: sampleRate)
         var frames = 0
         let frameLimit = Int(sampleRate * limit)
         while frames < frameLimit {

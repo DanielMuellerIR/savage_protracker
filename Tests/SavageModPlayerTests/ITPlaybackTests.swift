@@ -11,7 +11,7 @@ final class ITPlaybackTests: XCTestCase {
         ])
 
         // 4 Zeilen * Speed 6 * 48 Frames/Tick bei 2.400 Hz und BPM 125.
-        let duration = ModPlayerCoordinator.sequencedDuration(
+        let duration = RenderEngine.sequencedDuration(
             of: mod,
             sampleRate: 2_400,
             maximumSeconds: 10
@@ -25,7 +25,7 @@ final class ITPlaybackTests: XCTestCase {
             channelCount: 64,
             channelVolumes: Array(0..<64).map { $0 }
         )
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
 
         XCTAssertEqual(channels.count, 64)
         XCTAssertEqual(channels.first?.itVoicePool?.patternChannels.count, 64)
@@ -38,7 +38,7 @@ final class ITPlaybackTests: XCTestCase {
     func testC5SpeedDrivesLinearAndAmigaFrequencyModels() {
         for linear in [false, true] {
             let mod = makeMod(rows: [oneChannelRow()], linear: linear, c5Speed: 8_000)
-            let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+            let channel = RenderEngine.makeRenderChannels(for: mod)[0]
             channel.playNote(note(key: 60, instrument: 1), instruments: mod.instruments)
             channel.performTick(tick: 0, sampleRate: 4_000, clockRate: 14_317_056)
             XCTAssertEqual(channel.sampleSpeed, 2, accuracy: 0.000_001, "linear=\(linear)")
@@ -52,7 +52,7 @@ final class ITPlaybackTests: XCTestCase {
     func testLinearAndAmigaPortamentoMovePitchInTheSameDirection() {
         for linear in [false, true] {
             let mod = makeMod(rows: [oneChannelRow()], linear: linear)
-            let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+            let channel = RenderEngine.makeRenderChannels(for: mod)[0]
             channel.playNote(note(key: 60, instrument: 1), instruments: mod.instruments)
             channel.performTick(tick: 0, sampleRate: 8_000, clockRate: 14_317_056)
             let baseSpeed = channel.sampleSpeed
@@ -69,7 +69,7 @@ final class ITPlaybackTests: XCTestCase {
 
     func testITEffectMemorySlidesAndCombinedEffects() {
         let mod = makeMod(rows: [oneChannelRow()], linear: true)
-        let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+        let channel = RenderEngine.makeRenderChannels(for: mod)[0]
         channel.playNote(note(key: 60, instrument: 1, volume: 32), instruments: mod.instruments)
         channel.performTick(tick: 0, sampleRate: 8_000, clockRate: 14_317_056)
 
@@ -112,7 +112,7 @@ final class ITPlaybackTests: XCTestCase {
 
     func testITArpeggioTremorOffsetRetriggerTremoloFineVibratoAndPanning() {
         let mod = makeMod(rows: [oneChannelRow()], linear: true)
-        let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+        let channel = RenderEngine.makeRenderChannels(for: mod)[0]
         channel.playNote(note(key: 60, instrument: 1, volume: 32), instruments: mod.instruments)
         let basePeriod = channel.currentPeriod
 
@@ -170,7 +170,7 @@ final class ITPlaybackTests: XCTestCase {
             sampleGlobalVolume: 48,
             sampleDefaultPanning: 16
         )
-        let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+        let channel = RenderEngine.makeRenderChannels(for: mod)[0]
         channel.playNote(note(key: 60, instrument: 1, volume: 40), instruments: mod.instruments)
         XCTAssertEqual(channel.currentVolume, 40)
         XCTAssertEqual(channel.panning, 0.25)
@@ -199,8 +199,8 @@ final class ITPlaybackTests: XCTestCase {
             Row(notes: [Note](repeating: emptyNote(), count: 4))
         })
         let mod = makeMod(patterns: [first, second], patternTable: [0, 1], channelCount: 4)
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
-        let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: 2_400)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
+        let state = RenderEngine.makeRenderState(for: mod, sampleRate: 2_400)
 
         advanceTick(state, channels: channels, mod: mod, sampleRate: 2_400) // Row 0, Tick 0
         XCTAssertEqual(state.ticksPerRow, 3)
@@ -228,8 +228,8 @@ final class ITPlaybackTests: XCTestCase {
             initialSpeed: 2,
             initialTempo: 125
         )
-        let memoryChannels = ModPlayerCoordinator.makeRenderChannels(for: memoryMod)
-        let memoryState = ModPlayerCoordinator.makeRenderState(for: memoryMod, sampleRate: 2_400)
+        let memoryChannels = RenderEngine.makeRenderChannels(for: memoryMod)
+        let memoryState = RenderEngine.makeRenderState(for: memoryMod, sampleRate: 2_400)
         for _ in 0..<4 {
             advanceTick(memoryState, channels: memoryChannels, mod: memoryMod, sampleRate: 2_400)
         }
@@ -239,7 +239,7 @@ final class ITPlaybackTests: XCTestCase {
     func testCompatibleGxxControlsSharedPitchMemory() {
         for compatible in [false, true] {
             let mod = makeMod(rows: [oneChannelRow()], compatibleGxx: compatible)
-            let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+            let channel = RenderEngine.makeRenderChannels(for: mod)[0]
             channel.playNote(note(key: 60, instrument: 1), instruments: mod.instruments)
 
             channel.playNote(effect(5, 0x02), instruments: mod.instruments)
@@ -256,7 +256,7 @@ final class ITPlaybackTests: XCTestCase {
     func testOldEffectsChangeTickZeroTremorAndOutOfRangeOffset() {
         for oldEffects in [false, true] {
             let mod = makeMod(rows: [oneChannelRow()], oldEffects: oldEffects)
-            let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+            let channel = RenderEngine.makeRenderChannels(for: mod)[0]
             channel.playNote(note(key: 60, instrument: 1), instruments: mod.instruments)
 
             channel.playNote(effect(8, 0x14), instruments: mod.instruments)
@@ -294,7 +294,7 @@ final class ITPlaybackTests: XCTestCase {
         let row1 = Row(notes: [effect(23, 0x20)])
         let row2 = Row(notes: [effect(23, 0x00)])
         let mod = makeMod(rows: [row0, row1, row2], initialSpeed: 3)
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
         let channel = channels[0]
         let pool = channel.itVoicePool!
         let patternState = pool.patternChannels[0]
@@ -319,7 +319,7 @@ final class ITPlaybackTests: XCTestCase {
         pool.performPatternChannelTick(tick: 1, voices: channels)
         XCTAssertEqual(patternState.channelPanning, 0.5 - 2.0 / 64.0, accuracy: 0.000_001)
 
-        let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: 2_400)
+        let state = RenderEngine.makeRenderState(for: mod, sampleRate: 2_400)
         advanceTick(state, channels: channels, mod: mod, sampleRate: 2_400) // Row 0
         advanceTick(state, channels: channels, mod: mod, sampleRate: 2_400)
         advanceTick(state, channels: channels, mod: mod, sampleRate: 2_400)
@@ -334,7 +334,7 @@ final class ITPlaybackTests: XCTestCase {
 
     func testVolumeColumnMemoryIsSeparateAndPitchSlidesAreFourTimesEffectColumn() {
         let mod = makeMod(rows: [oneChannelRow()])
-        let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+        let channel = RenderEngine.makeRenderChannels(for: mod)[0]
         channel.playNote(note(key: 60, instrument: 1, volume: 32), instruments: mod.instruments)
 
         channel.playNote(note(volume: 88), instruments: mod.instruments) // C3
@@ -359,7 +359,7 @@ final class ITPlaybackTests: XCTestCase {
         ]
         for mode in 0...15 {
             let mod = makeMod(rows: [oneChannelRow()])
-            let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+            let channel = RenderEngine.makeRenderChannels(for: mod)[0]
             channel.playNote(
                 note(key: 60, instrument: 1, volume: 32),
                 instruments: mod.instruments
@@ -370,7 +370,7 @@ final class ITPlaybackTests: XCTestCase {
         }
 
         let mod = makeMod(rows: [oneChannelRow()])
-        let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+        let channel = RenderEngine.makeRenderChannels(for: mod)[0]
         channel.playNote(note(key: 60, instrument: 1, volume: 32), instruments: mod.instruments)
         channel.playNote(effect(17, 0x91), instruments: mod.instruments)
         channel.performTick(tick: 1, sampleRate: 8_000, clockRate: 14_317_056)
@@ -378,7 +378,7 @@ final class ITPlaybackTests: XCTestCase {
         channel.performTick(tick: 1, sampleRate: 8_000, clockRate: 14_317_056)
         XCTAssertEqual(channel.currentVolume, 34, "Q00 muss Modus und Intervall wiederholen")
 
-        let spanning = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+        let spanning = RenderEngine.makeRenderChannels(for: mod)[0]
         let noteWithQ = Note(
             instrument: 1,
             period: 0,
@@ -410,7 +410,7 @@ final class ITPlaybackTests: XCTestCase {
 
     func testFinePanningAndGlobalSlidesApplyOnlyOnTickZero() {
         let mod = makeMod(rows: [oneChannelRow()])
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
         let channel = channels[0]
         let patternState = channel.itPatternState!
         patternState.channelPanning = 0.5
@@ -425,8 +425,8 @@ final class ITPlaybackTests: XCTestCase {
 
         let rows = [oneChannelRow(effect(23, 0x2F)), oneChannelRow(effect(23, 0xF1))]
         let globalMod = makeMod(rows: rows, initialSpeed: 2)
-        let globalChannels = ModPlayerCoordinator.makeRenderChannels(for: globalMod)
-        let state = ModPlayerCoordinator.makeRenderState(for: globalMod, sampleRate: 2_400)
+        let globalChannels = RenderEngine.makeRenderChannels(for: globalMod)
+        let state = RenderEngine.makeRenderState(for: globalMod, sampleRate: 2_400)
         state.globalVolume = 64
         advanceTick(state, channels: globalChannels, mod: globalMod, sampleRate: 2_400)
         XCTAssertEqual(state.globalVolume, 66)
@@ -438,7 +438,7 @@ final class ITPlaybackTests: XCTestCase {
 
     func testITWaveformsPanbrelloHighOffsetAndSurroundState() {
         let mod = makeMod(rows: [oneChannelRow()])
-        let channel = ModPlayerCoordinator.makeRenderChannels(for: mod)[0]
+        let channel = RenderEngine.makeRenderChannels(for: mod)[0]
         let state = channel.itPatternState!
         channel.playNote(note(key: 60, instrument: 1), instruments: mod.instruments)
 
@@ -500,7 +500,7 @@ final class ITPlaybackTests: XCTestCase {
 
     func testITNoteCutDelayTickDelayPatternDelayAndPatternLoop() {
         let base = makeMod(rows: [oneChannelRow()])
-        let delayedChannel = ModPlayerCoordinator.makeRenderChannels(for: base)[0]
+        let delayedChannel = RenderEngine.makeRenderChannels(for: base)[0]
         let delayed = Note(
             instrument: 1,
             period: 0,
@@ -531,8 +531,8 @@ final class ITPlaybackTests: XCTestCase {
             oneChannelRow(),
         ]
         let mod = makeMod(rows: delayRows, initialSpeed: 2)
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
-        let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: 2_400)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
+        let state = RenderEngine.makeRenderState(for: mod, sampleRate: 2_400)
 
         advanceTick(state, channels: channels, mod: mod, sampleRate: 2_400) // Row 0
         XCTAssertEqual(state.ticksPerRow, 4)
@@ -577,8 +577,8 @@ final class ITPlaybackTests: XCTestCase {
             channelCount: 4,
             initialSpeed: 2
         )
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
-        let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: 2_400)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
+        let state = RenderEngine.makeRenderState(for: mod, sampleRate: 2_400)
         var rowStarts: [(Int, Int)] = []
         var lastTick = -1
         for _ in 0..<30 {
@@ -839,8 +839,8 @@ final class ITPlaybackTests: XCTestCase {
     // Framegenaue Sequencer-Dauer ohne WAV-Blockrundung. Der erste Frame nach
     // dem Songende gehört bereits zum Wrap und wird deshalb nicht mitgezählt.
     private func sequencedDuration(mod: Mod, sampleRate: Double) -> Double {
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: mod)
-        let state = ModPlayerCoordinator.makeRenderState(for: mod, sampleRate: sampleRate)
+        let channels = RenderEngine.makeRenderChannels(for: mod)
+        let state = RenderEngine.makeRenderState(for: mod, sampleRate: sampleRate)
         let frameLimit = Int(sampleRate * 60)
         var frames = 0
         while frames < frameLimit {

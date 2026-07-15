@@ -238,6 +238,8 @@ final class ModParserTests: XCTestCase {
         XCTAssertLessThan(Int(channel.sampleIndex), instrument.primarySample?.pcm.count ?? 0)
     }
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     @MainActor
     func testRTypeFourthChannelSampleSurvivesPastRow16() throws {
         guard let fileURL = realModURLs().first(where: {
@@ -264,6 +266,7 @@ final class ModParserTests: XCTestCase {
         XCTAssertGreaterThan(maxFourthChannelPeak, 0.001)
         XCTAssertGreaterThan(audibleProbeCount, 8)
     }
+#endif
     
     func testParserErrorResilience() {
         // Test parsing too small data
@@ -316,6 +319,8 @@ final class ModParserTests: XCTestCase {
         // MultiFormatTests.swift.
     }
     
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     @MainActor
     func testRealtimePlaybackSurvivesFiveSeconds() async throws {
         let audioDirPath = "audio"
@@ -345,6 +350,7 @@ final class ModParserTests: XCTestCase {
         coordinator.stop()
         XCTAssertFalse(coordinator.isPlaying)
     }
+#endif
     
     func testPrintPatternNotes() throws {
         guard let fileURL = realModURLs().first(where: {

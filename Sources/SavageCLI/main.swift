@@ -10,10 +10,13 @@ import SavageModPlayerCore
 // Nutzung:
 //   savage-cli <datei> [--out <pfad.wav>] [--seconds N] [--rate R]
 //              [--normalize] [--no-interp] [--info] [--pattern N] [--quiet]
+//              [--stdout] [--list <ordner>]
 //
 // Ohne --out schreibt der Renderer neben die Eingabe (<datei>.wav). --info gibt
 // nur die Modul-Struktur aus (kein Render). --normalize hebt den Pegel an (wie
-// Quick Look); für rohe Vergleiche weglassen.
+// Quick Look); für rohe Vergleiche weglassen. --stdout schreibt rohes PCM nach
+// stdout (Pipe-Wiedergabe, z.B. `savage-cli x.mod --stdout | aplay ...`).
+// --list scannt einen Ordner und listet die spielbaren Module.
 
 struct Options {
     var input: String?
@@ -25,6 +28,8 @@ struct Options {
     var infoOnly = false
     var dumpPattern: Int?          // Order-Index, dessen Pattern als Text ausgegeben wird
     var quiet = false
+    var toStdout = false           // rohes PCM-s16le nach stdout statt in eine WAV-Datei
+    var listDir: String?           // Ordner rekursiv nach spielbaren Modulen durchsuchen
 }
 
 func parseArgs(_ argv: [String]) -> Options {
@@ -41,6 +46,8 @@ func parseArgs(_ argv: [String]) -> Options {
         case "--info":           o.infoOnly = true
         case "--pattern":        i += 1; o.dumpPattern = Int(i < argv.count ? argv[i] : "")
         case "--quiet", "-q":    o.quiet = true
+        case "--stdout":         o.toStdout = true
+        case "--list":           i += 1; o.listDir = i < argv.count ? argv[i] : nil
         case "--help", "-h":     printUsageAndExit()
         default:
             if o.input == nil { o.input = a }
@@ -63,6 +70,11 @@ func printUsageAndExit() -> Never {
           --info           nur Modul-Struktur ausgeben (IT intern analysierbar)
           --pattern N      Pattern an Order-Position N als Text ausgeben
       -q, --quiet          keine Fortschrittsausgabe
+          --stdout         rohes PCM (s16le, stereo) nach stdout statt in eine Datei
+          --list <ordner>  Ordner rekursiv nach spielbaren Modulen durchsuchen
+
+    Beispiel (Linux):
+      savage-cli song.mod --stdout | aplay -f S16_LE -c2 -r44100
 
     """.utf8))
     exit(2)
@@ -300,6 +312,37 @@ func dumpPattern(_ mod: Mod, orderIndex: Int) {
 // ---- Hauptprogramm ----------------------------------------------------------
 
 let opts = parseArgs(Array(CommandLine.arguments.dropFirst()))
+
+// --list: Ordner scannen und spielbare Module ausgeben (ein Pfad je Zeile, damit
+// die Ausgabe pipe-/skriptfreundlich bleibt). Braucht keine Eingabedatei.
+if let listDir = opts.listDir {
+    let dirURL = URL(fileURLWithPath: listDir)
+    var isDir: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: dirURL.path, isDirectory: &isDir), isDir.boolValue else {
+        FileHandle.standardError.write(Data("Fehler: Kein Ordner: \(listDir)\n".utf8))
+        exit(1)
+    }
+    // Direkt enumerieren statt collectEntries: kein Entpacken, kein TempDir —
+    // --list soll nur zeigen, was da ist, und nichts auf die Platte schreiben.
+    guard let enumerator = FileManager.default.enumerator(
+        at: dirURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+    ) else {
+        FileHandle.standardError.write(Data("Fehler: Ordner nicht lesbar: \(listDir)\n".utf8))
+        exit(1)
+    }
+    var count = 0
+    var paths: [String] = []
+    while let fileURL = enumerator.nextObject() as? URL {
+        if PlaylistScanner.isModFile(fileURL) {
+            paths.append(fileURL.path)
+            count += 1
+        }
+    }
+    for path in paths.sorted() { print(path) }
+    log("\(count) spielbare Module in \(listDir)", quiet: opts.quiet)
+    exit(count > 0 ? 0 : 1)
+}
+
 guard let inputPath = opts.input else { printUsageAndExit() }
 
 let inputURL = URL(fileURLWithPath: inputPath)
@@ -341,6 +384,19 @@ do {
 }
 let elapsed = Date().timeIntervalSince(started)
 
+// data-Chunk-Größe steht ab Byte 40 (nach 44-Byte-Header).
+let audioBytes = max(0, wav.count - 44)
+let renderedSeconds = Double(audioBytes) / (opts.rate * 4.0) // 16-Bit-Stereo = 4 Byte/Frame
+
+// --stdout: nur die PCM-Nutzdaten ohne RIFF-Header, damit die Ausgabe direkt in
+// einen Player gepiped werden kann (aplay & Co. erwarten rohes s16le). Die
+// Statusmeldung geht wie gehabt auf stderr und verschmutzt den Stream nicht.
+if opts.toStdout {
+    FileHandle.standardOutput.write(wav.dropFirst(44))
+    log(String(format: "Fertig: %.1f s Audio nach stdout (in %.2f s gerendert)", renderedSeconds, elapsed), quiet: opts.quiet)
+    exit(0)
+}
+
 let outPath = opts.output ?? (inputPath + ".wav")
 do {
     try wav.write(to: URL(fileURLWithPath: outPath))
@@ -349,8 +405,5 @@ do {
     exit(1)
 }
 
-// data-Chunk-Größe steht ab Byte 40 (nach 44-Byte-Header).
-let audioBytes = max(0, wav.count - 44)
-let renderedSeconds = Double(audioBytes) / (opts.rate * 4.0) // 16-Bit-Stereo = 4 Byte/Frame
 log(String(format: "Fertig: %@ (%.1f s Audio, in %.2f s gerendert)", outPath, renderedSeconds, elapsed), quiet: opts.quiet)
 print(outPath)

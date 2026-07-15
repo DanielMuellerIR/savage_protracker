@@ -83,6 +83,8 @@ final class LengthOneModuleTests: XCTestCase {
         XCTAssertEqual(wav.prefix(4), Data("RIFF".utf8))
     }
 
+    // Braucht die AVAudioEngine-gebundene Live-Klasse — entfällt unter Linux.
+#if canImport(AVFoundation) && canImport(Combine)
     /// Seek jenseits der einzigen Position muss auf 0 klemmen (kein Absturz).
     @MainActor
     func testLengthOneModuleSeekClampsToZero() throws {
@@ -92,4 +94,5 @@ final class LengthOneModuleTests: XCTestCase {
         coordinator.seek(toPosition: 5) // jenseits der einzigen Position
         XCTAssertEqual(coordinator.currentPosition, 0, "Seek muss bei Länge 1 auf Position 0 klemmen")
     }
+#endif
 }

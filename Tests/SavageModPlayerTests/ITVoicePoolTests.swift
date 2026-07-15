@@ -1,4 +1,3 @@
-import AVFoundation
 import XCTest
 @testable import SavageModPlayerCore
 
@@ -399,7 +398,7 @@ final class ITVoicePoolTests: XCTestCase {
             "64-Kanal-/256-Voice-Releasepfad muss schneller als Echtzeit bleiben"
         )
         #endif
-        XCTAssertEqual(ModPlayerCoordinator.makeRenderChannels(for: stress).count, 256)
+        XCTAssertEqual(RenderEngine.makeRenderChannels(for: stress).count, 256)
     }
 
     func testRealOpenMPTCarryNNASongIsStructuredTimedAndAudible() throws {
@@ -514,7 +513,7 @@ final class ITVoicePoolTests: XCTestCase {
             channelVolumes: Array(repeating: 64, count: 64),
             itProperties: instrumentModeProperties
         )
-        let voices = ModPlayerCoordinator.makeRenderChannels(for: module)
+        let voices = RenderEngine.makeRenderChannels(for: module)
         return (module, try XCTUnwrap(voices.first?.itVoicePool), voices)
     }
 
@@ -564,8 +563,8 @@ final class ITVoicePoolTests: XCTestCase {
     private func renderOwnerSignals(
         _ module: Mod
     ) throws -> (maxStem: Float, maxStereo: Float, vu: Float, scope: Float, otherStemsAreSilent: Bool) {
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: module)
-        let state = ModPlayerCoordinator.makeRenderState(for: module, sampleRate: sampleRate)
+        let channels = RenderEngine.makeRenderChannels(for: module)
+        let state = RenderEngine.makeRenderState(for: module, sampleRate: sampleRate)
         let peaks = UnsafeMutablePointer<Float>.allocate(capacity: 64)
         let waves = UnsafeMutablePointer<Float>.allocate(capacity: 64 * 32)
         let master = UnsafeMutablePointer<Float>.allocate(capacity: 128)
@@ -579,11 +578,7 @@ final class ITVoicePoolTests: XCTestCase {
         master.initialize(repeating: 0, count: 128)
         let vu = RealtimeVUBuffer(pointer: peaks)
         let wave = RealtimeWaveBuffer(channelWaves: waves, masterWaves: master)
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2),
-              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024) else {
-            throw XCTSkip("Audio-Puffer konnte nicht angelegt werden")
-        }
-        buffer.frameLength = 1024
+        let buffer = StereoRenderBuffer(capacity: 1024)
         let captureStems = UnsafeMutablePointer<Float>.allocate(capacity: 64 * 1024)
         let captureLeft = UnsafeMutablePointer<Float>.allocate(capacity: 1024)
         let captureRight = UnsafeMutablePointer<Float>.allocate(capacity: 1024)
@@ -602,7 +597,7 @@ final class ITVoicePoolTests: XCTestCase {
             frameCapacity: 1024,
             channelCount: 64
         )
-        let block = ModPlayerCoordinator.createRenderBlock(
+        let block = RenderEngine.createRenderBlock(
             state: state,
             vuBuffer: vu,
             waveBuffer: wave,
@@ -611,9 +606,7 @@ final class ITVoicePoolTests: XCTestCase {
             sampleRate: sampleRate,
             capture: capture
         )
-        var silence = ObjCBool(false)
-        var timestamp = AudioTimeStamp()
-        XCTAssertEqual(block(&silence, &timestamp, 1024, buffer.mutableAudioBufferList), noErr)
+        block(1024, buffer.left, buffer.right)
 
         var maxStem: Float = 0
         var maxStereo: Float = 0
@@ -637,8 +630,8 @@ final class ITVoicePoolTests: XCTestCase {
         sampleRate: Double,
         limit: Double
     ) -> (duration: Double, maxActiveVoices: Int) {
-        let channels = ModPlayerCoordinator.makeRenderChannels(for: module)
-        let state = ModPlayerCoordinator.makeRenderState(for: module, sampleRate: sampleRate)
+        let channels = RenderEngine.makeRenderChannels(for: module)
+        let state = RenderEngine.makeRenderState(for: module, sampleRate: sampleRate)
         let frameLimit = Int(sampleRate * limit)
         var frames = 0
         var maxActiveVoices = 0
