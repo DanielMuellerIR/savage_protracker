@@ -3,10 +3,15 @@
 ## Typ und Zweck
 
 - **Typ:** native macOS-GUI-App mit SwiftUI/AVAudioEngine, Quick-Look-Extension,
-  headless Swift-CLI und kompakter HTML5-Variante.
+  plattformübergreifendes headless CLI (`savage-cli`, macOS + Linux) und kompakte
+  HTML5-Variante.
 - **Zweck:** Tracker-Modul-Player für MOD, S3M, XM und IT. Die native Variante
   unterstützt alle vier Formate; der Single-File-Browserplayer bleibt bewusst
   auf klassische 4-Kanal-ProTracker-MODs begrenzt.
+- **Linux ist Ist-Zustand, nicht Option** (seit 1.5.44/1.5.45): `SavageModPlayerCore`
+  und `savage-cli` bauen, testen und spielen unter Linux; App und Quick Look sind
+  macOS-only und werden dort per `#if os(macOS)` aus `Package.swift` ausgeblendet.
+  Details und Grenzen: [Linux-Plan](tasks/2026-07-05-linux-port/plan.md).
 - `SavageModPlayerCore` ist in `Package.swift` iOS-tauglich deklariert, aber ein
   iOS-App-Target oder verifizierter iOS-Buildpfad existiert nicht. iOS ist Option,
   kein Ist-Zustand.
@@ -18,12 +23,26 @@
   `ModuleLoader` als inhaltsbasierter Dispatch. Formatfremde Daten und strukturelle
   Korruption ablehnen; nur dokumentierte, sicher clamp-/ignorierbare Realweltwerte
   tolerant behandeln. Keine pauschale „OpenMPT akzeptiert es“-Toleranz.
-- `Sources/SavageModPlayerCore/DSP/`: gemeinsamer Live-/Probe-/Offline-Renderpfad
-  über `AVAudioSourceNode`. Im Echtzeit-Renderblock niemals Heap-Allokationen,
-  Locks oder dynamische Objective-C-Aufrufe einführen. Kanal-/Voice-Puffer bleiben
-  voralloziert; IT trennt bis zu 64 Pattern-Kanäle von 256 Voices.
-- `ModuleRenderer` verwendet dieselbe Engine für CLI, Tests und Quick Look. Ein
-  Fix darf den Live- und Offlinepfad nicht semantisch auseinanderlaufen lassen.
+- `Sources/SavageModPlayerCore/DSP/`: gemeinsamer Live-/Probe-/Offline-Renderpfad.
+  Im Echtzeit-Renderblock niemals Heap-Allokationen, Locks oder dynamische
+  Objective-C-Aufrufe einführen. Kanal-/Voice-Puffer bleiben voralloziert; IT
+  trennt bis zu 64 Pattern-Kanäle von 256 Voices.
+- **`RenderEngine.swift` ist plattformneutral und muss es bleiben.** Kein
+  AVFoundation, kein Combine, keine CoreAudio-Typen (`AudioBufferList`, `ObjCBool`,
+  `OSStatus`) — sonst bricht der Linux-Build. Der Renderblock hat die neutrale
+  Signatur `ModuleRenderBlock`; CoreAudio lebt ausschließlich im Adapter
+  `ModPlayerCoordinator.makeSourceNodeRenderBlock`. `ModPlayerCoordinator` und
+  `VisualizerState` sind hinter `canImport(AVFoundation)`/`canImport(Combine)`
+  geguardet.
+- `Sources/SavageModPlayerCore/Audio/`: Ausgabeschicht (`PCMSink` & Co.), aus
+  `vicious_sidplayer` übernommene Kopie plus eigenes `ModulePCMSource`. Frei von
+  Format-Wissen halten. Änderungen dort mit dem SID-Repo abgleichen — eine
+  Extraktion in ein gemeinsames Paket lohnt erst nach Bewährung in beiden.
+- **Eine Engine, mehrere Ausgaben.** `ModuleRenderer` (Offline/Quick Look),
+  `ModulePCMSource` (Echtzeit-CLI) und `ModPlayerCoordinator` (App) holen alle aus
+  `RenderEngine.createRenderBlock`. Ein Fix darf sie nicht auseinanderlaufen
+  lassen; `ModulePCMSourceTests` deckt die Gleichheit von Echtzeit- und
+  Offlinepfad sample-genau ab.
 - `modplayer.js` und `mod-player-worklet.js` bilden Parser/DSP des HTML5-Players;
   `src/` enthält UI-Quellen, `build.py` erzeugt die getrackte
   `savage-mod-player.html`. Generiertes HTML nach Web-/Versionsänderungen neu bauen
@@ -81,6 +100,8 @@ Die vollständigen Befehle, Fixture-Regeln und Quick-Look-Fallen stehen in
 |---|---|
 | Swift allgemein | gezielter Test, vollständiges `swift test`, `git diff --check` |
 | App/Core/Quick Look | zusätzlich `bash build_app.sh` |
+| `RenderEngine`, `Audio/`, `Package.swift`, Parser-Kern | zusätzlich Linux-Lauf (Docker, siehe Linux-Plan) — der Build dort ist der einzige Beleg für Plattformneutralität |
+| Audio-Renderpfad angefasst | `savage-cli`-WAVs über den lokalen MOD-Korpus byteidentisch zu vorher (Baseline vor der Änderung erzeugen) |
 | gemeinsamer MOD-DSP | `DSPChannelTimingTests`, Sequencer-Tests und `node Tests/js/worklet-timing.mjs` |
 | MOD/S3M/XM/IT-Parser oder -DSP | passende Format-Suite plus lokale Realweltdateien, falls vorhanden |
 | Webquelle/Version | `python3 build.py`, generierten HTML-Diff prüfen, Browser-Smoke bei UI-Verhalten |
@@ -117,9 +138,10 @@ geschlossen und dürfen nicht reaktiviert werden.
 ## Aktive nächste Schritte
 
 Nur [tasks/backlog.md](tasks/backlog.md) ist die aktive Projektliste. Dort stehen
-unter anderem der GUI-Dateiargument-Smoke, optionale Visualizer-/Churn-Arbeit,
-seltene XM-Feinheiten und der getrennte Linux-Port. Erledigte Release-, UI-,
-Audit- und IT-Chronik liegt in Release Notes, Tasks und
+unter anderem die offene Release-Notes-Entscheidung, der GUI-Dateiargument-Smoke,
+der Rest des Linux-Ports (Tastatursteuerung, Playlist, Dropout-Nachweis),
+optionale Visualizer-/Churn-Arbeit und seltene XM-Feinheiten. Erledigte Release-,
+UI-, Audit- und IT-Chronik liegt in Release Notes, Tasks und
 [docs/AGENTS-history-through-2026-07-12.md](docs/AGENTS-history-through-2026-07-12.md).
 
 ## Verzeichnisstruktur
@@ -137,6 +159,9 @@ Audit- und IT-Chronik liegt in Release Notes, Tasks und
 - [docs/AGENTS-history-through-2026-07-12.md](docs/AGENTS-history-through-2026-07-12.md)
   — ausgelagerte erledigte AGENTS-Chronik. `archive/p_modplayer_*` ist ein
   gitignorierter lokaler Sonderbestand und keine aktive Regelquelle.
+- `Sources/SavageModPlayerCore/` — Parser, `DSP/` (Renderkern, plattformneutral),
+  `Audio/` (Ausgabeschicht/PCMSink), `Playlist/`; `Sources/CALSA/` — Systemmodul
+  für ALSA (nur Linux); `Sources/SavageCLI/` — `savage-cli` (macOS + Linux).
 - `Sources/` und `Tests/` — native Produkte und Tests; `quicklook/` — Extension;
   `src/`, `modplayer.js`, `mod-player-worklet.js` und
   `savage-mod-player.html` — Webquelle und generiertes Single-File-Produkt.
