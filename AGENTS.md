@@ -129,10 +129,8 @@ Vor einer betroffenen Änderung gezielt [docs/testing.md](docs/testing.md) lesen
   generische Infokarte.
 
 Die IT-Implementierung M0–M10 ist abgeschlossen. Dauerhafte Semantik und
-Capability-Grenzen stehen in
-[tasks/2026-07-10-it-support/decisions.md](tasks/2026-07-10-it-support/decisions.md)
-und [openmpt-capability-audit.md](tasks/2026-07-10-it-support/openmpt-capability-audit.md).
-Historische Start-/Branch-Anweisungen aus `handoff.md` und `state.md` sind
+Capability-Grenzen sind projektextern dokumentiert. Historische
+Start-/Branch-Anweisungen aus dem IT-Support-Task sind
 geschlossen und dürfen nicht reaktiviert werden.
 
 ## Aktive nächste Schritte
@@ -153,9 +151,8 @@ UI-, Audit- und IT-Chronik liegt in Release Notes, Tasks und
 - [docs/testing.md](docs/testing.md) — Test-/Build-/Quick-Look-Runbook;
   `docs/screenshot-dark.png` ist ein Produktasset, keine Regelquelle.
 - [tasks/backlog.md](tasks/backlog.md) — echte offene Arbeit;
-  [Linux-Plan](tasks/2026-07-05-linux-port/plan.md) und
-  [IT-Plan](tasks/2026-07-10-it-support/plan.md) — optionale bzw. abgeschlossene
-  größere Vorhaben.
+  [Linux-Plan](tasks/2026-07-05-linux-port/plan.md) — optionales größeres
+  Vorhaben.
 - [docs/AGENTS-history-through-2026-07-12.md](docs/AGENTS-history-through-2026-07-12.md)
   — ausgelagerte erledigte AGENTS-Chronik. `archive/p_modplayer_*` ist ein
   gitignorierter lokaler Sonderbestand und keine aktive Regelquelle.

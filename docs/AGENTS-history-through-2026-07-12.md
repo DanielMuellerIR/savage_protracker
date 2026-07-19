@@ -34,8 +34,7 @@ Restarbeit in `tasks/backlog.md`.
 ## Erhaltene Quellen
 
 - Nutzerrelevante Historie: `RELEASE_NOTES.md` und `RELEASE_NOTES.de.md`.
-- IT-Architektur, Gates und Capability-Audit:
-  `tasks/2026-07-10-it-support/`.
+- IT-Architektur, Gates und Capability-Audit: projektextern dokumentiert.
 - Linux-Idee: `tasks/2026-07-05-linux-port/plan.md`.
 - Aktuelle Restarbeit: `tasks/backlog.md`.
 - Test-/Quick-Look-/Notary-Verfahren: `docs/testing.md`.

@@ -47,18 +47,12 @@ class ContextHygieneTests(unittest.TestCase):
     def test_deferred_rules_and_stale_handoff_are_reachable(self):
         testing = (ROOT / "docs/testing.md").read_text(encoding="utf-8")
         backlog = (ROOT / "tasks/backlog.md").read_text(encoding="utf-8")
-        handoff_head = "\n".join((ROOT / "tasks/2026-07-10-it-support/handoff.md")
-                                  .read_text(encoding="utf-8").splitlines()[:10])
-        state_head = "\n".join((ROOT / "tasks/2026-07-10-it-support/state.md")
-                                .read_text(encoding="utf-8").splitlines()[:10])
         for marker in ("DSPChannelTimingTests", "worklet-timing.mjs",
                        "build_app.sh", "QLPreviewReply(fileURL:)",
                        "Notary-Keychain"):
             self.assertIn(marker, testing)
         self.assertIn("GUI-Smoke", backlog)
         self.assertIn("Amiga-Periodentabelle", backlog)
-        self.assertIn("CLOSED / SUPERSEDED", handoff_head)
-        self.assertIn("CLOSED / SUPERSEDED", state_head)
 
     def test_public_start_context_has_no_private_path_or_remote(self):
         text = "\n".join(
