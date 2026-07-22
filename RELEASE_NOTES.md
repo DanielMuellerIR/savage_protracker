@@ -1,36 +1,49 @@
-The macOS app now plays **Impulse Tracker modules (`.it`)** in sample and instrument mode — the fifth supported tracker format after ProTracker MOD, Soundtracker, ScreamTracker 3, and FastTracker II. Version 1.5.29 also completes two FastTracker II effects and restructures the app UI implementation without changing its appearance or behavior.
+Savage Mod Player 1.5.46 adds native Linux audio playback and hardens parsers,
+rendering, command-line streaming, and Quick Look caching against malformed or
+ambiguous input.
 
-## Added
+## Linux and command-line playback
 
-- **Impulse Tracker (`.it`) support**: up to 64 logical channels, a preallocated 256-voice NNA pool, NNA/DCT/DCA, 120-note sample maps, envelopes, fadeout, sustain loops, stereo samples, surround, sample vibrato, pitch-pan, volume/pan swing, and resonant per-voice filters.
-- **IT 2.14/2.15 samples**: uncompressed and compressed 8-/16-bit mono or stereo PCM, signed/unsigned and delta variants, forward and ping-pong loops, and separate sustain loops.
-- **IT effect semantics**: effect and volume-column memory, `Old Effects`, `Compatible Gxx`, pattern/row delays and loops, tempo/global/channel volume, retrigger, tremor, vibrato, panbrello, and common filter macros.
-- **Structured OpenMPT capability analysis**: `cwtv` identifies the creating tracker, `cmwt` controls format compatibility, and full OpenMPT versions come from their dedicated extension fields. XTPM/STPM chunks, legacy ModPlug chunks, MIDI/plugin routing, and the current OpenMPT `PlayBehaviour` bits are parsed at their structural boundaries; known channel, timing, mix, preamp, restart, filter, and PCM compatibility values are applied, including classic, alternative, and modern tempo modes and extended IT patterns from 1 to 1,024 rows.
-- **Precise warnings**: compatibility warnings appear only when a limitation is actually reached in the played order path. Dormant MIDI flags, default macros, unused plugin definitions, and metadata remain silent; used external routes identify the instrument, channel, or plugin slot.
-- **Public integration**: `.it` works in the loader, playlist scanner, file dialog, drag & drop, Finder “Open with”, `savage-cli`, and the bundled Quick Look extension. `savage-cli --info` reports tracker identity, extension chunks, `PlayBehaviour` state, and concrete capability results.
+- The platform-neutral replay engine now builds and tests on both macOS and
+  Linux from the same Swift sources.
+- `savage-cli --play` outputs through ALSA using the same render engine as the
+  macOS app, offline renderer, and Quick Look extension.
+- `--stdout` streams bounded PCM chunks immediately instead of buffering a
+  complete song and WAV file before writing the first sample.
+- Duration and sample-rate arguments reject non-finite and out-of-range values
+  with a controlled exit code. Output options that cannot be combined are
+  rejected before parsing or rendering.
+- A required Ubuntu CI job builds and tests the release core and CLI with their
+  ALSA and archive dependencies.
 
-## Improved
+## Parser and playback correctness
 
-- **FastTracker II effects**: `Hxy` global-volume slide now follows FT2 tick and memory semantics; `Rxy` multi-retrigger applies the FT2 volume modes and remembers both parameter nibbles independently.
-- **Maintainability**: the former monolithic `MainView.swift` implementation is split into nine focused source files. This is an internal refactor with regression-tested behavior.
-- The tracker grid and oscilloscopes show only the channels actually used by the song, under their original channel numbers; the header shows the used channel count before the BPM.
-- Quick Look renders and caches a fast 60-second audio preview; unsupported files show a readable error instead of an endless loading indicator.
-- PAL/NTSC moved next to the master oscilloscope and is available only for Paula-based MOD formats.
-- Song duration and offline rendering use the same jump/loop/delay/tempo-aware sequencer probe, so the displayed time and the rendered length match the actual playback path.
+- XM and S3M dimensions, pattern grids, instruments, samples, and cumulative
+  PCM sizes are validated before allocation. Small malformed files can no
+  longer request multi-gigabyte parser structures.
+- FastTracker II files now honor the header's linear or Amiga frequency-table
+  mode, including the corresponding period and slide behavior.
+- The replay core was separated from AVFoundation and Combine without creating
+  a second playback implementation; live, streamed, offline, and Quick Look
+  rendering continue to share one engine.
+- Latent Linux-only compilation and sequencing faults uncovered by the port
+  were corrected and covered by cross-platform tests.
 
-## Verification
+## Quick Look and cache reliability
 
-- The full Swift suite (227 tests), dedicated filter/NNA/stereo fixtures, a 64-channel/256-voice release stress test, JS↔Swift MOD parity, the signed app build, and the Quick Look extension pass.
-- The new XM effect tests cover `Hxy` tick/memory behavior and `Rxy` volume modes plus per-nibble memory; A/B renders of all eight local XM fixtures are unchanged or improved.
-- Playback was compared against the pinned `openmpt123`/libopenmpt reference and, for filter and compatibility details, the OpenMPT and Schism Tracker source implementations.
+- Preview cache keys now include canonical file identity and sub-second
+  modification time. Equal basenames in different folders and rapid in-place
+  replacements no longer reuse the wrong audio preview.
+- Quick Look still renders at most 60 seconds and shows parser failures as a
+  finite text preview.
 
-## Known limitations
+## Verification and known limits
 
-- Savage Mod Player remains a native PCM tracker engine: MPTM, VST/AudioUnit plugin playback, and external MIDI output are not supported and warn only when actually used.
-- Embedded MIDI macros are limited to common cutoff/resonance filter macros.
-- Deprecated pre-1.17 OpenMPT swing, the superseded old loop/jump rule, imprecise legacy ping-pong overshoot, and proprietary envelope release nodes remain feature-specific compatibility limits.
-- The HTML5 player remains intentionally limited to classic 4-channel ProTracker MOD files.
-
-## Notes
-
-- The DMG is signed and notarized and includes the app and Quick Look extension; no module files are bundled.
+- The release is covered by the full optimized Swift suite, dedicated
+  parser/render/cache tests, JavaScript-to-Swift MOD timing parity, macOS app and
+  Quick Look builds, and the mandatory Linux CI job.
+- MPTM, VST/AudioUnit plug-in playback, and external MIDI output remain outside
+  the native engine. The HTML5 player remains intentionally limited to classic
+  four-channel ProTracker MOD files.
+- The DMG is Developer ID-signed, notarized by Apple, and includes the app and
+  Quick Look extension. No module files are bundled.

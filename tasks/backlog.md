@@ -1,18 +1,13 @@
 # Aktiver Projekt-Backlog
 
-Stand: 2026-07-22 · Basis: `main@2338de5`, Version 1.5.46.
+Stand: 2026-07-22 · Version 1.5.46.
 
 Diese Datei ist die einzige aktive Projektliste. Erledigte Chronik liegt in
 Release Notes, abgeschlossenen Tasks und `archive/`.
 
 ## Priorisiert
 
-1. **Release Notes konsolidieren — Entscheidung offen.** `RELEASE_NOTES.md`/`.de.md`
-   beschreiben noch 1.5.29, während Tags bis v1.5.45 und der Arbeitsstand bis
-   1.5.46 reichen. Sie sind der Text des nächsten GitHub-Releases, also eine
-   Veröffentlichungsentscheidung: Was aus 1.5.30–1.5.46 gehört hinein? Ohne
-   Daniels Vorgabe nicht anfassen.
-2. **GUI-Smoke für Dateiargument untersuchen.** Ein früherer Lauf mit
+1. **GUI-Smoke für Dateiargument untersuchen.** Ein früherer Lauf mit
    `open --args <mod>` zeigte kein Hauptfenster, während der Autoplay-Ordnerpfad
    funktionierte. Mit einer rechtlich unbedenklichen lokalen Datei reproduzieren,
    App-Lifecycle und Argumentdispatch trennen, headless Tests ergänzen und danach
@@ -20,7 +15,7 @@ Release Notes, abgeschlossenen Tasks und `archive/`.
    `knowledge/swiftui-cli-args-fenster.md` beschreibt exakt dieses Symptom
    (AppKit deutet unbekannte positionale Argumente als Datei-Öffnen) — vor der
    Analyse lesen, das könnte die Ursache schon nennen.*
-3. **Linux-Port Phase 2 abschließen.** Echtzeit-Wiedergabe läuft
+2. **Linux-Port Phase 2 abschließen.** Echtzeit-Wiedergabe läuft
    (`savage-cli --play`, ALSA); es fehlen Tastatursteuerung (Pause, nächster
    Titel, Quit) und Playlist-Wiedergabe über `--list`. Details:
    [Linux-Plan](2026-07-05-linux-port/plan.md).
